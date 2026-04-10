@@ -6,7 +6,7 @@
     <title>SWFI Terminal</title>
     <meta
       name="description"
-      content="Institutional intelligence terminal concept for sovereign wealth funds, public pensions, central banks, and long-horizon allocators."
+      content="Global institutional capital intelligence platform for sovereign wealth funds, public pensions, central banks, and endowments."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,310 +18,176 @@
   </head>
   <body>
     <div class="shell">
-      <header class="topbar panel">
-        <div class="brand-block">
+      <header class="masthead panel">
+        <div class="brand-cluster">
           <div class="brand-mark">SW</div>
-          <div>
+          <div class="brand-copy">
             <p class="eyebrow">Allocator Intelligence Platform</p>
             <h1>SWFI Terminal</h1>
           </div>
         </div>
-        <div class="topbar-meta">
-          <div class="pill">
-            <span class="pill-label">Coverage</span>
-            <strong>Funds, mandates, people, transactions</strong>
+        <div class="masthead-status">
+          <div class="live-chip">
+            <span class="live-dot"></span>
+            <span>Live</span>
           </div>
-          <div class="pill">
-            <span class="pill-label">UTC</span>
+          <div class="clock-block">
+            <span class="label">UTC</span>
             <strong id="utc-clock">--:--:--</strong>
           </div>
         </div>
       </header>
 
+      <section class="ticker panel">
+        <div class="ticker-head">
+          <span class="section-label">Capital tape</span>
+        </div>
+        <div class="ticker-window">
+          <div class="ticker-track" id="ticker-track"></div>
+        </div>
+      </section>
+
       <main class="layout">
-        <section class="hero panel">
-          <div class="hero-copy">
-            <p class="section-kicker">Institutional intelligence, not generic finance content</p>
-            <h2>
-              A sharper front end for
-              <span>sovereign wealth, pensions, central banks, and allocator workflows.</span>
-            </h2>
-            <p class="lede">
-              This concept reframes SWFI as a serious operating surface: one place to monitor institutions,
-              track transactions, discover mandates, follow executive moves, and route high-intent users into
-              subscription, API, and membership products.
-            </p>
-
-            <div class="cta-row">
-              <a class="cta primary" href="#platform">Explore Platform</a>
-              <a class="cta secondary" href="#offerings">Review Offerings</a>
-              <a class="cta ghost" href="#terminal">See Terminal View</a>
+        <section class="hero-grid">
+          <article class="hero panel">
+            <div class="hero-copy">
+              <p class="section-label">Global institutional capital intelligence platform</p>
+              <h2>
+                Track <span>$49.2 trillion</span> in sovereign, pension, reserve, and endowment capital.
+              </h2>
+              <p class="lede">
+                Real-time deal flow, fund analytics, asset allocation data, and executive intelligence across
+                sovereign wealth funds, public pensions, central banks, and long-horizon allocators.
+              </p>
             </div>
-
-            <div class="hero-facts">
-              <article class="fact">
-                <span class="fact-label">Why this works</span>
-                <strong>Dense workflow-led presentation replaces the current catalog-first surface.</strong>
+            <div class="hero-stats">
+              <article class="metric-card">
+                <span class="metric-label">Total AUM tracked</span>
+                <strong>$49.2T</strong>
               </article>
-              <article class="fact">
-                <span class="fact-label">Primary objects</span>
-                <strong>Institutions, people, transactions, RFPs, rankings, and alerts.</strong>
+              <article class="metric-card">
+                <span class="metric-label">Fund profiles</span>
+                <strong>4,200+</strong>
               </article>
-              <article class="fact">
-                <span class="fact-label">Commercial split</span>
-                <strong>Public monitoring on the front door. Paid terminal modules behind it.</strong>
+              <article class="metric-card">
+                <span class="metric-label">Transactions</span>
+                <strong>28,500+</strong>
               </article>
-            </div>
-          </div>
-
-          <div class="hero-terminal">
-            <div class="terminal-frame">
-              <div class="terminal-top">
-                <div class="traffic">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div class="command-bar">
-                  <span class="prompt">/</span>
-                  <span>Search funds, people, transactions, mandates, rankings, alerts</span>
-                </div>
-              </div>
-
-              <div class="terminal-body">
-                <aside class="terminal-nav">
-                  <div class="nav-label">Workspace</div>
-                  <a class="nav-item is-active" href="#terminal">Overview</a>
-                  <a class="nav-item" href="#offerings">Products</a>
-                  <a class="nav-item" href="#signals">Signals</a>
-                  <a class="nav-item" href="#platform">Profiles</a>
-                  <a class="nav-item" href="#rankings">Rankings</a>
-                  <a class="nav-item" href="#api">API</a>
-                </aside>
-
-                <div class="terminal-main">
-                  <div class="terminal-grid">
-                    <section class="terminal-card span-7">
-                      <div class="card-head">
-                        <div>
-                          <p class="mini-kicker">Watchlist</p>
-                          <h3>Allocator activity monitor</h3>
-                        </div>
-                        <span class="status-dot">Live</span>
-                      </div>
-                      <table class="data-table">
-                        <thead>
-                          <tr>
-                            <th>Institution</th>
-                            <th>Region</th>
-                            <th>Signal</th>
-                            <th>Priority</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>Abu Dhabi sovereign cluster</td>
-                            <td>MENA</td>
-                            <td>Infrastructure allocation expansion</td>
-                            <td class="priority hi">High</td>
-                          </tr>
-                          <tr>
-                            <td>Ontario public pension cohort</td>
-                            <td>North America</td>
-                            <td>Co-investment partnership refresh</td>
-                            <td class="priority med">Medium</td>
-                          </tr>
-                          <tr>
-                            <td>Nordic central bank reserve desks</td>
-                            <td>Europe</td>
-                            <td>Liquidity policy review</td>
-                            <td class="priority med">Medium</td>
-                          </tr>
-                          <tr>
-                            <td>APAC state allocator network</td>
-                            <td>Asia Pacific</td>
-                            <td>Private markets pacing shift</td>
-                            <td class="priority hi">High</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </section>
-
-                    <section class="terminal-card span-5">
-                      <div class="card-head">
-                        <div>
-                          <p class="mini-kicker">Signals</p>
-                          <h3>Today</h3>
-                        </div>
-                      </div>
-                      <div class="signal-stack">
-                        <article>
-                          <span>Mandates</span>
-                          <strong>11 new RFP pathways surfaced across infrastructure and credit.</strong>
-                        </article>
-                        <article>
-                          <span>People moves</span>
-                          <strong>7 executive transitions across sovereign and pension allocators.</strong>
-                        </article>
-                        <article>
-                          <span>Transactions</span>
-                          <strong>23 notable deal signals across Asia, Europe, and North America.</strong>
-                        </article>
-                      </div>
-                    </section>
-
-                    <section class="terminal-card span-4">
-                      <div class="card-head">
-                        <div>
-                          <p class="mini-kicker">Profile</p>
-                          <h3>Institution snapshot</h3>
-                        </div>
-                      </div>
-                      <dl class="profile-list">
-                        <div>
-                          <dt>AUM band</dt>
-                          <dd>$100B+</dd>
-                        </div>
-                        <div>
-                          <dt>Focus</dt>
-                          <dd>Infrastructure, private equity, credit</dd>
-                        </div>
-                        <div>
-                          <dt>Decision makers</dt>
-                          <dd>12 verified principals</dd>
-                        </div>
-                        <div>
-                          <dt>Recent movement</dt>
-                          <dd>2 strategy updates in 30 days</dd>
-                        </div>
-                      </dl>
-                    </section>
-
-                    <section class="terminal-card span-4">
-                      <div class="card-head">
-                        <div>
-                          <p class="mini-kicker">Rankings</p>
-                          <h3>Top movers</h3>
-                        </div>
-                      </div>
-                      <ol class="ranking-list">
-                        <li><span>1</span> Sovereign infrastructure allocators</li>
-                        <li><span>2</span> APAC public pension expansion</li>
-                        <li><span>3</span> Secondary market buyers</li>
-                        <li><span>4</span> Reserve manager policy shifts</li>
-                      </ol>
-                    </section>
-
-                    <section class="terminal-card span-4">
-                      <div class="card-head">
-                        <div>
-                          <p class="mini-kicker">Export</p>
-                          <h3>Operational output</h3>
-                        </div>
-                      </div>
-                      <ul class="export-list">
-                        <li>CRM-ready contact packets</li>
-                        <li>Saved screen alerts</li>
-                        <li>Mandate feed exports</li>
-                        <li>JSON and CSV delivery</li>
-                      </ul>
-                    </section>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="section panel" id="offerings">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Offerings</p>
-              <h2>One institutional story, four commercial doors.</h2>
-            </div>
-            <p class="section-copy">
-              The redesign keeps SWFI's actual business lines intact and presents them as one coherent
-              intelligence platform instead of four unrelated brochure pages.
-            </p>
-          </div>
-
-          <div class="offering-grid">
-            <article class="offering-card">
-              <span class="offering-index">01</span>
-              <h3>Subscription</h3>
-              <p>Profiles, transactions, people data, mandates, rankings, alerts, and workflow screens.</p>
-            </article>
-            <article class="offering-card">
-              <span class="offering-index">02</span>
-              <h3>Datafeeds and API</h3>
-              <p>Structured delivery for internal systems, CRM sync, research ops, and downstream analytics.</p>
-            </article>
-            <article class="offering-card">
-              <span class="offering-index">03</span>
-              <h3>Membership and events</h3>
-              <p>Relationship-building, access, private circulation, and institutional convening.</p>
-            </article>
-            <article class="offering-card">
-              <span class="offering-index">04</span>
-              <h3>Public Fund Monitor</h3>
-              <p>Free monitoring layer for top-of-funnel demand, daily relevance, and audience habit.</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="section split-panel" id="platform">
-          <article class="panel section-card" id="signals">
-            <p class="section-kicker">Platform logic</p>
-            <h2>Every screen is built from the same institutional objects.</h2>
-            <p>
-              That is what makes the terminal feel operational. Profiles, transactions, people moves,
-              mandates, rankings, and alerts are not disconnected pages. They are filtered views over one
-              shared data model.
-            </p>
-            <div class="chip-grid">
-              <span>Institution</span>
-              <span>Person</span>
-              <span>Transaction</span>
-              <span>Mandate / RFP</span>
-              <span>Fund / vehicle</span>
-              <span>Manager</span>
-              <span>Sector</span>
-              <span>Alert</span>
+              <article class="metric-card">
+                <span class="metric-label">Countries</span>
+                <strong>156</strong>
+              </article>
             </div>
           </article>
 
-          <article class="panel section-card" id="rankings">
-            <p class="section-kicker">Workflow packaging</p>
-            <h2>Public site for conversion. Terminal for action.</h2>
-            <div class="workflow-list">
+          <article class="hero-side panel">
+            <div class="panel-head compact">
               <div>
-                <strong>Front door</strong>
-                <p>Clarify category, differentiate products, and route visitors into demo, API, or monitor flows.</p>
+                <p class="section-label">Watch focus</p>
+                <h3>Largest sovereign and public pools</h3>
               </div>
-              <div>
-                <strong>Terminal</strong>
-                <p>Saved screens, watchlists, filters, exports, and alerts turn data into a daily operating surface.</p>
-              </div>
-              <div id="api">
-                <strong>Data layer</strong>
-                <p>API and datafeed access are treated as native product modules, not an afterthought page.</p>
-              </div>
+              <span class="state-pill">Live</span>
             </div>
+            <div class="hero-side-grid" id="watch-grid"></div>
           </article>
         </section>
+
+        <section class="board-grid">
+          <article class="panel board-card board-rankings">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">Live rankings</p>
+                <h3>Top sovereign wealth funds by AUM</h3>
+              </div>
+              <span class="panel-note">Updated continuously</span>
+            </div>
+            <div class="table-wrap">
+              <table class="ranking-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Fund</th>
+                    <th>Country</th>
+                    <th>AUM (B)</th>
+                    <th>YTD</th>
+                    <th>Trend</th>
+                  </tr>
+                </thead>
+                <tbody id="ranking-body"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel board-card board-feed">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">Updating</p>
+                <h3>Intelligence feed</h3>
+              </div>
+              <span class="panel-note" id="feed-date">10 Apr 2026</span>
+            </div>
+            <div class="feed-list" id="feed-list"></div>
+          </article>
+        </section>
+
+        <section class="insight-grid">
+          <article class="panel board-card">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">Q2 2026</p>
+                <h3>Regional capital deployment (YTD)</h3>
+              </div>
+            </div>
+            <div class="region-list" id="region-list"></div>
+          </article>
+
+          <article class="panel board-card">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">$49.2T</p>
+                <h3>Asset class allocation, global SWF aggregate</h3>
+              </div>
+            </div>
+            <div class="allocation-list" id="allocation-list"></div>
+          </article>
+        </section>
+
+        <section class="stream-grid">
+          <article class="panel board-card stream-card">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">Live stream</p>
+                <h3>Recent transaction activity</h3>
+              </div>
+            </div>
+            <div class="stream-list" id="stream-list"></div>
+          </article>
+        </section>
+
+        <section class="terminal-bar panel">
+          <div class="terminal-mark">SWFI</div>
+          <div class="terminal-body">
+            <div class="terminal-input">
+              <span class="prompt">/</span>
+              <span>Search funds, managers, transactions, RFPs, or type a command...</span>
+            </div>
+            <div class="terminal-hints">ESC to clear | TAB autocomplete | UP/DOWN history</div>
+          </div>
+        </section>
+
+        <footer class="footer panel">
+          <div class="footer-meta">
+            <strong>SWFI Terminal v4.0</strong>
+            <span>Sovereign Wealth Fund Institute</span>
+            <span>swfinstitute.org</span>
+          </div>
+          <div class="footer-notes">
+            <span>Data as of <span id="as-of-date">2026-04-10</span></span>
+            <span>All amounts in USD</span>
+            <span>Sources: fund disclosures, regulatory filings, SWFI research</span>
+          </div>
+        </footer>
       </main>
-
-      <footer class="footer panel">
-        <div>
-          <p class="section-kicker">Prototype state</p>
-          <strong>Initial repo and live preview for the SWFI terminal direction.</strong>
-        </div>
-        <div class="footer-links">
-          <a href="#offerings">Offerings</a>
-          <a href="#terminal">Terminal</a>
-          <a href="#platform">Platform</a>
-        </div>
-      </footer>
     </div>
 
     <script src="./app.js" type="module"></script>
