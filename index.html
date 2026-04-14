@@ -3,189 +3,292 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SWFI Terminal</title>
+    <title>SWFI Intelligence Workspace Demo</title>
     <meta
       name="description"
-      content="Global institutional capital intelligence platform for sovereign wealth funds, public pensions, central banks, and endowments."
+      content="Premium SWFI workspace demo for capital flows, coverage, mandate intelligence, and data feeds."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="shell">
-      <header class="masthead panel">
-        <div class="brand-cluster">
+    <div class="page-shell">
+      <header class="topbar panel">
+        <div class="brand-lockup">
           <div class="brand-mark">SW</div>
           <div class="brand-copy">
-            <p class="eyebrow">Allocator Intelligence Platform</p>
-            <h1>SWFI Terminal</h1>
+            <p class="eyebrow">Pilot workspace</p>
+            <h1>SWFI Intelligence Workspace</h1>
           </div>
         </div>
-        <div class="masthead-status">
-          <div class="live-chip">
-            <span class="live-dot"></span>
-            <span>Live</span>
-          </div>
-          <div class="clock-block">
-            <span class="label">UTC</span>
-            <strong id="utc-clock">--:--:--</strong>
-          </div>
+
+        <label class="command-bar" for="command-search">
+          <span class="command-prompt">desk:</span>
+          <input
+            id="command-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Search funds, allocators, mandates, decision makers"
+          />
+        </label>
+
+        <div class="status-row">
+          <span class="status-chip">Pilot build</span>
+          <span class="status-chip">Read-only</span>
+          <span class="status-chip" id="last-refresh">Loading live sources</span>
         </div>
       </header>
 
-      <section class="ticker panel">
-        <div class="ticker-head">
-          <span class="section-label">Capital tape</span>
-        </div>
-        <div class="ticker-window">
-          <div class="ticker-track" id="ticker-track"></div>
-        </div>
-      </section>
+      <main class="stack">
+        <section class="briefing-grid">
+          <article class="panel hero">
+            <p class="eyebrow">Institutional capital markets desk</p>
+            <h2>Institutional capital intelligence for fundraising, coverage, and mandate origination.</h2>
+            <p class="lede">
+              A premium market-data style workspace for sovereign wealth funds, pensions, reserve managers,
+              private capital platforms, placement teams, and Wall Street coverage desks.
+            </p>
 
-      <main class="layout">
-        <section class="hero-grid">
-          <article class="hero panel">
-            <div class="hero-copy">
-              <p class="section-label">Global institutional capital intelligence platform</p>
-              <h2>
-                Track <span>$49.2 trillion</span> in sovereign, pension, reserve, and endowment capital.
-              </h2>
-              <p class="lede">
-                Real-time deal flow, fund analytics, asset allocation data, and executive intelligence across
-                sovereign wealth funds, public pensions, central banks, and long-horizon allocators.
-              </p>
+            <div class="hero-actions">
+              <button class="action-btn active" type="button" data-module-target="capital-flows">
+                Capital flows
+              </button>
+              <button class="action-btn" type="button" data-module-target="coverage-desk">
+                Coverage desk
+              </button>
+              <button class="action-btn" type="button" data-module-target="mandate-radar">
+                Mandate radar
+              </button>
+              <button class="action-btn" type="button" data-module-target="profile-ops">
+                Profile ops
+              </button>
             </div>
-            <div class="hero-stats">
-              <article class="metric-card">
-                <span class="metric-label">Total AUM tracked</span>
-                <strong>$49.2T</strong>
-              </article>
-              <article class="metric-card">
-                <span class="metric-label">Fund profiles</span>
-                <strong>4,200+</strong>
-              </article>
-              <article class="metric-card">
-                <span class="metric-label">Transactions</span>
-                <strong>28,500+</strong>
-              </article>
-              <article class="metric-card">
-                <span class="metric-label">Countries</span>
-                <strong>156</strong>
-              </article>
-            </div>
+
+            <div class="metric-strip" id="metric-strip"></div>
           </article>
 
-          <article class="hero-side panel">
-            <div class="panel-head compact">
-              <div>
-                <p class="section-label">Watch focus</p>
-                <h3>Largest sovereign and public pools</h3>
+          <aside class="hero-side">
+            <article class="panel audience-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Buyer fit</p>
+                  <h3>Built for Blackstone, KKR, and Wall Street buyer instincts</h3>
+                </div>
               </div>
-              <span class="state-pill">Live</span>
-            </div>
-            <div class="hero-side-grid" id="watch-grid"></div>
-          </article>
+              <div class="audience-list" id="audience-list"></div>
+            </article>
+
+            <article class="panel source-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Live source health</p>
+                  <h3>Free APIs wired into the pilot</h3>
+                </div>
+              </div>
+              <div class="source-health-list" id="source-health-list"></div>
+            </article>
+          </aside>
         </section>
 
-        <section class="board-grid">
-          <article class="panel board-card board-rankings">
+        <section class="workspace-layout">
+          <aside class="panel left-rail">
             <div class="panel-head">
               <div>
-                <p class="section-label">Live rankings</p>
-                <h3>Top sovereign wealth funds by AUM</h3>
+                <p class="eyebrow">Workspace rail</p>
+                <h3>Modules</h3>
               </div>
-              <span class="panel-note">Updated continuously</span>
             </div>
-            <div class="table-wrap">
-              <table class="ranking-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Fund</th>
-                    <th>Country</th>
-                    <th>AUM (B)</th>
-                    <th>YTD</th>
-                    <th>Trend</th>
-                  </tr>
-                </thead>
-                <tbody id="ranking-body"></tbody>
-              </table>
-            </div>
-          </article>
+            <div class="module-list" id="module-list"></div>
+            <p class="rail-note">
+              The fastest believable wedge is a premium read-only intelligence desk over the current SWFI
+              estate, with structured write paths added where trust matters.
+            </p>
+          </aside>
 
-          <article class="panel board-card board-feed">
-            <div class="panel-head">
-              <div>
-                <p class="section-label">Updating</p>
-                <h3>Intelligence feed</h3>
+          <section class="center-column">
+            <article class="panel signal-board">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Desk overview</p>
+                  <h3>Live public-source signals recut into a premium deal desk</h3>
+                </div>
               </div>
-              <span class="panel-note" id="feed-date">10 Apr 2026</span>
-            </div>
-            <div class="feed-list" id="feed-list"></div>
-          </article>
+              <div class="signal-grid" id="signal-grid"></div>
+              <div class="coverage-list" id="coverage-list"></div>
+            </article>
+
+            <article class="panel workbench" id="workbench">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Coverage workspace</p>
+                  <h3>Bloomberg-style search and dossier workspace</h3>
+                </div>
+                <span class="panel-note">Capital-pool-first view over the current entity universe</span>
+              </div>
+
+              <div class="surface-controls">
+                <label class="search-box" for="entity-search">
+                  <span class="search-prefix">/</span>
+                  <input
+                    id="entity-search"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="Search capital sources, countries, or raw types"
+                  />
+                </label>
+
+                <label class="toggle-pill" for="allocator-toggle">
+                  <input id="allocator-toggle" type="checkbox" checked />
+                  <span>Capital pools only</span>
+                </label>
+              </div>
+
+              <div class="filter-row" id="family-filters"></div>
+
+              <div class="workbench-grid">
+                <section class="entity-list" id="entity-list"></section>
+
+                <section class="dossier-stack">
+                  <div class="dossier-top" id="dossier-top"></div>
+                  <div class="fact-grid" id="fact-grid"></div>
+
+                  <div class="signal-pane-grid">
+                    <section class="detail-card">
+                      <div class="detail-head">
+                        <p class="eyebrow">Signals</p>
+                        <h4>What moves this account</h4>
+                      </div>
+                      <div class="signal-list" id="signal-list"></div>
+                    </section>
+
+                    <section class="detail-card">
+                      <div class="detail-head">
+                        <p class="eyebrow">Workflow</p>
+                        <h4>What the new layer changes</h4>
+                      </div>
+                      <div class="workflow-list" id="workflow-list"></div>
+                    </section>
+                  </div>
+
+                  <div class="source-strip" id="source-strip"></div>
+                </section>
+              </div>
+            </article>
+          </section>
+
+          <aside class="right-rail">
+            <article class="panel module-spotlight">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Active module</p>
+                  <h3>What this desk is for</h3>
+                </div>
+              </div>
+              <div class="spotlight-meta" id="module-meta"></div>
+              <h3 class="spotlight-title" id="module-title"></h3>
+              <p class="spotlight-copy" id="module-copy"></p>
+              <div class="metric-row" id="module-metrics"></div>
+              <div class="spotlight-list" id="module-checklist"></div>
+            </article>
+
+            <article class="panel chat-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Research AI</p>
+                  <h3>Institutional capital research desk</h3>
+                </div>
+              </div>
+              <div class="assistant-guardrails">
+                <span>Research only</span>
+                <span>Read-only</span>
+                <span>Source-backed</span>
+              </div>
+              <div class="chat-log" id="chat-log"></div>
+              <div class="chat-suggestions">
+                <button type="button" class="suggestion-chip" data-chat-suggestion="What do the latest Blackstone and KKR filings suggest?">
+                  Blackstone vs KKR
+                </button>
+                <button type="button" class="suggestion-chip" data-chat-suggestion="Give me macro context for Norway and China capital pools.">
+                  Norway and China
+                </button>
+                <button type="button" class="suggestion-chip" data-chat-suggestion="Find public-source signals for mandate and strategy movement.">
+                  Mandate signals
+                </button>
+              </div>
+              <form class="chat-form" id="chat-form">
+                <input
+                  id="chat-input"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="Ask about an allocator, manager, filing, country, or mandate signal"
+                />
+                <button type="submit" id="chat-send">Research</button>
+              </form>
+            </article>
+
+            <article class="panel feed-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Signal feed</p>
+                  <h3>Public-source market intelligence</h3>
+                </div>
+              </div>
+              <div class="feed-list" id="feed-list"></div>
+            </article>
+
+            <article class="panel filings-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Street watch</p>
+                  <h3>Latest SEC filings</h3>
+                </div>
+              </div>
+              <div class="filings-list" id="filings-list"></div>
+            </article>
+
+            <article class="panel macro-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Country context</p>
+                  <h3>World Bank macro snapshot</h3>
+                </div>
+              </div>
+              <div class="macro-list" id="macro-list"></div>
+            </article>
+
+            <article class="panel watch-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Watchlists</p>
+                  <h3>Named desks, not generic firehoses</h3>
+                </div>
+              </div>
+              <div class="watchlist-list" id="watchlist-list"></div>
+            </article>
+
+            <article class="panel ops-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Profile ops</p>
+                  <h3>Decision-maker and profile ops</h3>
+                </div>
+              </div>
+              <div class="ops-steps" id="ops-steps"></div>
+            </article>
+          </aside>
         </section>
 
-        <section class="insight-grid">
-          <article class="panel board-card">
-            <div class="panel-head">
-              <div>
-                <p class="section-label">Q2 2026</p>
-                <h3>Regional capital deployment (YTD)</h3>
-              </div>
-            </div>
-            <div class="region-list" id="region-list"></div>
-          </article>
-
-          <article class="panel board-card">
-            <div class="panel-head">
-              <div>
-                <p class="section-label">$49.2T</p>
-                <h3>Asset class allocation, global SWF aggregate</h3>
-              </div>
-            </div>
-            <div class="allocation-list" id="allocation-list"></div>
-          </article>
-        </section>
-
-        <section class="stream-grid">
-          <article class="panel board-card stream-card">
-            <div class="panel-head">
-              <div>
-                <p class="section-label">Live stream</p>
-                <h3>Recent transaction activity</h3>
-              </div>
-            </div>
-            <div class="stream-list" id="stream-list"></div>
-          </article>
-        </section>
-
-        <section class="terminal-bar panel">
-          <div class="terminal-mark">SWFI</div>
-          <div class="terminal-body">
-            <div class="terminal-input">
-              <span class="prompt">/</span>
-              <span>Search funds, managers, transactions, RFPs, or type a command...</span>
-            </div>
-            <div class="terminal-hints">ESC to clear | TAB autocomplete | UP/DOWN history</div>
+        <footer class="panel footer">
+          <div class="footer-head">
+            <p class="eyebrow">Why this lands</p>
+            <h3>It feels like a premium finance product while staying honest about the data underneath.</h3>
           </div>
-        </section>
-
-        <footer class="footer panel">
-          <div class="footer-meta">
-            <strong>SWFI Terminal v4.0</strong>
-            <span>Sovereign Wealth Fund Institute</span>
-            <span>swfinstitute.org</span>
-          </div>
-          <div class="footer-notes">
-            <span>Data as of <span id="as-of-date">2026-04-10</span></span>
-            <span>All amounts in USD</span>
-            <span>Sources: fund disclosures, regulatory filings, SWFI research</span>
-          </div>
+          <div class="win-list" id="win-list"></div>
         </footer>
       </main>
     </div>
