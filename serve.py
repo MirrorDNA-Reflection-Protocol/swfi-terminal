@@ -16,7 +16,6 @@ from urllib import error, parse, request
 ROOT = Path(__file__).resolve().parent
 SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "SWFI-Demo research@example.com")
 DASHBOARD_TTL_SECONDS = int(os.environ.get("DASHBOARD_TTL_SECONDS", "900"))
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 SPONSOR_TICKERS = ("BX", "KKR", "APO", "BN", "BLK")
 SPONSOR_NAMES = {
@@ -114,6 +113,31 @@ ACTION_REQUEST_HINTS = (
     "log in",
     "login",
 )
+
+
+def load_gemini_api_key() -> str:
+    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
+    if key:
+        return key
+
+    for secret_name in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        try:
+            result = subprocess.run(
+                ["security", "find-generic-password", "-a", "mirrordna", "-s", secret_name, "-w"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except Exception:
+            continue
+
+    return ""
+
+
+GEMINI_API_KEY = load_gemini_api_key()
 
 
 def fetch_json(url: str, *, headers: dict[str, str] | None = None, payload: object | None = None, timeout: int = 20):
