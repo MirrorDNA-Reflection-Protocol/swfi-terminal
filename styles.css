@@ -207,7 +207,6 @@ input {
 .source-pill,
 .family-badge,
 .state-pill,
-.spotlight-chip,
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -221,31 +220,24 @@ input {
 
 .status-chip,
 .metric-pill,
-.spotlight-chip,
 .status-pill {
   color: var(--green);
 }
 
 .briefing-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) 360px;
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
 .hero,
-.audience-panel,
-.source-panel,
-.left-rail,
 .signal-board,
 .workbench,
-.module-spotlight,
 .chat-panel,
 .feed-panel,
 .filings-panel,
 .macro-panel,
-.watch-panel,
-.ops-panel,
-.footer {
+.ops-panel {
   padding: 18px;
 }
 
@@ -257,14 +249,9 @@ input {
 }
 
 .lede,
-.rail-note,
-.spotlight-copy,
 .entity-note,
-.win-card p,
 .feed-card p,
-.watch-card p,
 .ops-card p,
-.audience-card p,
 .source-health-card p,
 .filing-card p,
 .macro-card p,
@@ -281,6 +268,20 @@ input {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 20px;
+}
+
+.hero-monitor {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(99, 255, 158, 0.08);
+}
+
+.hero-monitor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .action-btn,
@@ -318,16 +319,13 @@ input {
 
 .metric-strip,
 .signal-grid,
-.audience-list,
 .source-health-list,
 .module-list,
 .entity-list,
 .feed-list,
 .filings-list,
 .macro-list,
-.watchlist-list,
 .ops-steps,
-.win-list,
 .signal-list,
 .workflow-list,
 .spotlight-list {
@@ -341,7 +339,6 @@ input {
 }
 
 .metric-card,
-.audience-card,
 .source-health-card,
 .signal-tile,
 .module-card,
@@ -351,9 +348,7 @@ input {
 .feed-card,
 .filing-card,
 .macro-card,
-.watch-card,
 .ops-card,
-.win-card,
 .tape-card {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -362,16 +357,13 @@ input {
 }
 
 .metric-card,
-.audience-card,
 .source-health-card,
 .signal-tile,
 .fact-card,
 .feed-card,
 .filing-card,
 .macro-card,
-.watch-card,
-.ops-card,
-.win-card {
+.ops-card {
   padding: 14px;
 }
 
@@ -385,12 +377,10 @@ input {
 
 .metric-card p,
 .signal-tile p,
-.audience-card p,
 .source-health-card p {
   margin-top: 10px;
 }
 
-.hero-side,
 .right-rail,
 .center-column {
   display: grid;
@@ -413,7 +403,6 @@ input {
 .source-health-head,
 .filing-head,
 .macro-head,
-.watch-head,
 .entity-head,
 .entity-metrics,
 .feed-head,
@@ -434,9 +423,13 @@ input {
 
 .workspace-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 14px;
   align-items: start;
+}
+
+.source-health-inline {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .module-card {
@@ -542,8 +535,6 @@ input {
 
 .surface-controls,
 .filter-row,
-.spotlight-meta,
-.metric-row,
 .source-pills,
 .dossier-badges,
 .chat-suggestions {
@@ -594,10 +585,7 @@ input {
 .entity-head strong,
 .filing-card strong,
 .macro-card strong,
-.watch-card strong,
 .ops-card strong,
-.win-card strong,
-.audience-card strong,
 .source-health-card strong {
   display: block;
 }
@@ -850,9 +838,7 @@ input {
 .feed-card,
 .filing-card,
 .macro-card,
-.watch-card,
-.ops-card,
-.win-card {
+.ops-card {
   padding: 13px;
 }
 
@@ -884,14 +870,6 @@ input {
   font-size: 1.25rem;
 }
 
-.footer-head {
-  margin-bottom: 12px;
-}
-
-.win-list {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .empty-state {
   padding: 16px;
   border: 1px dashed var(--line-strong);
@@ -900,13 +878,9 @@ input {
 }
 
 @media (max-width: 1360px) {
-  .workspace-layout {
-    grid-template-columns: 240px minmax(0, 1fr) 340px;
-  }
-
   .signal-grid,
   .metric-strip,
-  .win-list {
+  .source-health-inline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -941,19 +915,13 @@ input {
 
   .topbar,
   .hero,
-  .audience-panel,
-  .source-panel,
-  .left-rail,
   .signal-board,
   .workbench,
-  .module-spotlight,
   .chat-panel,
   .feed-panel,
   .filings-panel,
   .macro-panel,
-  .watch-panel,
-  .ops-panel,
-  .footer {
+  .ops-panel {
     padding: 14px;
   }
 
@@ -968,9 +936,9 @@ input {
 
   .signal-grid,
   .metric-strip,
+  .source-health-inline,
   .fact-grid,
   .signal-pane-grid,
-  .win-list,
   .right-rail {
     grid-template-columns: 1fr;
   }
@@ -979,8 +947,6 @@ input {
 @media (max-width: 560px) {
   .hero-actions,
   .filter-row,
-  .spotlight-meta,
-  .metric-row,
   .source-pills,
   .dossier-badges,
   .chat-suggestions {
@@ -994,7 +960,6 @@ input {
   .metric-pill,
   .source-pill,
   .family-badge,
-  .spotlight-chip,
   .status-pill {
     width: 100%;
     justify-content: center;
@@ -1004,7 +969,6 @@ input {
   .entity-metrics,
   .filing-head,
   .macro-head,
-  .watch-head,
   .source-head,
   .coverage-head,
   .feed-head,

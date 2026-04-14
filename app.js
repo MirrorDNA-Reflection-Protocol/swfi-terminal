@@ -57,21 +57,6 @@ const modules = [
   },
 ];
 
-const audienceCards = [
-  {
-    title: "Allocator coverage",
-    body: "Named accounts, profile state, source trail.",
-  },
-  {
-    title: "Street watch",
-    body: "SEC pulse, manager filings, market context.",
-  },
-  {
-    title: "Mandate flow",
-    body: "Search signals, strategy shifts, watchlists.",
-  },
-];
-
 const entities = [
   {
     id: "gpfg",
@@ -245,24 +230,6 @@ const entities = [
   },
 ];
 
-const watchlists = [
-  {
-    name: "Asia Sovereign Coverage",
-    cadence: "Daily open",
-    logic: "State capital + Asia + profile change + strategy movement + verified signals",
-  },
-  {
-    name: "Mandate Radar",
-    cadence: "Morning sweep",
-    logic: "Signals that suggest manager search, allocation shift, or relationship opportunity",
-  },
-  {
-    name: "Street Coverage",
-    cadence: "Intraday",
-    logic: "Blackstone, KKR, Apollo, Brookfield, BlackRock filing pulse and public-source signal flow",
-  },
-];
-
 const opsSteps = [
   {
     step: "01",
@@ -283,25 +250,6 @@ const opsSteps = [
     step: "04",
     title: "Publish",
     body: "Push approved changes back into the desk.",
-  },
-];
-
-const wins = [
-  {
-    title: "Entity layer",
-    body: "SWFI-seeded accounts and profiles.",
-  },
-  {
-    title: "Live stack",
-    body: "SEC, World Bank, USAspending, GDELT fallback.",
-  },
-  {
-    title: "Research AI",
-    body: "Read-only, source-backed, institutional scope.",
-  },
-  {
-    title: "Desk mode",
-    body: "Allocator-first filters and named watchlists.",
   },
 ];
 
@@ -338,7 +286,6 @@ const state = {
 };
 
 const metricStrip = document.getElementById("metric-strip");
-const audienceList = document.getElementById("audience-list");
 const sourceHealthList = document.getElementById("source-health-list");
 const moduleList = document.getElementById("module-list");
 const signalGrid = document.getElementById("signal-grid");
@@ -361,9 +308,7 @@ const moduleChecklist = document.getElementById("module-checklist");
 const feedList = document.getElementById("feed-list");
 const filingsList = document.getElementById("filings-list");
 const macroList = document.getElementById("macro-list");
-const watchlistList = document.getElementById("watchlist-list");
 const opsStepsEl = document.getElementById("ops-steps");
-const winList = document.getElementById("win-list");
 const lastRefresh = document.getElementById("last-refresh");
 const chatLog = document.getElementById("chat-log");
 const chatForm = document.getElementById("chat-form");
@@ -430,20 +375,8 @@ function renderMetricStrip() {
     .join("");
 }
 
-function renderAudience() {
-  audienceList.innerHTML = audienceCards
-    .map(
-      (card) => `
-        <article class="audience-card">
-          <strong>${card.title}</strong>
-          <p>${card.body}</p>
-        </article>
-      `,
-    )
-    .join("");
-}
-
 function renderSourceHealth() {
+  if (!sourceHealthList) return;
   const statuses = state.liveData.statuses || [];
   sourceHealthList.innerHTML = statuses
     .map(
@@ -582,6 +515,7 @@ function setModule(moduleId) {
 }
 
 function renderModules() {
+  if (!moduleList) return;
   moduleList.innerHTML = modules
     .map(
       (module) => `
@@ -604,6 +538,7 @@ function renderModules() {
 }
 
 function renderModuleSpotlight() {
+  if (!moduleMeta || !moduleTitle || !moduleCopy || !moduleMetrics || !moduleChecklist) return;
   const module = modules.find((item) => item.id === state.activeModule);
   if (!module) return;
 
@@ -856,23 +791,8 @@ function renderMacro() {
     .join("");
 }
 
-function renderWatchlists() {
-  watchlistList.innerHTML = watchlists
-    .map(
-      (item) => `
-        <article class="watch-card">
-          <div class="watch-head">
-            <strong>${item.name}</strong>
-            <span>${item.cadence}</span>
-          </div>
-          <p>${item.logic}</p>
-        </article>
-      `,
-    )
-    .join("");
-}
-
 function renderOps() {
+  if (!opsStepsEl) return;
   opsStepsEl.innerHTML = opsSteps
     .map(
       (item) => `
@@ -882,19 +802,6 @@ function renderOps() {
             <strong>${item.title}</strong>
             <p>${item.body}</p>
           </div>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function renderWins() {
-  winList.innerHTML = wins
-    .map(
-      (item) => `
-        <article class="win-card">
-          <strong>${item.title}</strong>
-          <p>${item.body}</p>
         </article>
       `,
     )
@@ -1011,14 +918,11 @@ document.querySelectorAll("[data-chat-suggestion]").forEach((button) => {
   });
 });
 
-renderAudience();
 renderModules();
 renderFamilyFilters();
 renderEntitiesAndDossier();
 renderModuleSpotlight();
-renderWatchlists();
 renderOps();
-renderWins();
 syncModuleButtons();
 renderMetricStrip();
 renderSourceHealth();
