@@ -2,73 +2,73 @@ const modules = [
   {
     id: "capital-flows",
     label: "Capital Flows",
-    eyebrow: "Capital markets desk",
-    title: "Track sovereign and institutional capital with a fund-raising lens.",
+    eyebrow: "Flow monitor",
+    title: "Where capital is moving across sovereign and institutional accounts.",
     copy:
-      "This module is for teams that care about where large pools of capital are moving, how mandates are shifting, and which institutions belong on the active coverage list.",
-    metrics: ["Flow signals", "Coverage-ready dossiers", "Named-account routing"],
+      "Focus on pool size, account changes, and fresh signals that move a coverage list.",
+    metrics: ["Flow signals", "Account tiers", "Watchlist routing"],
     checklist: [
-      "Keep capital pools at the center of the experience.",
-      "Route signal flow into named accounts and target institutions.",
-      "Make the interface feel premium enough to justify a paid product.",
+      "Keep allocators first.",
+      "Route signals into accounts.",
+      "Cut general-market noise.",
     ],
   },
   {
     id: "coverage-desk",
     label: "Coverage Desk",
-    eyebrow: "Wall Street workflow",
-    title: "Give relationship, strategy, and placement teams one shared coverage workspace.",
+    eyebrow: "Coverage monitor",
+    title: "One book for institutions, people, signals, and profile state.",
     copy:
-      "The best SWFI wedge is not a generic dashboard. It is a live coverage desk with institution profiles, decision context, public-source signals, and fast scanning for who matters this week.",
-    metrics: ["Account coverage", "Decision context", "Fast morning scan"],
+      "Use the desk to move from search to account view without leaving the workspace.",
+    metrics: ["Account coverage", "People context", "Morning scan"],
     checklist: [
-      "Pull profiles, market signals, and mandate context into one view.",
-      "Preserve source trails so the desk is trusted, not decorative.",
-      "Optimize for relationship and origination teams, not just researchers.",
+      "Keep the book live.",
+      "Show the source trail.",
+      "Stay account-centric.",
     ],
   },
   {
     id: "mandate-radar",
     label: "Mandate Radar",
-    eyebrow: "Origination desk",
-    title: "Surface mandate, strategy, and account movement faster than a static research portal.",
+    eyebrow: "Signal monitor",
+    title: "Mandate movement, strategy shifts, and search signals.",
     copy:
-      "This is the origination angle: where strategy changes, manager searches, capital formation, and opportunity signals should become visible before they get lost in a generic news flow.",
-    metrics: ["Mandate shifts", "Opportunity signals", "Strategy movement"],
+      "Pull headlines, filings, and public-source movement into one read path.",
+    metrics: ["Mandate shifts", "Search signals", "Strategy moves"],
     checklist: [
-      "Translate raw activity into actionable coverage signals.",
-      "Make the desk useful to IR, placement, and product strategy teams.",
-      "Use source-backed signals instead of fake terminal noise.",
+      "Turn noise into account signals.",
+      "Keep signals short.",
+      "Stay source-backed.",
     ],
   },
   {
     id: "profile-ops",
     label: "Profile Ops",
-    eyebrow: "Operating desk",
-    title: "Turn profile maintenance into a visible workflow instead of a manual request queue.",
+    eyebrow: "Queue monitor",
+    title: "Claims, evidence, review, and publish state.",
     copy:
-      "The live SWFI product already has the core records. The weak spot is operational: freshness, review, and ownership. This module shows how to make that a real queue without waiting for a total rebuild.",
-    metrics: ["Claim queue", "Evidence review", "Publish control"],
+      "Keep profile change visible instead of burying it behind request forms.",
+    metrics: ["Claim queue", "Evidence review", "Publish state"],
     checklist: [
-      "Open a structured write path only where it improves trust.",
-      "Keep analyst review visible and auditable.",
-      "Let profile operations feed the product instead of sitting behind it.",
+      "Keep ownership visible.",
+      "Review before publish.",
+      "Feed changes back into the desk.",
     ],
   },
 ];
 
 const audienceCards = [
   {
-    title: "Private capital platforms",
-    body: "Need a premium desk for sovereign coverage, capital formation, and strategic relationship mapping.",
+    title: "Allocator coverage",
+    body: "Named accounts, profile state, source trail.",
   },
   {
-    title: "Wall Street coverage teams",
-    body: "Need an institutional market-data workspace, not a generic research site or slow vendor portal.",
+    title: "Street watch",
+    body: "SEC pulse, manager filings, market context.",
   },
   {
-    title: "Strategy and placement desks",
-    body: "Need faster visibility into mandates, manager searches, and account movement across large pools of capital.",
+    title: "Mandate flow",
+    body: "Search signals, strategy shifts, watchlists.",
   },
 ];
 
@@ -83,7 +83,7 @@ const entities = [
     assets: "$2.117T",
     allocator: true,
     deskFit: "Flagship sovereign account",
-    note: "The strongest live SWFI profile to anchor a premium institutional-capital dossier.",
+    note: "Flagship sovereign account. Real assets, exclusions, and policy signals matter.",
     lastSeen: "Current SWFI entity profile",
     freshness: "Observed 14 Apr 2026",
     status: "Profile verified",
@@ -97,14 +97,14 @@ const entities = [
     ],
     sources: ["SWFI profile page", "nbim.no", "Analyst-ready dossier"],
     signals: [
-      "Policy changes and exclusions are high-value coverage signals.",
-      "Real-asset activity should route into capital-formation desks immediately.",
-      "Freshness improvements on this profile create obvious subscriber value.",
+      "Watch policy changes and exclusions.",
+      "Route real-asset activity into the live list.",
+      "Treat freshness as part of coverage quality.",
     ],
     workflow: [
-      "Use the profile as the anchor for relationship, mandate, and opportunity context.",
-      "Attach updates to a structured claim and review queue.",
-      "Push approved changes into named-account watchlists.",
+      "Anchor the sovereign book here.",
+      "Push updates into review.",
+      "Feed changes into watchlists.",
     ],
   },
   {
@@ -117,7 +117,7 @@ const entities = [
     assets: "$1.952T",
     allocator: true,
     deskFit: "Core Asia sovereign coverage",
-    note: "A high-value sovereign account that belongs in a premium institutional-capital desk, not a mixed institutional dump.",
+    note: "Core Asia sovereign. Keep it in the top coverage lane.",
     lastSeen: "Current SWFI entity search",
     freshness: "Observed 14 Apr 2026",
     status: "Search verified",
@@ -131,14 +131,14 @@ const entities = [
     ],
     sources: ["SWFI entity search", "Coverage explorer"],
     signals: [
-      "Coverage desks need mandate and relationship context beside the profile.",
-      "Any capital movement should feed named Asia sovereign watchlists.",
-      "The premium value is in making these accounts easy to monitor quickly.",
+      "Keep mandate context beside the profile.",
+      "Route movement into Asia watchlists.",
+      "Make the account fast to scan.",
     ],
     workflow: [
-      "Keep the account visible in sovereign-first mode.",
-      "Connect people, opportunities, and strategy changes to the same desk.",
-      "Treat freshness as part of the commercial product, not just operations.",
+      "Keep it visible in allocator mode.",
+      "Connect people and strategy changes.",
+      "Review freshness continuously.",
     ],
   },
   {
@@ -151,7 +151,7 @@ const entities = [
     assets: "$1.567T",
     allocator: true,
     deskFit: "Named-account priority",
-    note: "A natural fit for target-account coverage, mandate tracking, and strategy team workflows.",
+    note: "Named account. Track strategy shifts and decision-maker movement.",
     lastSeen: "Current SWFI entity search",
     freshness: "Observed 14 Apr 2026",
     status: "Search verified",
@@ -165,14 +165,14 @@ const entities = [
     ],
     sources: ["SWFI entity search", "Coverage workflow"],
     signals: [
-      "Decision-maker movement and strategy change belong in one account view.",
-      "Signal routing should prioritize relationship and origination teams.",
-      "This is where SWFI can outperform a generic research portal quickly.",
+      "Keep people moves with strategy shifts.",
+      "Route signals into the live book.",
+      "Make the account easy to revisit.",
     ],
     workflow: [
-      "Keep account coverage active, not archival.",
-      "Use named-account watchlists to power the morning scan.",
-      "Surface opportunities and account movement in the same workspace.",
+      "Keep the account live, not archival.",
+      "Use the watchlist for morning scan.",
+      "Keep opportunities in the same view.",
     ],
   },
   {
@@ -185,7 +185,7 @@ const entities = [
     assets: "$7.113T",
     allocator: true,
     deskFit: "Reserve and macro desk",
-    note: "An important institutional record, but it belongs in a reserve-manager lane rather than mixed blindly into sovereign coverage.",
+    note: "Important context record. Keep it in the reserve lane, not the sovereign lane.",
     lastSeen: "Current SWFI entity search",
     freshness: "Observed 14 Apr 2026",
     status: "Search verified",
@@ -199,14 +199,14 @@ const entities = [
     ],
     sources: ["SWFI entity search", "Capital-pool filter"],
     signals: [
-      "Reserve signals matter, but the desk needs family-aware segmentation.",
-      "Macro-relevant entities should be visible without cluttering sovereign coverage.",
-      "This is a good proof point for why the filtering layer matters commercially.",
+      "Reserve signals matter.",
+      "Keep macro context visible without clutter.",
+      "Segmentation should stay obvious.",
     ],
     workflow: [
-      "Preserve the record but place it in the right desk by default.",
-      "Use a consistent dossier format across families.",
-      "Make segmentation a user-facing advantage.",
+      "Keep the record in the right lane.",
+      "Use the same dossier format.",
+      "Let filters do the sorting.",
     ],
   },
   {
@@ -219,7 +219,7 @@ const entities = [
     assets: "$4.425T",
     allocator: false,
     deskFit: "Context only",
-    note: "A useful record for context, but exactly the kind of result that should not dominate a sovereign and institutional capital workspace by default.",
+    note: "Useful context. Not a default allocator result.",
     lastSeen: "Current SWFI entity search",
     freshness: "Observed 14 Apr 2026",
     status: "Filtered by default",
@@ -233,14 +233,14 @@ const entities = [
     ],
     sources: ["SWFI entity search", "Capital-pool mode"],
     signals: [
-      "This is useful context, not a default capital-pool result.",
-      "Keeping it searchable but hidden by default is a strong demo moment.",
-      "Commercial users should feel that the desk understands scope immediately.",
+      "Keep it searchable.",
+      "Hide it by default in allocator mode.",
+      "Scope should feel obvious.",
     ],
     workflow: [
-      "Keep power-user access without cluttering the main desk.",
-      "Use design and defaults to reinforce the right workflow.",
-      "Make scope control visible and deliberate.",
+      "Preserve power-user access.",
+      "Keep the main desk clean.",
+      "Make scope control visible.",
     ],
   },
 ];
@@ -267,41 +267,41 @@ const opsSteps = [
   {
     step: "01",
     title: "Claim",
-    body: "Profile owners or internal operators claim the record instead of sending blind update requests.",
+    body: "Assign ownership to the record.",
   },
   {
     step: "02",
     title: "Evidence",
-    body: "Every proposed change carries a source, document, or verified decision-maker context.",
+    body: "Attach sources to each proposed change.",
   },
   {
     step: "03",
     title: "Review",
-    body: "An analyst queue assigns freshness, confidence, and publish state before the change goes live.",
+    body: "Review freshness and publish state.",
   },
   {
     step: "04",
     title: "Publish",
-    body: "Approved changes flow back into account desks, signal feeds, and watchlists automatically.",
+    body: "Push approved changes back into the desk.",
   },
 ];
 
 const wins = [
   {
-    title: "The desk feels expensive in the right way.",
-    body: "It reads like a premium market-data product instead of a generic portal or internal tool.",
+    title: "Entity layer",
+    body: "SWFI-seeded accounts and profiles.",
   },
   {
-    title: "It uses live public sources immediately.",
-    body: "SEC, World Bank, USAspending, and optional GDELT enrichment make the pilot feel connected without a big procurement cycle.",
+    title: "Live stack",
+    body: "SEC, World Bank, USAspending, GDELT fallback.",
   },
   {
-    title: "It sells to Wall Street workflows.",
-    body: "Coverage, mandate intelligence, capital flows, and named-account tracking are visible on the page.",
+    title: "Research AI",
+    body: "Read-only, source-backed, institutional scope.",
   },
   {
-    title: "It stays believable.",
-    body: "The pilot is honest about where data is seeded from SWFI and where it is pulled live from free public APIs.",
+    title: "Desk mode",
+    body: "Allocator-first filters and named watchlists.",
   },
 ];
 
@@ -324,7 +324,7 @@ const fallbackFeedItems = [
     state: "Seeded",
     title: "Coverage feed will populate from live public sources once the local API layer returns.",
     summary: "The desk prefers live SEC, World Bank, USAspending, and optional GDELT responses over static filler.",
-    sources: ["Local pilot server"],
+    sources: ["Local source layer"],
   },
 ];
 
@@ -467,7 +467,7 @@ function appendChatMessage(role, text, evidence = [], meta = "") {
   wrapper.className = `chat-message ${role}`;
   wrapper.innerHTML = `
     <div class="chat-message-head">
-      <strong>${role === "user" ? "You" : "Research Copilot"}</strong>
+      <strong>${role === "user" ? "You" : "Research Desk"}</strong>
       ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
     </div>
     <p>${escapeHtml(text)}</p>
@@ -494,7 +494,7 @@ function seedChat() {
   if (!chatLog || chatLog.childElementCount) return;
   appendChatMessage(
     "assistant",
-    "Ask about Blackstone, KKR, Apollo, Brookfield, sovereign accounts, macro context, or mandate movement. This desk stays read-only and answers from the live SEC, World Bank, USAspending, and public-source feed layer wired into the pilot.",
+    "Ask about Blackstone, KKR, Apollo, Brookfield, sovereign accounts, macro context, or mandate movement. The desk stays read-only and answers from the live source stack.",
     [],
     "Research only",
   );
@@ -520,13 +520,13 @@ function renderSignalBoard() {
     {
       label: "Public-source matches",
       value: recipientCount ? String(recipientCount) : "Warm",
-      note: "USAspending and public-source enrichment feeding the pilot",
+      note: "USAspending and public-source coverage",
       tone: "cyan",
     },
     {
       label: "Ops path",
       value: "Claimed",
-      note: "Claim, evidence, review, publish",
+      note: "Claim, review, publish",
       tone: "rose",
     },
   ];

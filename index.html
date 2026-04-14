@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SWFI Intelligence Workspace Demo</title>
+    <title>SWFI Intelligence Workspace</title>
     <meta
       name="description"
-      content="Premium SWFI workspace demo for capital flows, coverage, mandate intelligence, and data feeds."
+      content="SWFI market workspace for allocator coverage, mandate tracking, filings, and research."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,7 +22,7 @@
         <div class="brand-lockup">
           <div class="brand-mark">SW</div>
           <div class="brand-copy">
-            <p class="eyebrow">Pilot workspace</p>
+            <p class="eyebrow">Allocator terminal</p>
             <h1>SWFI Intelligence Workspace</h1>
           </div>
         </div>
@@ -38,7 +38,7 @@
         </label>
 
         <div class="status-row">
-          <span class="status-chip">Pilot build</span>
+          <span class="status-chip">Live workspace</span>
           <span class="status-chip">Read-only</span>
           <span class="status-chip" id="last-refresh">Loading live sources</span>
         </div>
@@ -47,11 +47,10 @@
       <main class="stack">
         <section class="briefing-grid">
           <article class="panel hero">
-            <p class="eyebrow">Institutional capital markets desk</p>
-            <h2>Institutional capital intelligence for fundraising, coverage, and mandate origination.</h2>
+            <p class="eyebrow">Allocator coverage</p>
+            <h2>Track allocators. Watch mandates. Work the list.</h2>
             <p class="lede">
-              A premium market-data style workspace for sovereign wealth funds, pensions, reserve managers,
-              private capital platforms, placement teams, and Wall Street coverage desks.
+              Sovereigns, pensions, reserve managers, public-market filings, and live source checks in one workspace.
             </p>
 
             <div class="hero-actions">
@@ -76,8 +75,8 @@
             <article class="panel audience-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Buyer fit</p>
-                  <h3>Built for Blackstone, KKR, and Wall Street buyer instincts</h3>
+                  <p class="eyebrow">Desk lanes</p>
+                  <h3>Coverage, strategy, and street watch</h3>
                 </div>
               </div>
               <div class="audience-list" id="audience-list"></div>
@@ -86,8 +85,8 @@
             <article class="panel source-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Live source health</p>
-                  <h3>Free APIs wired into the pilot</h3>
+                  <p class="eyebrow">Live source stack</p>
+                  <h3>Source status</h3>
                 </div>
               </div>
               <div class="source-health-list" id="source-health-list"></div>
@@ -105,8 +104,7 @@
             </div>
             <div class="module-list" id="module-list"></div>
             <p class="rail-note">
-              The fastest believable wedge is a premium read-only intelligence desk over the current SWFI
-              estate, with structured write paths added where trust matters.
+              Read-only research surface over the current entity layer.
             </p>
           </aside>
 
@@ -115,7 +113,7 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">Desk overview</p>
-                  <h3>Live public-source signals recut into a premium deal desk</h3>
+                  <h3>Signal tape</h3>
                 </div>
               </div>
               <div class="signal-grid" id="signal-grid"></div>
@@ -125,10 +123,10 @@
             <article class="panel workbench" id="workbench">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Coverage workspace</p>
-                  <h3>Bloomberg-style search and dossier workspace</h3>
+                  <p class="eyebrow">Entity workbench</p>
+                  <h3>Search, filter, and drill into the book</h3>
                 </div>
-                <span class="panel-note">Capital-pool-first view over the current entity universe</span>
+                <span class="panel-note">Allocator-first view</span>
               </div>
 
               <div class="surface-controls">
@@ -169,7 +167,7 @@
                     <section class="detail-card">
                       <div class="detail-head">
                         <p class="eyebrow">Workflow</p>
-                        <h4>What the new layer changes</h4>
+                        <h4>Desk actions</h4>
                       </div>
                       <div class="workflow-list" id="workflow-list"></div>
                     </section>
@@ -185,8 +183,8 @@
             <article class="panel module-spotlight">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Active module</p>
-                  <h3>What this desk is for</h3>
+                  <p class="eyebrow">Current view</p>
+                  <h3>Desk focus</h3>
                 </div>
               </div>
               <div class="spotlight-meta" id="module-meta"></div>
@@ -235,7 +233,7 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">Signal feed</p>
-                  <h3>Public-source market intelligence</h3>
+                  <h3>Market tape</h3>
                 </div>
               </div>
               <div class="feed-list" id="feed-list"></div>
@@ -265,7 +263,7 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">Watchlists</p>
-                  <h3>Named desks, not generic firehoses</h3>
+                  <h3>Desk watchlists</h3>
                 </div>
               </div>
               <div class="watchlist-list" id="watchlist-list"></div>
@@ -275,7 +273,7 @@
               <div class="panel-head">
                 <div>
                   <p class="eyebrow">Profile ops</p>
-                  <h3>Decision-maker and profile ops</h3>
+                  <h3>Profile queue</h3>
                 </div>
               </div>
               <div class="ops-steps" id="ops-steps"></div>
@@ -285,8 +283,8 @@
 
         <footer class="panel footer">
           <div class="footer-head">
-            <p class="eyebrow">Why this lands</p>
-            <h3>It feels like a premium finance product while staying honest about the data underneath.</h3>
+            <p class="eyebrow">System notes</p>
+            <h3>Seeded entity layer. Live public-source stack. Read-only research AI.</h3>
           </div>
           <div class="win-list" id="win-list"></div>
         </footer>
