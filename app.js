@@ -1,320 +1,35 @@
-const modules = [
-  {
-    id: "capital-flows",
-    label: "Capital Flows",
-    eyebrow: "Flow monitor",
-    title: "Where capital is moving across sovereign and institutional accounts.",
-    copy:
-      "Focus on pool size, account changes, and fresh signals that move a coverage list.",
-    metrics: ["Flow signals", "Account tiers", "Watchlist routing"],
-    checklist: [
-      "Keep allocators first.",
-      "Route signals into accounts.",
-      "Cut general-market noise.",
-    ],
-  },
-  {
-    id: "coverage-desk",
-    label: "Coverage Desk",
-    eyebrow: "Coverage monitor",
-    title: "One book for institutions, people, signals, and profile state.",
-    copy:
-      "Use the desk to move from search to account view without leaving the workspace.",
-    metrics: ["Account coverage", "People context", "Morning scan"],
-    checklist: [
-      "Keep the book live.",
-      "Show the source trail.",
-      "Stay account-centric.",
-    ],
-  },
-  {
-    id: "mandate-radar",
-    label: "Mandate Radar",
-    eyebrow: "Signal monitor",
-    title: "Mandate movement, strategy shifts, and search signals.",
-    copy:
-      "Pull headlines, filings, and public-source movement into one read path.",
-    metrics: ["Mandate shifts", "Search signals", "Strategy moves"],
-    checklist: [
-      "Turn noise into account signals.",
-      "Keep signals short.",
-      "Stay source-backed.",
-    ],
-  },
-  {
-    id: "profile-ops",
-    label: "Profile Ops",
-    eyebrow: "Queue monitor",
-    title: "Claims, evidence, review, and publish state.",
-    copy:
-      "Keep profile change visible instead of burying it behind request forms.",
-    metrics: ["Claim queue", "Evidence review", "Publish state"],
-    checklist: [
-      "Keep ownership visible.",
-      "Review before publish.",
-      "Feed changes back into the desk.",
-    ],
-  },
-];
-
-const entities = [
-  {
-    id: "gpfg",
-    name: "Norway Government Pension Fund Global",
-    family: "State capital",
-    rawType: "Sovereign Wealth Fund",
-    country: "Norway",
-    region: "Europe",
-    assets: "$2.117T",
-    allocator: true,
-    deskFit: "Flagship sovereign account",
-    note: "Flagship sovereign account. Real assets, exclusions, and policy signals matter.",
-    lastSeen: "Current SWFI entity profile",
-    freshness: "Observed 14 Apr 2026",
-    status: "Profile verified",
-    facts: [
-      ["Legal name", "Norges Bank Investment Management"],
-      ["Desk label", "Flagship sovereign account"],
-      ["Transparency", "10 / 10"],
-      ["Alt assets", "Real Estate, Infrastructure, Hedge Funds"],
-      ["Established", "01 Jan 1990"],
-      ["Desk priority", "Coverage tier 1"],
-    ],
-    sources: ["SWFI profile page", "nbim.no", "Analyst-ready dossier"],
-    signals: [
-      "Watch policy changes and exclusions.",
-      "Route real-asset activity into the live list.",
-      "Treat freshness as part of coverage quality.",
-    ],
-    workflow: [
-      "Anchor the sovereign book here.",
-      "Push updates into review.",
-      "Feed changes into watchlists.",
-    ],
-  },
-  {
-    id: "safe",
-    name: "SAFE Investment Company",
-    family: "State capital",
-    rawType: "Sovereign Wealth Fund",
-    country: "China",
-    region: "Asia",
-    assets: "$1.952T",
-    allocator: true,
-    deskFit: "Core Asia sovereign coverage",
-    note: "Core Asia sovereign. Keep it in the top coverage lane.",
-    lastSeen: "Current SWFI entity search",
-    freshness: "Observed 14 Apr 2026",
-    status: "Search verified",
-    facts: [
-      ["Country", "China"],
-      ["Desk label", "Core Asia sovereign coverage"],
-      ["Raw type", "Sovereign Wealth Fund"],
-      ["Region", "Asia"],
-      ["Visible assets", "$1.952T"],
-      ["Desk priority", "Coverage tier 1"],
-    ],
-    sources: ["SWFI entity search", "Coverage explorer"],
-    signals: [
-      "Keep mandate context beside the profile.",
-      "Route movement into Asia watchlists.",
-      "Make the account fast to scan.",
-    ],
-    workflow: [
-      "Keep it visible in allocator mode.",
-      "Connect people and strategy changes.",
-      "Review freshness continuously.",
-    ],
-  },
-  {
-    id: "cic",
-    name: "China Investment Corporation",
-    family: "State capital",
-    rawType: "Sovereign Wealth Fund",
-    country: "China",
-    region: "Asia",
-    assets: "$1.567T",
-    allocator: true,
-    deskFit: "Named-account priority",
-    note: "Named account. Track strategy shifts and decision-maker movement.",
-    lastSeen: "Current SWFI entity search",
-    freshness: "Observed 14 Apr 2026",
-    status: "Search verified",
-    facts: [
-      ["Country", "China"],
-      ["Desk label", "Named-account priority"],
-      ["Raw type", "Sovereign Wealth Fund"],
-      ["Region", "Asia"],
-      ["Visible assets", "$1.567T"],
-      ["Desk priority", "Coverage tier 1"],
-    ],
-    sources: ["SWFI entity search", "Coverage workflow"],
-    signals: [
-      "Keep people moves with strategy shifts.",
-      "Route signals into the live book.",
-      "Make the account easy to revisit.",
-    ],
-    workflow: [
-      "Keep the account live, not archival.",
-      "Use the watchlist for morning scan.",
-      "Keep opportunities in the same view.",
-    ],
-  },
-  {
-    id: "fed",
-    name: "Federal Reserve System",
-    family: "Reserve manager",
-    rawType: "Central Bank",
-    country: "United States",
-    region: "North America",
-    assets: "$7.113T",
-    allocator: true,
-    deskFit: "Reserve and macro desk",
-    note: "Important context record. Keep it in the reserve lane, not the sovereign lane.",
-    lastSeen: "Current SWFI entity search",
-    freshness: "Observed 14 Apr 2026",
-    status: "Search verified",
-    facts: [
-      ["Country", "United States"],
-      ["Desk label", "Reserve and macro desk"],
-      ["Raw type", "Central Bank"],
-      ["Region", "North America"],
-      ["Visible assets", "$7.113T"],
-      ["Desk priority", "Context tier 1"],
-    ],
-    sources: ["SWFI entity search", "Capital-pool filter"],
-    signals: [
-      "Reserve signals matter.",
-      "Keep macro context visible without clutter.",
-      "Segmentation should stay obvious.",
-    ],
-    workflow: [
-      "Keep the record in the right lane.",
-      "Use the same dossier format.",
-      "Let filters do the sorting.",
-    ],
-  },
-  {
-    id: "jpm",
-    name: "JPMorgan Chase & Co",
-    family: "Out of scope",
-    rawType: "Financial Holding Company",
-    country: "United States",
-    region: "North America",
-    assets: "$4.425T",
-    allocator: false,
-    deskFit: "Context only",
-    note: "Useful context. Not a default allocator result.",
-    lastSeen: "Current SWFI entity search",
-    freshness: "Observed 14 Apr 2026",
-    status: "Filtered by default",
-    facts: [
-      ["Country", "United States"],
-      ["Desk label", "Context only"],
-      ["Raw type", "Financial Holding Company"],
-      ["Region", "North America"],
-      ["Visible assets", "$4.425T"],
-      ["Desk priority", "Background only"],
-    ],
-    sources: ["SWFI entity search", "Capital-pool mode"],
-    signals: [
-      "Keep it searchable.",
-      "Hide it by default in allocator mode.",
-      "Scope should feel obvious.",
-    ],
-    workflow: [
-      "Preserve power-user access.",
-      "Keep the main desk clean.",
-      "Make scope control visible.",
-    ],
-  },
-];
-
-const opsSteps = [
-  {
-    step: "01",
-    title: "Claim",
-    body: "Assign ownership to the record.",
-  },
-  {
-    step: "02",
-    title: "Evidence",
-    body: "Attach sources to each proposed change.",
-  },
-  {
-    step: "03",
-    title: "Review",
-    body: "Review freshness and publish state.",
-  },
-  {
-    step: "04",
-    title: "Publish",
-    body: "Push approved changes back into the desk.",
-  },
-];
-
-const fallbackLiveData = {
-  generated_at: null,
-  statuses: [
-    { source: "SEC", status: "loading", note: "Pulling filings" },
-    { source: "World Bank", status: "loading", note: "Pulling macro context" },
-    { source: "USAspending", status: "loading", note: "Pulling public-sector matches" },
-    { source: "GDELT", status: "loading", note: "Pulling signal feed" },
-  ],
-  filings: [],
-  macro: [],
-  recipients: [],
-  feed: [],
-};
-
-const fallbackFeedItems = [
-  {
-    state: "Seeded",
-    title: "Coverage feed will populate from live public sources once the local API layer returns.",
-    summary: "The desk prefers live SEC, World Bank, USAspending, and optional GDELT responses over static filler.",
-    sources: ["Local source layer"],
-  },
-];
-
 const state = {
-  activeModule: "capital-flows",
-  activeEntityId: "gpfg",
+  dashboard: null,
+  lane: "All",
   query: "",
-  allocatorOnly: true,
-  family: "All",
-  liveData: fallbackLiveData,
 };
 
-const metricStrip = document.getElementById("metric-strip");
-const sourceHealthList = document.getElementById("source-health-list");
-const moduleList = document.getElementById("module-list");
-const signalGrid = document.getElementById("signal-grid");
-const coverageList = document.getElementById("coverage-list");
-const commandSearch = document.getElementById("command-search");
-const entitySearch = document.getElementById("entity-search");
-const allocatorToggle = document.getElementById("allocator-toggle");
-const familyFilters = document.getElementById("family-filters");
-const entityList = document.getElementById("entity-list");
-const dossierTop = document.getElementById("dossier-top");
-const factGrid = document.getElementById("fact-grid");
-const signalList = document.getElementById("signal-list");
-const workflowList = document.getElementById("workflow-list");
-const sourceStrip = document.getElementById("source-strip");
-const moduleMeta = document.getElementById("module-meta");
-const moduleTitle = document.getElementById("module-title");
-const moduleCopy = document.getElementById("module-copy");
-const moduleMetrics = document.getElementById("module-metrics");
-const moduleChecklist = document.getElementById("module-checklist");
-const feedList = document.getElementById("feed-list");
-const filingsList = document.getElementById("filings-list");
-const macroList = document.getElementById("macro-list");
-const opsStepsEl = document.getElementById("ops-steps");
+const statusStrip = document.getElementById("status-strip");
+const metricGrid = document.getElementById("metric-grid");
+const laneTabs = document.getElementById("lane-tabs");
+const proposalBrief = document.getElementById("proposal-brief");
+const referenceGrid = document.getElementById("reference-grid");
+const collectionList = document.getElementById("collection-list");
+const laneList = document.getElementById("lane-list");
+const actionList = document.getElementById("action-list");
+const clientFilters = document.getElementById("client-filters");
+const concernSearch = document.getElementById("concern-search");
+const concernList = document.getElementById("concern-list");
+const concernCount = document.getElementById("concern-count");
+const apiTitle = document.getElementById("api-title");
+const apiPath = document.getElementById("api-path");
+const apiSummaryGrid = document.getElementById("api-summary-grid");
+const apiParamList = document.getElementById("api-param-list");
+const apiFieldList = document.getElementById("api-field-list");
+const readinessList = document.getElementById("readiness-list");
+const deliverableList = document.getElementById("deliverable-list");
+const telemetryChart = document.getElementById("telemetry-chart");
 const lastRefresh = document.getElementById("last-refresh");
 const chatLog = document.getElementById("chat-log");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
-
-const familyOptions = ["All", ...new Set(entities.map((entity) => entity.family))];
+const benchmarkList = document.getElementById("benchmark-list");
+const apiStackList = document.getElementById("api-stack-list");
 
 function escapeHtml(value) {
   return String(value)
@@ -326,7 +41,7 @@ function escapeHtml(value) {
 }
 
 function formatRelativeDate(isoString) {
-  if (!isoString) return "Not refreshed";
+  if (!isoString) return "No refresh time";
   const deltaMs = Date.now() - new Date(isoString).getTime();
   const minutes = Math.max(1, Math.round(deltaMs / 60000));
   if (minutes < 60) return `Refreshed ${minutes}m ago`;
@@ -334,73 +49,451 @@ function formatRelativeDate(isoString) {
   return `Refreshed ${hours}h ago`;
 }
 
-function renderMetricStrip() {
-  const statuses = state.liveData.statuses || [];
-  const okCount = statuses.filter((item) => item.status === "ok").length;
-  const gdeltState = statuses.find((item) => item.source === "GDELT")?.status ?? "unknown";
+function statusTone(status) {
+  return {
+    ok: "ok",
+    partial: "partial",
+    active: "ok",
+    scaffolded: "watch",
+    blocked: "blocked",
+    watch: "watch",
+    direct_competitor: "partial",
+    platform_benchmark: "partial",
+    missing: "blocked",
+    partial_have: "partial",
+    have_base_need_productization: "partial",
+  }[status] || status;
+}
 
-  const metricCards = [
-    {
-      label: "Live sources",
-      value: `${okCount}/${statuses.length || 4}`,
-      note: "Public APIs currently responding to the desk",
-    },
-    {
-      label: "Street filings",
-      value: String((state.liveData.filings || []).length || 0),
-      note: "Latest SEC filing pulse for key public managers",
-    },
-    {
-      label: "Macro countries",
-      value: String((state.liveData.macro || []).length || 0),
-      note: "World Bank GDP context for core sovereign markets",
-    },
-    {
-      label: "Signal feed",
-      value: gdeltState === "ok" ? "Live" : gdeltState === "rate_limited" ? "Fallback" : "Seeded",
-      note: "Public-source feed with graceful fallback when rate-limited",
-    },
-  ];
+function renderStatusStrip() {
+  statusStrip.innerHTML = state.dashboard.statuses
+    .map(
+      (item) => `
+        <article class="status-pill tone-${statusTone(item.status)}">
+          <strong>${escapeHtml(item.source)}</strong>
+          <span>${escapeHtml(item.note)}</span>
+        </article>
+      `,
+    )
+    .join("");
+}
 
-  metricStrip.innerHTML = metricCards
+function renderMetricGrid() {
+  metricGrid.innerHTML = state.dashboard.metric_cards
     .map(
       (card) => `
         <article class="metric-card">
-          <span class="metric-label">${card.label}</span>
-          <strong>${card.value}</strong>
-          <p>${card.note}</p>
+          <span class="metric-label">${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(card.value)}</strong>
+          <p>${escapeHtml(card.note)}</p>
         </article>
       `,
     )
     .join("");
 }
 
-function renderSourceHealth() {
-  if (!sourceHealthList) return;
-  const statuses = state.liveData.statuses || [];
-  sourceHealthList.innerHTML = statuses
+function renderLaneSelectors() {
+  const lanes = [{ name: "All", focus: "All client lanes" }, ...state.dashboard.lanes];
+
+  const buttonMarkup = lanes
+    .map(
+      (lane) => `
+        <button
+          class="lane-tab ${lane.name === state.lane ? "active" : ""}"
+          type="button"
+          data-lane="${escapeHtml(lane.name)}"
+        >
+          <span>${escapeHtml(lane.name)}</span>
+          <strong>${escapeHtml(lane.name === "All" ? "Full desk" : lane.focus)}</strong>
+        </button>
+      `,
+    )
+    .join("");
+
+  laneTabs.innerHTML = buttonMarkup;
+  clientFilters.innerHTML = buttonMarkup;
+
+  document.querySelectorAll("[data-lane]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.lane = button.dataset.lane || "All";
+      renderLaneSelectors();
+      renderLaneList();
+      renderConcernList();
+      renderTelemetryChart();
+    });
+  });
+}
+
+function renderProposalBrief() {
+  const proposal = state.dashboard.proposal;
+  proposalBrief.innerHTML = `
+    <div class="brief-grid">
+      <article class="brief-card">
+        <span class="metric-label">Project fee</span>
+        <strong>${escapeHtml(proposal.fee)}</strong>
+        <p>${escapeHtml(proposal.goal)}</p>
+      </article>
+      <article class="brief-card">
+        <span class="metric-label">Timeline</span>
+        <strong>${escapeHtml(proposal.timeline)}</strong>
+        <p>${proposal.payments.map(escapeHtml).join(" · ")}</p>
+      </article>
+    </div>
+  `;
+}
+
+function renderReferenceGrid() {
+  const reference = state.dashboard.platform_reference;
+  const cards = reference.counts
     .map(
       (item) => `
-        <article class="source-health-card tone-${item.status}">
-          <div class="source-health-head">
-            <strong>${item.source}</strong>
-            <span>${item.status}</span>
-          </div>
-          <p>${item.note}</p>
+        <article class="reference-card">
+          <span class="metric-label">${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <p>${escapeHtml(item.note)}</p>
         </article>
       `,
     )
     .join("");
+
+  const surfaces = reference.surfaces
+    .map(
+      (item) => `
+        <article class="surface-card">
+          <span class="metric-label">${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <p>${escapeHtml(item.note)}</p>
+        </article>
+      `,
+    )
+    .join("");
+
+  referenceGrid.innerHTML = `
+    <p class="panel-note">${escapeHtml(reference.observed_at)}</p>
+    <div class="reference-cards">${cards}</div>
+    <div class="surface-list">${surfaces}</div>
+  `;
+}
+
+function renderCollections() {
+  collectionList.innerHTML = state.dashboard.aum_docs.collections
+    .slice(0, 14)
+    .map((item) => `<span class="data-pill">${escapeHtml(item.label)}</span>`)
+    .join("");
+}
+
+function renderLaneList() {
+  laneList.innerHTML = state.dashboard.lanes
+    .map(
+      (lane) => `
+        <button
+          class="lane-card ${lane.name === state.lane ? "active" : ""}"
+          type="button"
+          data-lane="${escapeHtml(lane.name)}"
+        >
+          <div class="lane-head">
+            <div>
+              <span class="metric-label">${escapeHtml(lane.cadence)}</span>
+              <strong>${escapeHtml(lane.name)}</strong>
+            </div>
+            <span class="status-chip tone-${statusTone(lane.status)}">${escapeHtml(lane.status)}</span>
+          </div>
+          <p>${escapeHtml(lane.focus)}</p>
+          <div class="lane-metrics">
+            <span><strong>${lane.issue_count}</strong><em>Issues</em></span>
+            <span><strong>${lane.manual_count}</strong><em>Manual</em></span>
+            <span><strong>${lane.field_gap_count}</strong><em>Field gaps</em></span>
+          </div>
+          <div class="lane-footer">
+            <span>${escapeHtml(lane.deliverable)}</span>
+            <span>${escapeHtml(lane.source_note)}</span>
+          </div>
+        </button>
+      `,
+    )
+    .join("");
+
+  laneList.querySelectorAll("[data-lane]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.lane = button.dataset.lane || "All";
+      renderLaneSelectors();
+      renderLaneList();
+      renderConcernList();
+      renderTelemetryChart();
+    });
+  });
+}
+
+function renderActionList() {
+  actionList.innerHTML = state.dashboard.action_queue
+    .map(
+      (item) => `
+        <article class="action-card tone-${statusTone(item.status)}">
+          <div class="action-head">
+            <strong>${escapeHtml(item.title)}</strong>
+            <span>${escapeHtml(item.priority)}</span>
+          </div>
+          <p>${escapeHtml(item.impact)}</p>
+          <div class="action-meta">
+            <span>${escapeHtml(item.lane)}</span>
+            <span>${escapeHtml(item.status)}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function filteredConcerns() {
+  const query = state.query.trim().toLowerCase();
+  return state.dashboard.concerns.filter((row) => {
+    const matchesLane = state.lane === "All" ? true : row.client === state.lane;
+    const haystack = [row.client, row.use_case, row.requirement, row.challenge, row.recommendation, row.title]
+      .join(" ")
+      .toLowerCase();
+    const matchesQuery = query ? haystack.includes(query) : true;
+    return matchesLane && matchesQuery;
+  });
+}
+
+function renderConcernList() {
+  const rows = filteredConcerns();
+  concernCount.textContent = `${rows.length} issue${rows.length === 1 ? "" : "s"}`;
+
+  if (!rows.length) {
+    concernList.innerHTML = `
+      <article class="empty-state">
+        <strong>No concern rows match the current lane filter.</strong>
+        <p>Widen the desk filter or clear the search box.</p>
+      </article>
+    `;
+    return;
+  }
+
+  concernList.innerHTML = rows
+    .map(
+      (row) => `
+        <article class="concern-card tone-${statusTone(row.state)}">
+          <div class="concern-head-row">
+            <div>
+              <p class="eyebrow">${escapeHtml(row.client)} · ${escapeHtml(row.use_case)}</p>
+              <h4>${escapeHtml(row.title)}</h4>
+            </div>
+            <div class="tag-column">
+              <span class="status-chip tone-${statusTone(row.state)}">${escapeHtml(row.state)}</span>
+              <span class="priority-chip">${escapeHtml(row.priority)}</span>
+            </div>
+          </div>
+
+          ${
+            row.requirement
+              ? `<div class="concern-block"><span>Requirement</span><p>${escapeHtml(row.requirement)}</p></div>`
+              : ""
+          }
+          ${
+            row.challenge
+              ? `<div class="concern-block"><span>Challenge</span><p>${escapeHtml(row.challenge)}</p></div>`
+              : ""
+          }
+          ${
+            row.recommendation
+              ? `<div class="concern-block"><span>Recommendation</span><p>${escapeHtml(row.recommendation)}</p></div>`
+              : ""
+          }
+          <div class="tag-row">
+            ${row.tags.map((tag) => `<span class="data-pill">${escapeHtml(tag.replaceAll("_", " "))}</span>`).join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderApiSurface() {
+  const docs = state.dashboard.aum_docs;
+  apiTitle.textContent = docs.title;
+  apiPath.textContent = docs.path;
+
+  const summaryCards = [
+    {
+      label: "Query params",
+      value: String(docs.query_parameters.length),
+      note: "Time windows, value ranges, entity_id, pagination, sort",
+    },
+    {
+      label: "Example fields",
+      value: String(docs.example_fields.length),
+      note: "Assets, net assets, investments, liabilities, allocation splits",
+    },
+    {
+      label: "Docs collections",
+      value: String(docs.collections.length),
+      note: "AUM plus adjacent object collections in the public docs",
+    },
+    {
+      label: "Delivery modes",
+      value: "API + CSV + UI",
+      note: "Product must support machine delivery and operator workflows",
+    },
+  ];
+
+  apiSummaryGrid.innerHTML = summaryCards
+    .map(
+      (card) => `
+        <article class="summary-card">
+          <span class="metric-label">${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(card.value)}</strong>
+          <p>${escapeHtml(card.note)}</p>
+        </article>
+      `,
+    )
+    .join("");
+
+  apiParamList.innerHTML = docs.query_parameters
+    .slice(0, 18)
+    .map(
+      (param) => `
+        <article class="api-item">
+          <div class="api-item-head">
+            <strong>${escapeHtml(param.name)}</strong>
+            <span>${escapeHtml(param.type)}</span>
+          </div>
+          <p>${escapeHtml(param.description)}</p>
+        </article>
+      `,
+    )
+    .join("");
+
+  apiFieldList.innerHTML = docs.example_fields
+    .slice(0, 24)
+    .map((field) => `<span class="data-pill">${escapeHtml(field)}</span>`)
+    .join("");
+}
+
+function renderReadiness() {
+  readinessList.innerHTML = state.dashboard.readiness
+    .map(
+      (item) => `
+        <article class="readiness-card tone-${statusTone(item.status)}">
+          <div class="readiness-head">
+            <strong>${escapeHtml(item.title)}</strong>
+            <span class="status-chip tone-${statusTone(item.status)}">${escapeHtml(item.status)}</span>
+          </div>
+          <p>${escapeHtml(item.note)}</p>
+        </article>
+      `,
+    )
+    .join("");
+
+  deliverableList.innerHTML = state.dashboard.proposal.deliverables
+    .map((item) => `<article class="deliverable-item"><span class="list-mark">OK</span><p>${escapeHtml(item)}</p></article>`)
+    .join("");
+}
+
+function renderBenchmarkPanel() {
+  benchmarkList.innerHTML = state.dashboard.competitor_benchmark
+    .map(
+      (item) => `
+        <article class="benchmark-card">
+          <div class="benchmark-head">
+            <div>
+              <p class="eyebrow">${escapeHtml(item.status.replaceAll("_", " "))}</p>
+              <strong>${escapeHtml(item.name)}</strong>
+            </div>
+          </div>
+          <p>${escapeHtml(item.headline)}</p>
+          <div class="mini-list">
+            ${item.signals.map((signal) => `<article class="mini-item"><span class="list-mark">01</span><p>${escapeHtml(signal)}</p></article>`).join("")}
+          </div>
+          <a class="source-link" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">${escapeHtml(item.source)}</a>
+        </article>
+      `,
+    )
+    .join("");
+
+  apiStackList.innerHTML = state.dashboard.required_api_stack
+    .map(
+      (item) => `
+        <article class="stack-card tone-${statusTone(item.status)}">
+          <div class="readiness-head">
+            <strong>${escapeHtml(item.name)}</strong>
+            <span class="status-chip tone-${statusTone(item.status)}">${escapeHtml(item.status.replaceAll("_", " "))}</span>
+          </div>
+          <p>${escapeHtml(item.why)}</p>
+          <div class="concern-block compact">
+            <span>Gap</span>
+            <p>${escapeHtml(item.gap)}</p>
+          </div>
+          <div class="tag-row">
+            ${(item.sources || [])
+              .map(
+                (source) => `
+                  <a class="data-pill pill-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
+                    ${escapeHtml(source.label)}
+                  </a>
+                `,
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderTelemetryChart() {
+  const selected = state.lane === "All" ? state.dashboard.lanes : state.dashboard.lanes.filter((lane) => lane.name === state.lane);
+  const values = selected.map((lane) => Math.max(1, lane.issue_count + lane.manual_count + lane.field_gap_count));
+  const maxValue = Math.max(...values, 1);
+  const width = 320;
+  const height = 120;
+  const step = values.length > 1 ? width / (values.length - 1) : width;
+  const points = values
+    .map((value, index) => {
+      const x = values.length === 1 ? width / 2 : index * step;
+      const y = height - (value / maxValue) * 90 - 12;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  const labels = selected
+    .map(
+      (lane, index) => `
+        <div class="telemetry-legend-item">
+          <span>${escapeHtml(lane.name)}</span>
+          <strong>${values[index]}</strong>
+        </div>
+      `,
+    )
+    .join("");
+
+  telemetryChart.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" class="sparkline" role="img" aria-label="Lane blocker pressure">
+      <defs>
+        <linearGradient id="spark" x1="0%" x2="100%" y1="0%" y2="0%">
+          <stop offset="0%" stop-color="#4dff9a" />
+          <stop offset="100%" stop-color="#d5ff52" />
+        </linearGradient>
+      </defs>
+      <polyline points="${points}" fill="none" stroke="url(#spark)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      ${values
+        .map((value, index) => {
+          const x = values.length === 1 ? width / 2 : index * step;
+          const y = height - (value / maxValue) * 90 - 12;
+          return `<circle cx="${x}" cy="${y}" r="4.5" fill="#08110d" stroke="#4dff9a" stroke-width="2"></circle>`;
+        })
+        .join("")}
+    </svg>
+    <div class="telemetry-legend">${labels}</div>
+  `;
 }
 
 function appendChatMessage(role, text, evidence = [], meta = "") {
-  if (!chatLog) return;
-
   const wrapper = document.createElement("article");
   wrapper.className = `chat-message ${role}`;
   wrapper.innerHTML = `
     <div class="chat-message-head">
-      <strong>${role === "user" ? "You" : "Research Desk"}</strong>
+      <strong>${role === "user" ? "You" : "Ops Copilot"}</strong>
       ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
     </div>
     <p>${escapeHtml(text)}</p>
@@ -424,511 +517,100 @@ function appendChatMessage(role, text, evidence = [], meta = "") {
 }
 
 function seedChat() {
-  if (!chatLog || chatLog.childElementCount) return;
+  if (chatLog.childElementCount) return;
   appendChatMessage(
     "assistant",
-    "Ask about Blackstone, KKR, Apollo, Brookfield, sovereign accounts, macro context, or mandate movement. The desk stays read-only and answers from the live source stack.",
+    "Ask about client blockers, competitive gaps, AUM schema readiness, or which APIs are still missing to make SWFI a full delivery product.",
     [],
-    "Research only",
+    "Read-only analysis",
   );
 }
 
-function renderSignalBoard() {
-  const recipientCount = (state.liveData.recipients || []).reduce((total, item) => total + (item.count || 0), 0);
-  const filingPulse = state.liveData.filings?.[0]?.form ?? "n/a";
-
-  const signalTiles = [
-    {
-      label: "Coverage mode",
-      value: "Capital pools",
-      note: "Sovereign and institutional capital ranked above generic finance noise",
-      tone: "teal",
-    },
-    {
-      label: "Street pulse",
-      value: filingPulse,
-      note: "Latest live SEC form across the tracked public managers",
-      tone: "amber",
-    },
-    {
-      label: "Public-source matches",
-      value: recipientCount ? String(recipientCount) : "Warm",
-      note: "USAspending and public-source coverage",
-      tone: "cyan",
-    },
-    {
-      label: "Ops path",
-      value: "Claimed",
-      note: "Claim, review, publish",
-      tone: "rose",
-    },
-  ];
-
-  const coverageRows = [
-    { label: "State capital", width: 95, note: "Core target universe", tone: "teal" },
-    { label: "Reserve managers", width: 72, note: "Segmented but visible", tone: "cyan" },
-    { label: "Mandate radar", width: 84, note: "Origination-first signal flow", tone: "amber" },
-    { label: "Street coverage", width: 88, note: "Blackstone, KKR, Apollo, Brookfield, BlackRock", tone: "amber" },
-    { label: "Commercial finance noise", width: 34, note: "Hidden unless widened intentionally", tone: "rose" },
-  ];
-
-  signalGrid.innerHTML = signalTiles
-    .map(
-      (tile) => `
-        <article class="signal-tile tone-${tile.tone}">
-          <span class="signal-label">${tile.label}</span>
-          <strong>${tile.value}</strong>
-          <p>${tile.note}</p>
-        </article>
-      `,
-    )
-    .join("");
-
-  coverageList.innerHTML = coverageRows
-    .map(
-      (row) => `
-        <article class="coverage-row">
-          <div class="coverage-head">
-            <strong>${row.label}</strong>
-            <span>${row.note}</span>
-          </div>
-          <div class="coverage-bar tone-${row.tone}">
-            <span style="width:${row.width}%"></span>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function syncModuleButtons() {
-  document.querySelectorAll("[data-module-target]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.moduleTarget === state.activeModule);
-  });
-}
-
-function setModule(moduleId) {
-  state.activeModule = moduleId;
-  renderModules();
-  renderModuleSpotlight();
-  syncModuleButtons();
-}
-
-function renderModules() {
-  if (!moduleList) return;
-  moduleList.innerHTML = modules
-    .map(
-      (module) => `
-        <button
-          class="module-card ${module.id === state.activeModule ? "active" : ""}"
-          type="button"
-          data-module-id="${module.id}"
-        >
-          <span class="module-eyebrow">${module.eyebrow}</span>
-          <strong>${module.label}</strong>
-          <p>${module.title}</p>
-        </button>
-      `,
-    )
-    .join("");
-
-  moduleList.querySelectorAll("[data-module-id]").forEach((button) => {
-    button.addEventListener("click", () => setModule(button.dataset.moduleId));
-  });
-}
-
-function renderModuleSpotlight() {
-  if (!moduleMeta || !moduleTitle || !moduleCopy || !moduleMetrics || !moduleChecklist) return;
-  const module = modules.find((item) => item.id === state.activeModule);
-  if (!module) return;
-
-  moduleMeta.innerHTML = `<span class="spotlight-chip">${module.eyebrow}</span><span class="spotlight-chip">${module.label}</span>`;
-  moduleTitle.textContent = module.title;
-  moduleCopy.textContent = module.copy;
-  moduleMetrics.innerHTML = module.metrics.map((item) => `<span class="metric-pill">${item}</span>`).join("");
-  moduleChecklist.innerHTML = module.checklist
-    .map(
-      (item) => `
-        <article class="check-item">
-          <span class="check-mark">OK</span>
-          <p>${item}</p>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function getFilteredEntities() {
-  const query = state.query.trim().toLowerCase();
-
-  return entities.filter((entity) => {
-    const matchesAllocator = state.allocatorOnly ? entity.allocator : true;
-    const matchesFamily = state.family === "All" ? true : entity.family === state.family;
-    const haystack = [
-      entity.name,
-      entity.country,
-      entity.region,
-      entity.rawType,
-      entity.family,
-      entity.deskFit,
-    ]
-      .join(" ")
-      .toLowerCase();
-    const matchesQuery = query ? haystack.includes(query) : true;
-
-    return matchesAllocator && matchesFamily && matchesQuery;
-  });
-}
-
-function ensureActiveEntity(filtered) {
-  if (!filtered.length) {
-    state.activeEntityId = "";
-    return;
-  }
-
-  if (!filtered.some((entity) => entity.id === state.activeEntityId)) {
-    state.activeEntityId = filtered[0].id;
-  }
-}
-
-function renderFamilyFilters() {
-  familyFilters.innerHTML = familyOptions
-    .map(
-      (family) => `
-        <button
-          class="filter-btn ${family === state.family ? "active" : ""}"
-          type="button"
-          data-family="${family}"
-        >
-          ${family}
-        </button>
-      `,
-    )
-    .join("");
-
-  familyFilters.querySelectorAll("[data-family]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.family = button.dataset.family;
-      renderEntitiesAndDossier();
-      renderFamilyFilters();
-    });
-  });
-}
-
-function renderEntitiesAndDossier() {
-  const filtered = getFilteredEntities();
-  ensureActiveEntity(filtered);
-
-  if (!filtered.length) {
-    entityList.innerHTML = `
-      <article class="empty-state">
-        <strong>No entities match the current desk filters.</strong>
-        <p>Widen the family filter or turn capital-pool-only mode off.</p>
-      </article>
-    `;
-    dossierTop.innerHTML = "";
-    factGrid.innerHTML = "";
-    signalList.innerHTML = "";
-    workflowList.innerHTML = "";
-    sourceStrip.innerHTML = "";
-    return;
-  }
-
-  entityList.innerHTML = filtered
-    .map(
-      (entity) => `
-        <button
-          class="entity-card ${entity.id === state.activeEntityId ? "active" : ""}"
-          type="button"
-          data-entity-id="${entity.id}"
-        >
-          <div class="entity-head">
-            <div>
-              <strong>${entity.name}</strong>
-              <p>${entity.country} · ${entity.region}</p>
-            </div>
-            <span class="family-badge">${entity.family}</span>
-          </div>
-          <div class="entity-metrics">
-            <span><strong>Raw type</strong><em>${entity.rawType}</em></span>
-            <span><strong>Assets</strong><em>${entity.assets}</em></span>
-            <span><strong>Desk fit</strong><em>${entity.deskFit}</em></span>
-          </div>
-          <p class="entity-note">${entity.note}</p>
-        </button>
-      `,
-    )
-    .join("");
-
-  entityList.querySelectorAll("[data-entity-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.activeEntityId = button.dataset.entityId;
-      renderEntitiesAndDossier();
-    });
-  });
-
-  const entity = entities.find((item) => item.id === state.activeEntityId);
-  if (!entity) return;
-
-  dossierTop.innerHTML = `
-    <div class="dossier-heading">
-      <p class="eyebrow">Selected account</p>
-      <h3>${entity.name}</h3>
-      <p class="dossier-copy">${entity.note}</p>
-    </div>
-    <div class="dossier-badges">
-      <span class="metric-pill">${entity.family}</span>
-      <span class="metric-pill">${entity.rawType}</span>
-      <span class="metric-pill">${entity.status}</span>
-      <span class="metric-pill">${entity.freshness}</span>
-    </div>
-  `;
-
-  factGrid.innerHTML = entity.facts
-    .map(
-      ([label, value]) => `
-        <article class="fact-card">
-          <span>${label}</span>
-          <strong>${value}</strong>
-        </article>
-      `,
-    )
-    .join("");
-
-  signalList.innerHTML = entity.signals
-    .map(
-      (item, index) => `
-        <article class="list-item">
-          <span class="list-mark">${String(index + 1).padStart(2, "0")}</span>
-          <p>${item}</p>
-        </article>
-      `,
-    )
-    .join("");
-
-  workflowList.innerHTML = entity.workflow
-    .map(
-      (item, index) => `
-        <article class="list-item">
-          <span class="list-mark">${String(index + 1).padStart(2, "0")}</span>
-          <p>${item}</p>
-        </article>
-      `,
-    )
-    .join("");
-
-  sourceStrip.innerHTML = `
-    <div class="source-head">
-      <div>
-        <p class="eyebrow">Source trail</p>
-        <strong>${entity.lastSeen}</strong>
-      </div>
-      <span class="status-pill">${entity.freshness}</span>
-    </div>
-    <div class="source-pills">
-      ${entity.sources.map((source) => `<span class="source-pill">${source}</span>`).join("")}
-    </div>
-  `;
-}
-
-function renderFeed() {
-  const items = (state.liveData.feed && state.liveData.feed.length ? state.liveData.feed : fallbackFeedItems).slice(0, 6);
-  feedList.innerHTML = items
-    .map(
-      (item) => `
-        <article class="feed-card">
-          <div class="feed-head">
-            <span class="state-pill">${item.state}</span>
-            <span class="feed-date">${item.date || "Observed live"}</span>
-          </div>
-          <strong>${item.title}</strong>
-          <p>${item.summary}</p>
-          <div class="source-pills">
-            ${(item.sources || []).map((source) => `<span class="source-pill">${source}</span>`).join("")}
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function renderFilings() {
-  const filings = state.liveData.filings || [];
-  filingsList.innerHTML = filings
-    .map(
-      (item) => `
-        <article class="filing-card">
-          <div class="filing-head">
-            <strong>${item.ticker}</strong>
-            <span>${item.date}</span>
-          </div>
-          <p>${item.name}</p>
-          <div class="filing-meta">
-            <span class="metric-pill">${item.form}</span>
-            <a href="${item.url}" target="_blank" rel="noreferrer">Open filing</a>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function renderMacro() {
-  const macro = state.liveData.macro || [];
-  macroList.innerHTML = macro
-    .map(
-      (item) => `
-        <article class="macro-card">
-          <div class="macro-head">
-            <strong>${item.country}</strong>
-            <span>${item.date}</span>
-          </div>
-          <p>${item.label}</p>
-          <strong class="macro-value">${item.display_value}</strong>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function renderOps() {
-  if (!opsStepsEl) return;
-  opsStepsEl.innerHTML = opsSteps
-    .map(
-      (item) => `
-        <article class="ops-card">
-          <span class="ops-step">${item.step}</span>
-          <div>
-            <strong>${item.title}</strong>
-            <p>${item.body}</p>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function setQuery(value) {
-  state.query = value;
-  if (commandSearch && commandSearch.value !== value) {
-    commandSearch.value = value;
-  }
-  if (entitySearch && entitySearch.value !== value) {
-    entitySearch.value = value;
-  }
-  renderEntitiesAndDossier();
-}
-
-async function loadLiveData() {
-  try {
-    const response = await fetch("/api/dashboard");
-    if (!response.ok) {
-      throw new Error(`dashboard ${response.status}`);
-    }
-    state.liveData = await response.json();
-  } catch (error) {
-    console.error("live data unavailable", error);
-    state.liveData = {
-      ...fallbackLiveData,
-      statuses: fallbackLiveData.statuses.map((item) => ({
-        ...item,
-        status: "fallback",
-        note: "Using local fallback because live fetch failed",
-      })),
-    };
-  }
-
-  renderMetricStrip();
-  renderSourceHealth();
-  renderSignalBoard();
-  renderFeed();
-  renderFilings();
-  renderMacro();
-  if (lastRefresh) {
-    lastRefresh.textContent = formatRelativeDate(state.liveData.generated_at);
-  }
-}
-
-async function runResearch(query) {
+async function runCopilot(query) {
   if (!query.trim()) return;
 
   appendChatMessage("user", query);
-  appendChatMessage("assistant", "Running source-backed research...", [], "Live pull");
+  appendChatMessage("assistant", "Pulling proposal, concern-sheet, benchmark, and API context...", [], "Source packet");
 
   try {
     const response = await fetch(`/api/research?q=${encodeURIComponent(query)}`);
     const payload = await response.json();
-    const placeholder = chatLog?.lastElementChild;
-    if (placeholder?.classList.contains("assistant")) {
-      placeholder.remove();
-    }
-    const assistantMeta = payload.guardrail === "scope_limited"
-      ? "Research only"
-      : payload.model
-        ? `${payload.model} · source-backed`
-        : "Source packet";
-    appendChatMessage("assistant", payload.answer, payload.evidence || [], assistantMeta);
-  } catch (error) {
-    const placeholder = chatLog?.lastElementChild;
+    const placeholder = chatLog.lastElementChild;
     if (placeholder?.classList.contains("assistant")) {
       placeholder.remove();
     }
     appendChatMessage(
       "assistant",
-      "The research layer did not return cleanly. SEC and macro endpoints are wired, but this answer fell back before synthesis completed.",
+      payload.answer,
+      payload.evidence || [],
+      payload.model ? `${payload.model} · source-grounded` : "Deterministic fallback",
+    );
+  } catch (error) {
+    const placeholder = chatLog.lastElementChild;
+    if (placeholder?.classList.contains("assistant")) {
+      placeholder.remove();
+    }
+    appendChatMessage(
+      "assistant",
+      "The ops copilot did not return cleanly. The dashboard data is still loaded, but the synthesis step failed.",
       [],
       "Fallback",
     );
-    console.error("research failed", error);
+    console.error(error);
   }
 }
 
-document.querySelectorAll("[data-module-target]").forEach((button) => {
-  button.addEventListener("click", () => setModule(button.dataset.moduleTarget));
-});
+function renderAll() {
+  if (!state.dashboard) return;
+  renderStatusStrip();
+  renderMetricGrid();
+  renderLaneSelectors();
+  renderProposalBrief();
+  renderReferenceGrid();
+  renderCollections();
+  renderLaneList();
+  renderActionList();
+  renderConcernList();
+  renderApiSurface();
+  renderReadiness();
+  renderBenchmarkPanel();
+  renderTelemetryChart();
+  lastRefresh.textContent = formatRelativeDate(state.dashboard.generated_at);
+  seedChat();
+}
 
-commandSearch?.addEventListener("input", (event) => {
-  setQuery(event.target.value);
-});
+async function loadDashboard() {
+  const response = await fetch("/api/dashboard");
+  if (!response.ok) {
+    throw new Error(`dashboard ${response.status}`);
+  }
+  state.dashboard = await response.json();
+  renderAll();
+}
 
-entitySearch?.addEventListener("input", (event) => {
-  setQuery(event.target.value);
-});
-
-allocatorToggle?.addEventListener("change", (event) => {
-  state.allocatorOnly = event.target.checked;
-  renderEntitiesAndDossier();
+concernSearch?.addEventListener("input", (event) => {
+  state.query = event.target.value || "";
+  renderConcernList();
 });
 
 chatForm?.addEventListener("submit", (event) => {
   event.preventDefault();
-  const query = chatInput?.value || "";
+  const query = chatInput.value || "";
   if (!query.trim()) return;
   chatInput.value = "";
-  runResearch(query);
+  runCopilot(query);
 });
 
 document.querySelectorAll("[data-chat-suggestion]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const query = button.dataset.chatSuggestion || "";
-    if (chatInput) {
-      chatInput.value = "";
-    }
-    runResearch(query);
-  });
+  button.addEventListener("click", () => runCopilot(button.dataset.chatSuggestion || ""));
 });
 
-renderModules();
-renderFamilyFilters();
-renderEntitiesAndDossier();
-renderModuleSpotlight();
-renderOps();
-syncModuleButtons();
-renderMetricStrip();
-renderSourceHealth();
-renderSignalBoard();
-renderFeed();
-renderFilings();
-renderMacro();
-seedChat();
-loadLiveData();
+loadDashboard().catch((error) => {
+  console.error(error);
+  statusStrip.innerHTML = `
+    <article class="status-pill tone-blocked">
+      <strong>Dashboard</strong>
+      <span>Failed to load the SWFI packet</span>
+    </article>
+  `;
+});

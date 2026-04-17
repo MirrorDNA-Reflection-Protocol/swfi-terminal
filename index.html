@@ -3,232 +3,257 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SWFI Intelligence Workspace</title>
+    <title>SWFI Intelligence AI</title>
     <meta
       name="description"
-      content="SWFI market workspace for allocator coverage, mandate tracking, filings, and research."
+      content="Private SWFI feed modernization terminal for client delivery, AUM operations, and schema readiness."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="page-shell">
-      <header class="topbar panel">
+      <header class="topbar terminal-panel">
         <div class="brand-lockup">
           <div class="brand-mark">SW</div>
           <div class="brand-copy">
-            <p class="eyebrow">Allocator terminal</p>
-            <h1>SWFI Intelligence Workspace</h1>
+            <p class="eyebrow">Private working surface</p>
+            <h1>SWFI Intelligence AI</h1>
           </div>
         </div>
 
-        <label class="command-bar" for="command-search">
-          <span class="command-prompt">desk:</span>
+        <label class="terminal-search" for="concern-search">
+          <span class="terminal-prompt">desk:</span>
           <input
-            id="command-search"
+            id="concern-search"
             type="search"
             autocomplete="off"
-            placeholder="Search funds, allocators, mandates, decision makers"
+            placeholder="Search blockers, fields, exports, currencies, or clients"
           />
         </label>
 
-        <div class="status-row">
-          <span class="status-chip">Live workspace</span>
-          <span class="status-chip">Read-only</span>
-          <span class="status-chip" id="last-refresh">Loading live sources</span>
-        </div>
+        <div class="status-strip" id="status-strip"></div>
       </header>
 
-      <main class="stack">
-        <section class="briefing-grid">
-          <article class="panel hero">
-            <p class="eyebrow">Allocator coverage</p>
-            <h2>Track allocators. Watch mandates. Work the list.</h2>
-            <p class="lede">
-              Sovereigns, pensions, reserve managers, public-market filings, and live source checks in one workspace.
-            </p>
-
-            <div class="hero-actions">
-              <button class="action-btn active" type="button" data-module-target="capital-flows">
-                Capital flows
-              </button>
-              <button class="action-btn" type="button" data-module-target="coverage-desk">
-                Coverage desk
-              </button>
-              <button class="action-btn" type="button" data-module-target="mandate-radar">
-                Mandate radar
-              </button>
-              <button class="action-btn" type="button" data-module-target="profile-ops">
-                Profile ops
-              </button>
+      <main class="main-stack">
+        <section class="hero-grid">
+          <article class="terminal-panel hero-panel">
+            <div class="hero-copy">
+              <p class="eyebrow">Feed modernization terminal</p>
+              <h2>Controlled delivery for client feeds, mapping, exports, and AUM ops.</h2>
+              <p class="lede">
+                Built around the live proposal, the client concerns sheet, and the public AUM API
+                docs. The desk is scoped to MSCI, Bloomberg, IFC, and the private delivery layer at
+                <span>swfi.activemirror.ai</span>.
+              </p>
             </div>
 
-            <div class="metric-strip" id="metric-strip"></div>
-            <div class="hero-monitor">
-              <div class="hero-monitor-head">
-                <div>
-                  <p class="eyebrow">Live source stack</p>
-                  <h3>Source status</h3>
+            <div class="lane-tabs" id="lane-tabs"></div>
+            <div class="metric-grid" id="metric-grid"></div>
+
+            <div class="hero-lower">
+              <section class="telemetry-card">
+                <div class="panel-head compact">
+                  <div>
+                    <p class="eyebrow">Terminal telemetry</p>
+                    <h3>Blocker pressure by lane</h3>
+                  </div>
+                  <span class="panel-note" id="last-refresh">Loading</span>
                 </div>
-                <span class="panel-note">SEC · World Bank · USAspending · GDELT</span>
-              </div>
-              <div class="source-health-list source-health-inline" id="source-health-list"></div>
+                <div class="telemetry-chart" id="telemetry-chart"></div>
+              </section>
+
+              <section class="proposal-brief" id="proposal-brief"></section>
             </div>
           </article>
+
+          <aside class="terminal-panel reference-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Platform reference</p>
+                <h3>Observed SWFI surface map</h3>
+              </div>
+              <span class="panel-note">Public + authenticated review</span>
+            </div>
+
+            <div class="reference-grid" id="reference-grid"></div>
+
+            <div class="section-block">
+              <div class="section-head">
+                <p class="eyebrow">API collections</p>
+                <strong>Public docs inventory</strong>
+              </div>
+              <div class="collection-list" id="collection-list"></div>
+            </div>
+          </aside>
         </section>
 
-        <section class="workspace-layout">
+        <section class="workspace-grid">
+          <aside class="left-rail">
+            <article class="terminal-panel lane-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Delivery lanes</p>
+                  <h3>Client feed stack</h3>
+                </div>
+              </div>
+              <div class="lane-list" id="lane-list"></div>
+            </article>
+
+            <article class="terminal-panel action-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Action queue</p>
+                  <h3>High-leverage build items</h3>
+                </div>
+              </div>
+              <div class="action-list" id="action-list"></div>
+            </article>
+          </aside>
+
           <section class="center-column">
-            <article class="panel signal-board">
-              <div class="panel-head">
+            <article class="terminal-panel concern-panel">
+              <div class="panel-head concern-head">
                 <div>
-                  <p class="eyebrow">Desk overview</p>
-                  <h3>Signal tape</h3>
+                  <p class="eyebrow">Client concern matrix</p>
+                  <h3>Operational blockers and field gaps</h3>
                 </div>
-                <span class="panel-note">Allocator-first monitor</span>
+                <span class="panel-note" id="concern-count">0 issues</span>
               </div>
-              <div class="signal-grid" id="signal-grid"></div>
-              <div class="coverage-list" id="coverage-list"></div>
+
+              <div class="filter-row" id="client-filters"></div>
+              <div class="concern-list" id="concern-list"></div>
             </article>
 
-            <article class="panel workbench" id="workbench">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Entity workbench</p>
-                  <h3>Search, filter, and drill into the book</h3>
-                </div>
-                <span class="panel-note">Allocator-first view</span>
-              </div>
-
-              <div class="surface-controls">
-                <label class="search-box" for="entity-search">
-                  <span class="search-prefix">/</span>
-                  <input
-                    id="entity-search"
-                    type="search"
-                    autocomplete="off"
-                    placeholder="Search capital sources, countries, or raw types"
-                  />
-                </label>
-
-                <label class="toggle-pill" for="allocator-toggle">
-                  <input id="allocator-toggle" type="checkbox" checked />
-                  <span>Capital pools only</span>
-                </label>
-              </div>
-
-              <div class="filter-row" id="family-filters"></div>
-
-              <div class="workbench-grid">
-                <section class="entity-list" id="entity-list"></section>
-
-                <section class="dossier-stack">
-                  <div class="dossier-top" id="dossier-top"></div>
-                  <div class="fact-grid" id="fact-grid"></div>
-
-                  <div class="signal-pane-grid">
-                    <section class="detail-card">
-                      <div class="detail-head">
-                        <p class="eyebrow">Signals</p>
-                        <h4>What moves this account</h4>
-                      </div>
-                      <div class="signal-list" id="signal-list"></div>
-                    </section>
-
-                    <section class="detail-card">
-                      <div class="detail-head">
-                        <p class="eyebrow">Workflow</p>
-                        <h4>Desk actions</h4>
-                      </div>
-                      <div class="workflow-list" id="workflow-list"></div>
-                    </section>
+            <div class="lower-grid">
+              <article class="terminal-panel api-panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">AUM API surface</p>
+                    <h3 id="api-title">Loading AUM schema</h3>
                   </div>
+                  <span class="panel-note" id="api-path"></span>
+                </div>
 
-                  <div class="source-strip" id="source-strip"></div>
-                </section>
-              </div>
-            </article>
+                <div class="api-summary-grid" id="api-summary-grid"></div>
+
+                <div class="api-columns">
+                  <section class="api-section">
+                    <div class="section-head">
+                      <p class="eyebrow">Query parameters</p>
+                      <strong>Documented filters</strong>
+                    </div>
+                    <div class="api-param-list" id="api-param-list"></div>
+                  </section>
+
+                  <section class="api-section">
+                    <div class="section-head">
+                      <p class="eyebrow">Example payload</p>
+                      <strong>Response fields</strong>
+                    </div>
+                    <div class="api-field-list" id="api-field-list"></div>
+                  </section>
+                </div>
+              </article>
+
+              <article class="terminal-panel readiness-panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Readiness matrix</p>
+                    <h3>Delivery foundations</h3>
+                  </div>
+                </div>
+
+                <div class="readiness-list" id="readiness-list"></div>
+
+                <div class="section-block">
+                  <div class="section-head">
+                    <p class="eyebrow">Deliverables</p>
+                    <strong>Project handoff scope</strong>
+                  </div>
+                  <div class="deliverable-list" id="deliverable-list"></div>
+                </div>
+              </article>
+            </div>
           </section>
 
           <aside class="right-rail">
-            <article class="panel chat-panel">
+            <article class="terminal-panel copilot-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Research AI</p>
-                  <h3>Institutional capital research desk</h3>
+                  <p class="eyebrow">Ops copilot</p>
+                  <h3>Ask the delivery desk</h3>
                 </div>
+                <span class="panel-note">Read-only, source-backed</span>
               </div>
-              <div class="assistant-guardrails">
-                <span>Research only</span>
-                <span>Read-only</span>
-                <span>Source-backed</span>
+
+              <div class="copilot-guardrails">
+                <span>Proposal-scoped</span>
+                <span>Sheet-backed</span>
+                <span>AUM docs aware</span>
               </div>
+
               <div class="chat-log" id="chat-log"></div>
+
               <div class="chat-suggestions">
-                <button type="button" class="suggestion-chip" data-chat-suggestion="What do the latest Blackstone and KKR filings suggest?">
-                  Blackstone vs KKR
+                <button type="button" class="suggestion-chip" data-chat-suggestion="Summarize the MSCI blockers.">
+                  MSCI blockers
                 </button>
-                <button type="button" class="suggestion-chip" data-chat-suggestion="Give me macro context for Norway and China capital pools.">
-                  Norway and China
+                <button
+                  type="button"
+                  class="suggestion-chip"
+                  data-chat-suggestion="What should be automated first across the feed lanes?"
+                >
+                  Automation first
                 </button>
-                <button type="button" class="suggestion-chip" data-chat-suggestion="Find public-source signals for mandate and strategy movement.">
-                  Mandate signals
+                <button
+                  type="button"
+                  class="suggestion-chip"
+                  data-chat-suggestion="Which AUM fields matter for subsidiaries and managed assets?"
+                >
+                  AUM fields
                 </button>
               </div>
+
               <form class="chat-form" id="chat-form">
                 <input
                   id="chat-input"
                   type="text"
                   autocomplete="off"
-                  placeholder="Ask about an allocator, manager, filing, country, or mandate signal"
+                  placeholder="Ask about feed blockers, mappings, exports, or API fields"
                 />
-                <button type="submit" id="chat-send">Research</button>
+                <button type="submit" id="chat-send">Analyze</button>
               </form>
             </article>
 
-            <article class="panel feed-panel">
+            <article class="terminal-panel benchmark-panel">
               <div class="panel-head">
                 <div>
-                  <p class="eyebrow">Signal feed</p>
-                  <h3>Market tape</h3>
+                  <p class="eyebrow">Competitive frame</p>
+                  <h3>Benchmark and required API stack</h3>
                 </div>
               </div>
-              <div class="feed-list" id="feed-list"></div>
-            </article>
 
-            <article class="panel filings-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Street watch</p>
-                  <h3>Latest SEC filings</h3>
+              <div class="section-block compact-block">
+                <div class="section-head">
+                  <p class="eyebrow">Competitors</p>
+                  <strong>What they signal publicly</strong>
                 </div>
+                <div class="benchmark-list" id="benchmark-list"></div>
               </div>
-              <div class="filings-list" id="filings-list"></div>
-            </article>
 
-            <article class="panel macro-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Country context</p>
-                  <h3>World Bank macro snapshot</h3>
+              <div class="section-block compact-block">
+                <div class="section-head">
+                  <p class="eyebrow">Required APIs</p>
+                  <strong>What SWFI needs to close the gap</strong>
                 </div>
+                <div class="api-stack-list" id="api-stack-list"></div>
               </div>
-              <div class="macro-list" id="macro-list"></div>
-            </article>
-
-            <article class="panel ops-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="eyebrow">Profile ops</p>
-                  <h3>Profile queue</h3>
-                </div>
-              </div>
-              <div class="ops-steps" id="ops-steps"></div>
             </article>
           </aside>
         </section>
