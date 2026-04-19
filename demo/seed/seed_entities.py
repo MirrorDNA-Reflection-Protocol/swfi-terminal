@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """
-demo/seed/seed_entities.py — Pass A: auto-seed demo/seed/entities.json from sandbox API.
+demo/seed/seed_entities.py — Pass A: seed demo/seed/entities.json from sandbox API.
 
-Usage:
-    python3 demo/seed/seed_entities.py [--dry-run] [--limit N]
+Strategy (confirmed by API probe 2026-04-19):
+  1. Fetch entities by type (SWF, Pension Fund, etc.) — type filter returns targeted subsets
+  2. Enrich each entity with:
+     - /aum?entity_id={id}       → rich numeric AUM (assets field is numeric here)
+     - /people?entity_id={id}    → verified contacts
+     - /transactions?entity_id={id} → transaction records
+  3. Apply hard completeness filter (AUM + contact + txn + provenance)
+  4. Rank by completeness score, take top 500
+  5. Write entities.json + ratification CSV for Prem + Kong
 
-Pass A produces entities.json + a ratification CSV for Prem + Kong (Pass B).
-Run from the repo root:
-    cd ~/repos/swfi-terminal-live
-    python3 demo/seed/seed_entities.py
+Sandbox API (confirmed):
+  Base: https://sandbox-api.swfi.com/v1
+  Auth: Authorization: <raw_key>  (no Bearer prefix)
+  Pagination: ?limit=N&offset=N
+  Type filter: /entities?type=Sovereign+Wealth+Fund  (173 SWFs confirmed)
+  AUM: /aum?entity_id={id}  → {"data": [{assets: 545000000000, ...}]}
 
-Requirements:
-  - SWFI_SANDBOX_API_KEY in macOS Keychain (account: mirrordna, service: SWFI_SANDBOX_API_KEY)
-    or SWFI_SANDBOX_API_KEY in environment.
-  - Python 3.11+, no third-party deps.
+Usage (from repo root):
+    python3 demo/seed/seed_entities.py [--dry-run] [--limit 500]
 """
-
 from __future__ import annotations
 
 import argparse
@@ -30,22 +36,34 @@ from pathlib import Path
 from urllib import parse, request
 from urllib.error import HTTPError
 
-# ── paths ─────────────────────────────────────────────────────────────────────
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SEED_DIR = REPO_ROOT / "demo" / "seed"
 ENTITIES_JSON = SEED_DIR / "entities.json"
+SANDBOX_BASE = os.environ.get("SWFI_SANDBOX_API_ROOT", "https://sandbox-api.swfi.com/v1").rstrip("/")
 
-SANDBOX_BASE = "https://sandbox-api.swfi.com/v1"
-
-# The six provenance fields required by PROVENANCE_CONTRACT in serve.py
 REQUIRED_PROVENANCE_FIELDS = [
-    "source_system",
-    "retrieval_time",
-    "extraction_method",
-    "confidence",
-    "status",
-    "evidence_url_or_pointer",
+    "source_system", "retrieval_time", "extraction_method",
+    "confidence", "status", "evidence_url_or_pointer",
 ]
+
+# Entity types to target — covers the demo narrative (MENA SWFs, pension funds, etc.)
+TARGET_TYPES = [
+    "Sovereign Wealth Fund",
+    "Pension Fund",
+    "Endowment",
+    "Family Office",
+    "Insurance Company",
+    "Central Bank",
+    "Development Bank",
+    "Asset Manager",
+    "Government Investment Corporation",
+    "National Reserve Fund",
+    "Sovereign Development Fund",
+    "Public Pension Reserve",
+]
+
+_SANDBOX_MIN_INTERVAL = 0.12
+_last_req: float = 0.0
 
 
 # ── keychain ──────────────────────────────────────────────────────────────────
@@ -67,275 +85,281 @@ def load_secret(*names: str) -> str:
     return ""
 
 
-# ── sandbox API helpers ───────────────────────────────────────────────────────
-def sandbox_get(path: str, api_key: str, params: dict | None = None, timeout: int = 20) -> dict | list:
+# ── fetch helpers ─────────────────────────────────────────────────────────────
+def _get(path: str, key: str, params: dict | None = None, timeout: int = 20) -> dict:
+    global _last_req
     url = f"{SANDBOX_BASE}/{path.lstrip('/')}"
     if params:
-        url += "?" + parse.urlencode(params)
-    req = request.Request(url, headers={
-        "Authorization": f"Bearer {api_key}",
-        "Accept": "application/json",
-    })
+        pairs = [(k, v) for k, v in params.items() if v not in ("", None)]
+        if pairs:
+            url += "?" + parse.urlencode(pairs, doseq=True)
+    wait = _SANDBOX_MIN_INTERVAL - (time.time() - _last_req)
+    if wait > 0:
+        time.sleep(wait)
+    _last_req = time.time()
+    req = request.Request(url, headers={"Accept": "application/json", "Authorization": key})
     with request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def discover_collections(api_key: str) -> list[str]:
-    """Return list of collection endpoint slugs from the API root."""
-    try:
-        root = sandbox_get("", api_key)
-        # Typical shape: {"collections": ["sovereign_wealth_funds", "pension_funds", ...]}
-        if isinstance(root, dict) and "collections" in root:
-            return [str(c) for c in root["collections"]]
-    except Exception as exc:
-        print(f"  [warn] root discovery failed: {exc}", file=sys.stderr)
-    # Fallback: known collection slugs from the dashboard audit (19 collections)
-    return [
-        "sovereign_wealth_funds", "pension_funds", "endowments", "foundations",
-        "family_offices", "insurance_companies", "central_banks", "development_banks",
-        "asset_managers", "private_equity_funds", "hedge_funds", "real_estate_funds",
-        "infrastructure_funds", "venture_capital", "sovereign_development_funds",
-        "government_investment_corporations", "national_reserve_funds",
-        "public_pension_reserves", "sovereign_investment_authorities",
-    ]
-
-
-def fetch_collection_entities(collection: str, api_key: str) -> list[dict]:
-    """Paginate through a collection and return all entity records."""
-    entities: list[dict] = []
-    page = 1
-    while True:
+def _fetch_all(path: str, key: str, params: dict | None = None, max_records: int = 500) -> list[dict]:
+    """Paginate an endpoint and return all records up to max_records."""
+    all_records: list[dict] = []
+    base_params = dict(params or {})
+    page_size = min(100, max_records)
+    offset = 0
+    while len(all_records) < max_records:
+        p = {**base_params, "limit": page_size, "offset": offset}
         try:
-            data = sandbox_get(f"collections/{collection}", api_key, params={"page": page, "per_page": 100})
-        except HTTPError as exc:
-            if exc.code == 404:
-                print(f"  [skip] {collection}: 404", file=sys.stderr)
-            else:
-                print(f"  [warn] {collection} page {page}: HTTP {exc.code}", file=sys.stderr)
-            break
+            raw = _get(path, key, p)
         except Exception as exc:
-            print(f"  [warn] {collection} page {page}: {exc}", file=sys.stderr)
+            print(f"    [warn] {path} offset={offset}: {exc}", file=sys.stderr)
             break
-
-        if isinstance(data, list):
-            batch = data
-        elif isinstance(data, dict):
-            batch = data.get("data") or data.get("results") or data.get("entities") or []
-        else:
+        records = raw.get("data") or (raw if isinstance(raw, list) else [])
+        if not records:
             break
-
-        if not batch:
+        all_records.extend(records)
+        if len(records) < page_size:
             break
-        entities.extend(batch)
-
-        # Stop if we got a partial page (last page)
-        if len(batch) < 100:
-            break
-        page += 1
-        time.sleep(0.1)  # be a good citizen
-
-    return entities
+        offset += page_size
+    return all_records[:max_records]
 
 
-# ── completeness scoring ──────────────────────────────────────────────────────
-def has_aum(entity: dict) -> bool:
-    aum = entity.get("aum") or entity.get("assets_under_management")
-    if isinstance(aum, dict):
-        v = aum.get("value") or aum.get("amount")
-        return v is not None and float(v or 0) > 0
-    if isinstance(aum, (int, float)):
-        return aum > 0
+# ── enrichment ────────────────────────────────────────────────────────────────
+def enrich(entity: dict, key: str) -> dict:
+    eid = entity.get("_id") or entity.get("id") or entity.get("entity_id")
+    if not eid:
+        return entity
+
+    # AUM series — richer than the entity stub's `assets` field
+    aum_records = _fetch_all("aum", key, {"entity_id": eid}, max_records=5)
+    if aum_records:
+        # Use the most recent record
+        latest = sorted(aum_records, key=lambda r: r.get("period",""), reverse=True)[0]
+        entity["_aum_series"] = aum_records
+        entity["_aum_latest"] = latest
+        # Promote the numeric AUM to top-level for filter/score
+        if latest.get("assets") and not entity.get("assets"):
+            entity["assets"] = latest["assets"]
+
+    # Contacts (people)
+    if not entity.get("contacts"):
+        people = _fetch_all("people", key, {"entity_id": eid}, max_records=20)
+        if people:
+            entity["contacts"] = people
+
+    # Transactions
+    if not entity.get("transactions"):
+        txns = _fetch_all("transactions", key, {"entity_id": eid}, max_records=20)
+        if txns:
+            entity["transactions"] = txns
+
+    return entity
+
+
+# ── completeness ──────────────────────────────────────────────────────────────
+def has_aum(e: dict) -> bool:
+    for field in ("assets", "managed_assets", "aum"):
+        v = e.get(field)
+        if v is None or v == "":
+            continue
+        if isinstance(v, (int, float)) and v > 0:
+            return True
+        if isinstance(v, str) and v.strip():
+            return True
+    # also check promoted AUM from enrichment
+    latest = e.get("_aum_latest") or {}
+    if latest.get("assets") and float(latest.get("assets") or 0) > 0:
+        return True
     return False
 
 
-def has_verified_contact(entity: dict) -> bool:
-    contacts = entity.get("contacts") or entity.get("people") or []
-    if isinstance(contacts, list):
-        for c in contacts:
-            if isinstance(c, dict):
-                has_email = bool(c.get("email") or c.get("email_address"))
-                has_phone = bool(c.get("phone") or c.get("phone_number"))
-                has_linkedin = bool(c.get("linkedin") or c.get("linkedin_url"))
-                if has_email or has_phone or has_linkedin:
-                    return True
+def has_verified_contact(e: dict) -> bool:
+    if e.get("phone") and str(e["phone"]).strip():
+        return True
+    contacts = e.get("contacts") or []
+    return isinstance(contacts, list) and len(contacts) > 0
+
+
+def has_transaction_or_rfp(e: dict) -> bool:
+    for key in ("transactions", "investments", "deals", "rfps", "opportunities"):
+        v = e.get(key)
+        if isinstance(v, list) and len(v) > 0:
+            return True
     return False
 
 
-def has_transaction_or_rfp(entity: dict) -> bool:
-    txns = entity.get("transactions") or entity.get("investments") or []
-    rfps = entity.get("rfps") or entity.get("opportunities") or []
-    return len(txns) > 0 or len(rfps) > 0
-
-
-def has_complete_provenance(entity: dict) -> bool:
-    prov = entity.get("provenance") or entity.get("_provenance") or {}
-    if not isinstance(prov, dict):
-        return False
+def has_complete_provenance(e: dict) -> bool:
+    prov = e.get("provenance") or {}
     return all(prov.get(f) for f in REQUIRED_PROVENANCE_FIELDS)
 
 
-def count_populated_fields(obj: object, depth: int = 0) -> tuple[int, int]:
-    """Recursively count (populated, total) leaf fields."""
-    if depth > 4:
-        return 0, 0
-    if isinstance(obj, dict):
-        populated = total = 0
-        for v in obj.values():
-            p, t = count_populated_fields(v, depth + 1)
-            populated += p
-            total += t
-        return populated, total
-    if isinstance(obj, list):
-        populated = total = 0
-        for item in obj[:10]:  # cap list depth
-            p, t = count_populated_fields(item, depth + 1)
-            populated += p
-            total += t
-        return populated, total
-    # leaf
-    is_present = obj is not None and obj != "" and obj != 0 and obj is not False
-    return (1 if is_present else 0), 1
+def completeness_score(e: dict) -> float:
+    def _count(obj: object, depth: int = 0) -> tuple[int, int]:
+        if depth > 4:
+            return 0, 0
+        if isinstance(obj, dict):
+            p = t = 0
+            for v in obj.values():
+                dp, dt = _count(v, depth + 1)
+                p += dp; t += dt
+            return p, t
+        if isinstance(obj, list):
+            p = t = 0
+            for item in obj[:10]:
+                dp, dt = _count(item, depth + 1)
+                p += dp; t += dt
+            return p, t
+        present = obj is not None and obj != "" and obj is not False
+        return (1 if present else 0), 1
+    pop, total = _count(e)
+    return round(pop / total, 4) if total else 0.0
 
 
-def completeness_score(entity: dict) -> float:
-    p, t = count_populated_fields(entity)
-    if t == 0:
-        return 0.0
-    return round(p / t, 4)
-
-
-def red_flags(entity: dict) -> list[str]:
-    flags = []
-    if not has_aum(entity):
-        flags.append("missing_aum")
-    if not has_verified_contact(entity):
-        flags.append("no_verified_contact")
-    if not has_transaction_or_rfp(entity):
-        flags.append("no_transactions_or_rfps")
-    if not has_complete_provenance(entity):
-        flags.append("incomplete_provenance")
-    return flags
-
-
-# ── provenance injection ──────────────────────────────────────────────────────
-def inject_provenance_if_missing(entity: dict, collection: str) -> dict:
-    """If entity lacks a provenance envelope, attach one at entity level."""
-    if entity.get("provenance") or entity.get("_provenance"):
-        return entity
-    entity["provenance"] = {
-        "source_system": f"swfi_sandbox_api/{collection}",
+def inject_provenance(e: dict) -> dict:
+    if e.get("provenance"):
+        return e
+    e["provenance"] = {
+        "source_system": "swfi_sandbox_api/entities",
         "retrieval_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "extraction_method": "api_json",
-        "confidence": "medium",  # human review in Pass B will upgrade to 'high'
+        "extraction_method": "rest_api_json",
+        "confidence": "medium",
         "status": "pending_ratification",
-        "evidence_url_or_pointer": f"{SANDBOX_BASE}/collections/{collection}",
+        "evidence_url_or_pointer": f"{SANDBOX_BASE}/entities",
     }
-    return entity
+    return e
+
+
+def red_flags(e: dict) -> list[str]:
+    flags = []
+    if not has_aum(e): flags.append("missing_aum")
+    if not has_verified_contact(e): flags.append("no_verified_contact")
+    if not has_transaction_or_rfp(e): flags.append("no_transactions_or_rfps")
+    if not has_complete_provenance(e): flags.append("incomplete_provenance")
+    return flags
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed demo/seed/entities.json from sandbox API")
-    parser.add_argument("--dry-run", action="store_true", help="Fetch and score but don't write files")
-    parser.add_argument("--limit", type=int, default=500, help="Max entities to include (default 500)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--limit", type=int, default=500)
+    parser.add_argument("--no-enrich", action="store_true",
+                        help="Skip AUM/people/transactions enrichment (faster, lower hit rate)")
     args = parser.parse_args()
 
     api_key = load_secret("SWFI_SANDBOX_API_KEY")
     if not api_key:
-        print("ERROR: SWFI_SANDBOX_API_KEY not found in keychain or environment.", file=sys.stderr)
+        print("ERROR: SWFI_SANDBOX_API_KEY not found", file=sys.stderr)
         sys.exit(1)
     print(f"[seed] API key loaded ({len(api_key)} chars)")
 
-    # Step 1: discover collections
-    print("[seed] Discovering collections…")
-    collections = discover_collections(api_key)
-    print(f"[seed] {len(collections)} collections: {', '.join(collections)}")
-
-    # Step 2: fetch all entities
-    all_raw: list[tuple[str, dict]] = []  # (collection, entity)
-    for col in collections:
-        print(f"  fetching {col}…", end=" ", flush=True)
-        batch = fetch_collection_entities(col, api_key)
-        print(f"{len(batch)} records")
-        for e in batch:
-            all_raw.append((col, e))
-    print(f"[seed] Total raw records: {len(all_raw)}")
-
-    # Step 3: inject provenance, apply hard filter, score
-    passed: list[tuple[float, dict]] = []
-    filtered_out = 0
-    for col, entity in all_raw:
-        entity = inject_provenance_if_missing(entity, col)
-        if not (has_aum(entity) and has_verified_contact(entity)
-                and has_transaction_or_rfp(entity) and has_complete_provenance(entity)):
-            filtered_out += 1
+    # Step 1: collect entity stubs by type
+    all_stubs: list[dict] = []
+    seen_ids: set = set()
+    for entity_type in TARGET_TYPES:
+        try:
+            data = _get("entities", api_key, {"type": entity_type, "limit": 1, "offset": 0})
+            total = data.get("total_items", 0)
+            print(f"  {entity_type}: {total} available")
+        except Exception as exc:
+            print(f"  {entity_type}: error ({exc})", file=sys.stderr)
             continue
-        score = completeness_score(entity)
-        passed.append((score, entity))
+        if not total:
+            continue
+        # fetch up to 500 per type (we'll trim globally later)
+        records = _fetch_all("entities", api_key, {"type": entity_type}, max_records=500)
+        for r in records:
+            eid = r.get("_id") or r.get("id")
+            if eid and eid not in seen_ids:
+                seen_ids.add(eid)
+                all_stubs.append(r)
 
-    print(f"[seed] Passed filter: {len(passed)}  |  Filtered out: {filtered_out}")
+    print(f"\n[seed] Total unique stubs: {len(all_stubs)}")
 
-    # Step 4: rank and take top N
+    # Step 2: enrich (or skip)
+    enriched: list[dict] = []
+    if args.no_enrich:
+        enriched = [inject_provenance(e) for e in all_stubs]
+    else:
+        print(f"[seed] Enriching {len(all_stubs)} stubs with AUM, contacts, transactions…")
+        for i, e in enumerate(all_stubs):
+            e = enrich(e, api_key)
+            e = inject_provenance(e)
+            enriched.append(e)
+            if (i + 1) % 50 == 0:
+                print(f"  enriched {i + 1}/{len(all_stubs)}…")
+
+    # Step 3: filter + score
+    passed: list[tuple[float, dict]] = []
+    reasons: dict[str, int] = {}
+    for e in enriched:
+        flags = red_flags(e)
+        if not flags:
+            passed.append((completeness_score(e), e))
+        else:
+            for f in flags:
+                reasons[f] = reasons.get(f, 0) + 1
+
+    print(f"\n[seed] Passed: {len(passed)}  |  Filtered: {len(enriched)-len(passed)}")
+    if reasons:
+        for reason, count in sorted(reasons.items(), key=lambda x: -x[1]):
+            print(f"  {reason}: {count}")
+
     passed.sort(key=lambda x: x[0], reverse=True)
-    top = [e for _, e in passed[: args.limit]]
+    top_scored = passed[: args.limit]
+    top = [e for _, e in top_scored]
     print(f"[seed] Top {len(top)} selected")
 
-    # Step 5: sources_breakdown
     breakdown: dict[str, int] = {}
     for e in top:
-        prov = e.get("provenance") or e.get("_provenance") or {}
-        sys_name = str(prov.get("source_system", "unknown")).split("/")[0]
-        breakdown[sys_name] = breakdown.get(sys_name, 0) + 1
-
-    # Step 6: write entities.json
-    output = {
-        "_note": "Auto-seeded by seed_entities.py. Pending Pass B ratification by Prem + Kong.",
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "count": len(top),
-        "sources_breakdown": breakdown,
-        "entities": top,
-    }
+        t = str(e.get("type", "unknown"))
+        breakdown[t] = breakdown.get(t, 0) + 1
 
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     csv_path = SEED_DIR / f"ratification-{date_str}.csv"
 
     if args.dry_run:
-        print(f"[dry-run] Would write {ENTITIES_JSON} ({len(top)} entities)")
+        print(f"\n[dry-run] Would write {ENTITIES_JSON} ({len(top)} entities)")
         print(f"[dry-run] Would write {csv_path}")
-        print(f"[dry-run] sources_breakdown: {breakdown}")
+        print(f"[dry-run] entity type breakdown: {breakdown}")
+        if top_scored:
+            s, e = top_scored[0]
+            print(f"[dry-run] Best: score={s:.4f} name='{e.get('name','?')}' type='{e.get('type','?')}'")
         return
 
     SEED_DIR.mkdir(parents=True, exist_ok=True)
+    output = {
+        "_note": "Auto-seeded. Pending Pass B ratification by Prem + Kong.",
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "count": len(top),
+        "sources_breakdown": {"sandbox_api": len(top)},
+        "entity_type_breakdown": breakdown,
+        "entities": top,
+    }
     ENTITIES_JSON.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[seed] Wrote {ENTITIES_JSON}")
 
-    # Step 7: ratification CSV for Prem + Kong
     with csv_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
-        writer.writerow([
-            "entity_name", "country", "aum_raw", "contact_count",
-            "transaction_count", "rfp_count", "completeness_score", "red_flags",
-        ])
-        for score, entity in passed[: args.limit]:
-            name = entity.get("name") or entity.get("entity_name") or entity.get("institution_name") or ""
-            country = entity.get("country") or entity.get("country_code") or entity.get("headquarters_country") or ""
-            aum = entity.get("aum") or entity.get("assets_under_management") or ""
-            if isinstance(aum, dict):
-                aum = f"{aum.get('value', '')} {aum.get('currency', '')}".strip()
-            contacts = entity.get("contacts") or entity.get("people") or []
-            txns = entity.get("transactions") or entity.get("investments") or []
-            rfps = entity.get("rfps") or entity.get("opportunities") or []
-            flags = red_flags(entity)
+        writer.writerow(["entity_name", "entity_type", "country", "aum_usd",
+                         "contact_count", "transaction_count", "completeness_score", "red_flags"])
+        for score, e in top_scored:
+            latest = e.get("_aum_latest") or {}
+            aum_val = latest.get("assets") or e.get("assets") or e.get("managed_assets") or ""
+            contacts = e.get("contacts") or (["phone"] if e.get("phone") else [])
+            txns = e.get("transactions") or []
+            flags = red_flags(e)
             writer.writerow([
-                name, country, aum,
-                len(contacts), len(txns), len(rfps),
+                e.get("name", ""), e.get("type", ""), e.get("country", ""),
+                aum_val,
+                len(contacts) if isinstance(contacts, list) else 0,
+                len(txns) if isinstance(txns, list) else 0,
                 f"{score:.4f}",
                 "; ".join(flags) if flags else "",
             ])
-
-    print(f"[seed] Wrote {csv_path} ({len(top)} rows)")
-    print(f"[seed] Done. Send {csv_path.name} to Prem + Kong for Pass B ratification.")
-    print(f"[seed] sources_breakdown: {breakdown}")
+    print(f"[seed] Wrote {csv_path}")
+    print(f"[seed] Done. Send {csv_path.name} to Prem + Kong for ratification.")
 
 
 if __name__ == "__main__":
