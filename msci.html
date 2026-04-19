@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SWFI | MSCI Key People Export Workspace</title>
+    <meta name="description" content="Controlled-access SWFI workspace for MSCI Key People exports, account mapping, and delivery review." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ticker-wrap" aria-hidden="true">
+      <div class="ticker-track" id="ticker-tape"></div>
+    </div>
+
+    <div class="page-shell">
+      <nav class="topnav">
+        <div class="nav-left">
+          <a class="nav-brand" href="/">
+            <span class="brand-diamond">◆</span>
+            <span class="brand-text">SWFI</span>
+          </a>
+          <a href="/" class="nav-link">Terminal</a>
+          <a href="/msci" class="nav-link">MSCI</a>
+          <a href="/api/msci/workbench/v1" class="nav-link">API Access</a>
+        </div>
+        <div class="nav-right">
+          <span class="nav-status-dot nav-status-dot--controlled"></span>
+          <span class="nav-status-label">Controlled preview</span>
+          <a href="/auth/logout" class="nav-link">Sign out</a>
+        </div>
+      </nav>
+
+      <main class="main-stack msci-stack">
+        <header class="panel msci-hero">
+          <div class="msci-hero-copy">
+            <p class="sys-label">MSCI delivery workspace</p>
+            <h1>Key People Export</h1>
+            <p class="msci-copy">Controlled-access workspace for people coverage, account mapping, export readiness, and delivery downloads.</p>
+            <div class="status-strip msci-status-strip" id="msci-status-strip"></div>
+          </div>
+          <div class="msci-download-panel">
+            <p class="sys-label">Downloads</p>
+            <div class="download-row" id="msci-downloads"></div>
+          </div>
+        </header>
+
+        <section class="metric-grid" id="msci-summary-grid"></section>
+
+        <section class="workspace-grid msci-grid">
+          <section class="center-column">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Export status</p>
+                  <h3>Delivery readiness</h3>
+                </div>
+              </div>
+              <p class="msci-answer" id="msci-answer"></p>
+              <div class="section-block">
+                <p class="sys-label">Coverage summary</p>
+                <div class="api-summary-grid" id="msci-coverage-grid"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Requested fields</p>
+                  <h3>MSCI contract</h3>
+                </div>
+              </div>
+              <div class="msci-field-list" id="msci-requested-fields"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Preview rows</p>
+                  <h3>Accessible Key People</h3>
+                </div>
+              </div>
+              <div class="msci-table" id="msci-preview-table"></div>
+            </article>
+          </section>
+
+          <aside class="right-rail">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Ready now</p>
+                  <h3>Delivery surface</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="msci-ready-list"></div>
+              <div class="section-block">
+                <p class="sys-label">Still controlled</p>
+                <div class="panel-stack" id="msci-blocked-list"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Account mapping</p>
+                  <h3>Top targets</h3>
+                </div>
+              </div>
+              <div class="msci-table compact" id="msci-targets"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Breakdown</p>
+                  <h3>Institution mix</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="msci-breakdown-list"></div>
+            </article>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <script src="./msci.js" type="module"></script>
+  </body>
+</html>
