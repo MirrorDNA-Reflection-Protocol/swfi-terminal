@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import html
 from http import cookies
 import http.server
@@ -760,6 +761,14 @@ SWFI_PREVIEW_AUTH_USERNAME = load_secret_from_env_or_keychain("SWFI_PREVIEW_AUTH
 SWFI_PREVIEW_AUTH_PASSWORD = load_secret_from_env_or_keychain("SWFI_PREVIEW_AUTH_PASSWORD") or "swfi123"
 SWFI_SESSION_SECRET = load_secret_from_env_or_keychain("SWFI_SESSION_SECRET") or secrets.token_urlsafe(32)
 SESSION_COOKIE_NAME = "swfi_preview_session"
+
+# --- demo surface state -------------------------------------------------------
+_demo_cache_lock = threading.Lock()
+_demo_entity_cache: dict = {}
+_demo_cache_loaded_at: float = 0.0
+_DEMO_CACHE_TTL_SECONDS = 6 * 3600  # refresh entity packet every 6h
+DEMO_ASK_LOG = Path(os.path.expanduser("~/Library/Logs/swfi-terminal/demo-ask.log"))
+# --- end demo surface state ---------------------------------------------------
 
 
 def iso_now() -> str:
@@ -3572,6 +3581,117 @@ def check_rate_limit(bucket: str, key: str, limit: int, *, window_seconds: int =
     return True, 0
 
 
+# ---------------------------------------------------------------------------
+# Demo surface helpers — /demo/api/ask, /demo/health, /demo/api/coverage
+# ---------------------------------------------------------------------------
+
+def _load_demo_entity_cache() -> dict:
+    """Read entities.json from disk. Returns parsed dict (may have count=0)."""
+    seed_path = ROOT / "demo" / "seed" / "entities.json"
+    try:
+        return json.loads(seed_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"count": 0, "entities": [], "generated_at": None}
+
+
+def get_demo_entities() -> dict:
+    """Return the in-process entity cache, refreshing from disk if older than 6h."""
+    global _demo_entity_cache, _demo_cache_loaded_at
+    with _demo_cache_lock:
+        now = time.time()
+        if not _demo_entity_cache or (now - _demo_cache_loaded_at) > _DEMO_CACHE_TTL_SECONDS:
+            _demo_entity_cache = _load_demo_entity_cache()
+            _demo_cache_loaded_at = now
+        return _demo_entity_cache
+
+
+def build_demo_system_prompt(entities: dict) -> str:
+    entity_list = entities.get("entities", [])
+    count = entities.get("count", len(entity_list))
+    return (
+        "You are the SWFI verified-intelligence assistant. "
+        f"You have access ONLY to the following curated packet of {count} verified "
+        "sovereign wealth and institutional investor entities.\n"
+        "Rules you MUST follow:\n"
+        "1. Answer ONLY from facts present in the entity packet below.\n"
+        "2. If the packet does not contain the fund, investor, or number the user asked about, "
+        "say so clearly — do not guess or fabricate.\n"
+        "3. Every numeric claim in your answer (AUM, allocation %, date, etc.) MUST correspond "
+        "to an entry in your sources list with a URL or document pointer from the packet. "
+        "If you cannot cite it, do not claim it.\n"
+        "4. 'I don't know' or 'Not in the verified data' are acceptable answers.\n"
+        "5. Return your answer as a JSON object only — no text outside it:\n"
+        '   {"text": "...", "sources": [{"label": "...", "url": "...", "field": "..."}], "status": "ok"}\n\n'
+        "ENTITY PACKET:\n"
+        + json.dumps(entity_list, ensure_ascii=False)
+    )
+
+
+def call_gemini_for_demo(query: str, entities: dict) -> dict:
+    """Call Gemini 2.5 Pro (fallback: 2.5 Flash). Returns parsed response dict."""
+    if not GEMINI_API_KEY:
+        return {
+            "text": "AI search is not available: API key not configured on this runtime.",
+            "sources": [],
+            "status": "error",
+        }
+    system_prompt = build_demo_system_prompt(entities)
+    models = ["gemini-2.5-pro", "gemini-2.5-flash"]
+    last_err = ""
+    for model in models:
+        try:
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
+                f":generateContent?key={GEMINI_API_KEY}"
+            )
+            body = json.dumps({
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"role": "user", "parts": [{"text": query}]}],
+                "generationConfig": {"responseMimeType": "application/json"},
+            }).encode("utf-8")
+            req = request.Request(
+                url, data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=12) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+            text = raw["candidates"][0]["content"]["parts"][0]["text"].strip()
+            parsed = json.loads(text)
+            parsed["_model"] = model
+            return parsed
+        except Exception as exc:
+            last_err = str(exc)
+            continue
+    return {
+        "text": f"AI search temporarily unavailable. Please try again shortly.",
+        "sources": [],
+        "status": "error",
+        "_last_err": last_err,
+    }
+
+
+def log_demo_ask(ip_raw: str, query: str, model: str, latency_ms: int) -> None:
+    """Append one structured line to the demo-ask log.
+    IP is hashed (sha256 prefix), response text is NOT logged per spec."""
+    try:
+        DEMO_ASK_LOG.parent.mkdir(parents=True, exist_ok=True)
+        ip_hash = hashlib.sha256(ip_raw.encode("utf-8")).hexdigest()[:16]
+        line = json.dumps({
+            "ts": iso_now(),
+            "ip_hash": ip_hash,
+            "query": query[:500],
+            "model": model,
+            "latency_ms": latency_ms,
+        }, ensure_ascii=False)
+        with DEMO_ASK_LOG.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception:
+        pass  # log failures must never crash a request
+
+
+# ---------------------------------------------------------------------------
+
 def redact_path_tokens(path: str) -> str:
     parsed = parse.urlsplit(path)
     if not parsed.query:
@@ -4125,6 +4245,74 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_text(build_sitemap_xml(host, proto), "application/xml; charset=utf-8", head_only=head_only)
             return True
 
+        # --- /demo — public client-facing surface (summer launch) -----------
+        # No auth. Everything under /demo/* and /demo/api/* is explicitly
+        # public. Keep internal telemetry out of this tree.
+        if parsed.path in ("/demo", "/demo/"):
+            self._write_text(
+                (ROOT / "demo" / "index.html").read_text(encoding="utf-8"),
+                "text/html; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+        if parsed.path == "/demo/demo.css":
+            self._write_text(
+                (ROOT / "demo" / "demo.css").read_text(encoding="utf-8"),
+                "text/css; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+        if parsed.path == "/demo/demo.js":
+            self._write_text(
+                (ROOT / "demo" / "demo.js").read_text(encoding="utf-8"),
+                "application/javascript; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+        if parsed.path == "/demo/api/coverage":
+            data = get_demo_entities()
+            count = int(data.get("count", len(data.get("entities", []))))
+            self._write_json(
+                {
+                    "count": count,
+                    "generated_at": data.get("generated_at"),
+                    "sources_breakdown": data.get("sources_breakdown", {}),
+                    "note": (
+                        "Verified entities. Completeness-gated: AUM + verified contact "
+                        "+ transaction history + provenance envelope. Ratified by Prem + Kong."
+                    ),
+                },
+                head_only=head_only,
+            )
+            return True
+
+        if parsed.path == "/demo/health":
+            data = get_demo_entities()
+            count = int(data.get("count", len(data.get("entities", []))))
+            self._write_json(
+                {
+                    "status": "ok",
+                    "entities": count,
+                    "last_refresh": iso_now() if not data.get("generated_at") else data["generated_at"],
+                },
+                head_only=head_only,
+            )
+            return True
+
+        if parsed.path == "/demo/api/presets":
+            try:
+                presets_path = ROOT / "demo" / "seed" / "queries.json"
+                presets_data = json.loads(presets_path.read_text(encoding="utf-8"))
+            except Exception:
+                presets_data = {"presets": []}
+            self._write_json(presets_data, head_only=head_only)
+            return True
+
+        # --- end /demo -------------------------------------------------------
+
         if parsed.path == "/app.js":
             self._write_text(
                 (ROOT / "app.js").read_text(encoding="utf-8"),
@@ -4324,6 +4512,50 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
         client_ip = get_request_client_ip(self)
         host = parse_request_host(self.headers)
         proto = parse_request_proto(self.headers)
+
+        # --- /demo/api/ask — public AI search endpoint ----------------------
+        # Scaffold only. CC: wire this to Gemini 2.5 Pro (GOOGLE_API_KEY in
+        # keychain). Inline the curated 500-entity packet from demo/seed/
+        # into the system prompt. Rate-limit per client_ip. Return shape:
+        #   { "text": "...", "sources": [ { "label": "...", "url": "..." } ] }
+        if parsed.path == "/demo/api/ask":
+            allowed, retry_after = check_rate_limit("demo_ask", client_ip, 30, window_seconds=60)
+            if not allowed:
+                self.send_response(429)
+                payload = json.dumps({"error": "rate limit", "retry_after": retry_after}).encode("utf-8")
+                self._send_common_headers("application/json", len(payload), "no-store", extra_headers={"Retry-After": str(retry_after)})
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            # soft hourly cap: 200 requests/hour per IP (on top of 30/min)
+            allowed_hourly, _ = check_rate_limit("demo_ask_hourly", client_ip, 200, window_seconds=3600)
+            if not allowed_hourly:
+                self._write_json({"error": "hourly limit reached", "retry_after": 3600}, status=429)
+                return
+            # parse JSON body
+            try:
+                length = int(self.headers.get("Content-Length", "0") or "0")
+                raw_body = self.rfile.read(length) if length else b"{}"
+                body_data = json.loads(raw_body.decode("utf-8", errors="replace"))
+                query = str(body_data.get("q", "")).strip()[:1000]
+            except Exception:
+                self._write_json({"error": "invalid request body"}, status=400)
+                return
+            if not query:
+                self._write_json({"error": "missing q"}, status=400)
+                return
+            entities = get_demo_entities()
+            t0 = time.monotonic()
+            result = call_gemini_for_demo(query, entities)
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            model_used = result.pop("_model", "unknown")
+            result.pop("_last_err", None)  # never leak internal error details to client
+            log_demo_ask(client_ip, query, model_used, latency_ms)
+            if "status" not in result:
+                result["status"] = "ok"
+            self._write_json(result, status=200)
+            return
+        # --- end /demo/api/ask ----------------------------------------------
 
         if parsed.path != "/auth/login":
             self._write_json({"error": "method not allowed"}, status=405)

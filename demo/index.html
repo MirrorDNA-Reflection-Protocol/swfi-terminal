@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow,noarchive" />
+<title>SWFI — Ask anything about sovereign wealth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/demo/demo.css" />
+</head>
+<body>
+<main class="demo-shell">
+  <header class="demo-hero">
+    <p class="demo-eyebrow">SWFI · verified intelligence</p>
+    <h1>Ask anything about sovereign wealth.</h1>
+    <p class="demo-sub">500 entities. 100% sourced. Every number traceable to origin.</p>
+  </header>
+
+  <section class="demo-search-panel">
+    <form id="ask-form" class="ask-form">
+      <input id="ask-input" type="text" autocomplete="off"
+             placeholder="e.g. Show me MENA pension funds allocating to private equity" />
+      <button type="submit">Ask</button>
+    </form>
+    <div id="ask-presets" class="ask-presets">
+      <!-- populated from /demo/api/presets on load -->
+    </div>
+    <div id="ask-answer" class="ask-answer" aria-live="polite"></div>
+  </section>
+
+  <section class="demo-coverage">
+    <div class="coverage-card">
+      <p class="coverage-label">Verified entities</p>
+      <p class="coverage-value" id="coverage-count">—</p>
+      <p class="coverage-note">Every record: AUM + verified contact + transaction history + provenance envelope.</p>
+      <p class="coverage-meta" id="coverage-meta"></p>
+    </div>
+  </section>
+
+  <footer class="demo-footer">
+    <span>◆ SWFI</span>
+    <span>·</span>
+    <span>Powered by Active Mirror</span>
+  </footer>
+</main>
+<script src="/demo/demo.js"></script>
+</body>
+</html>
