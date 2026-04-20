@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SWFI | Institutional Investor Data</title>
+    <meta name="description" content="Institutional investor data across Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, and API Access." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ticker-wrap" aria-hidden="true">
+      <div class="ticker-track">
+        <span class="ticker-item"><span class="t-name">Profiles</span><span class="t-val">595,040</span><span class="t-sep">│</span></span>
+        <span class="ticker-item"><span class="t-name">Transactions</span><span class="t-val">172,518</span><span class="t-sep">│</span></span>
+        <span class="ticker-item"><span class="t-name">RFPs</span><span class="t-val">4,844</span><span class="t-sep">│</span></span>
+        <span class="ticker-item"><span class="t-name">People &amp; Contacts</span><span class="t-val">123,217</span><span class="t-sep">│</span></span>
+      </div>
+    </div>
+
+    <div class="page-shell">
+      <nav class="topnav">
+        <div class="nav-left">
+          <a class="nav-brand" href="/">
+            <span class="brand-diamond">◆</span>
+            <span class="brand-text">SWFI</span>
+          </a>
+          <a href="https://www.swfinstitute.org/services/subscription" class="nav-link" target="_blank" rel="noreferrer">Subscription</a>
+          <a href="https://www.swfinstitute.org/services/datafeed-api" class="nav-link" target="_blank" rel="noreferrer">Datafeeds/API</a>
+          <a href="https://www.swfinstitute.org/public-fund-monitor" class="nav-link" target="_blank" rel="noreferrer">Public Fund Monitor</a>
+          <a href="https://api.swfi.com/" class="nav-link" target="_blank" rel="noreferrer">API Docs</a>
+        </div>
+        <div class="nav-right">
+          <span class="nav-status-dot nav-status-dot--controlled"></span>
+          <span class="nav-status-label">Controlled access</span>
+          <a href="/login?next=/dashboard" class="nav-cta">Login to SWFI Dashboard</a>
+        </div>
+      </nav>
+
+      <main class="main-stack landing-stack">
+        <header class="panel landing-hero">
+          <div class="landing-hero-copy">
+            <p class="sys-label">Institutional investor data</p>
+            <h1>Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, API Access</h1>
+            <p class="landing-copy">
+              SWFI provides institutional investor data across sovereign wealth funds, public pensions, central banks,
+              endowments, family offices, transactions, mandates, key people, and asset allocation.
+            </p>
+            <div class="status-strip">
+              <article class="status-pill tone-ok">
+                <strong>Subscription</strong>
+                <span>Profiles, Transactions, RFPs and Opportunities, Key People, briefings, and news.</span>
+              </article>
+              <article class="status-pill tone-ok">
+                <strong>Datafeeds/API</strong>
+                <span>JSON and CSV delivery through the SWFI REST API and custom data structures.</span>
+              </article>
+              <article class="status-pill tone-partial">
+                <strong>Dashboard</strong>
+                <span>Client workspaces, protected exports, and research responses are available after sign-in.</span>
+              </article>
+            </div>
+          </div>
+          <div class="landing-hero-actions">
+            <a class="nav-cta landing-cta" href="/login?next=/dashboard">Login to SWFI Dashboard</a>
+            <a class="nav-link landing-link" href="https://www.swfinstitute.org/services/datafeed-api" target="_blank" rel="noreferrer">Request API Access</a>
+            <a class="nav-link landing-link" href="https://www.swfinstitute.org/" target="_blank" rel="noreferrer">Book a Demo</a>
+          </div>
+        </header>
+
+        <section class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">Profiles</span>
+            <strong>595,040</strong>
+            <p>Institution profiles across sovereign wealth funds, pensions, central banks, and related allocators.</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Transactions</span>
+            <strong>172,518</strong>
+            <p>Direct investments and fund commitments across institutional investors.</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">RFPs</span>
+            <strong>4,844</strong>
+            <p>Mandates and business opportunities by strategy, institution, and region.</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">People &amp; contacts</span>
+            <strong>123,217</strong>
+            <p>Key people, work history, education, phones, emails, and profile-linked contacts.</p>
+          </article>
+        </section>
+
+        <section class="landing-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="sys-label">Coverage</p>
+                <h3>What is available</h3>
+              </div>
+            </div>
+            <div class="panel-stack">
+              <article class="stack-card tone-ok">
+                <div class="readiness-head">
+                  <strong>Profiles</strong>
+                  <span class="status-chip tone-ok">Available</span>
+                </div>
+                <p>Institution profiles across sovereign wealth funds, public pensions, central banks, endowments, and family offices.</p>
+              </article>
+              <article class="stack-card tone-ok">
+                <div class="readiness-head">
+                  <strong>Transactions</strong>
+                  <span class="status-chip tone-ok">Available</span>
+                </div>
+                <p>Historical and current transactions, investment activity, and related institutional allocation signals.</p>
+              </article>
+              <article class="stack-card tone-ok">
+                <div class="readiness-head">
+                  <strong>RFPs and Opportunities</strong>
+                  <span class="status-chip tone-ok">Available</span>
+                </div>
+                <p>Mandates, procurement notices, and opportunity tracking across the institutional investor base.</p>
+              </article>
+              <article class="stack-card tone-ok">
+                <div class="readiness-head">
+                  <strong>Key People and Asset Allocation</strong>
+                  <span class="status-chip tone-ok">Available</span>
+                </div>
+                <p>Contacts, work history, emails, phones, and asset allocation fields connected to institution profiles.</p>
+              </article>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="sys-label">Access</p>
+                <h3>How to use SWFI</h3>
+              </div>
+            </div>
+            <div class="panel-stack">
+              <article class="stack-card tone-ok">
+                <div class="readiness-head">
+                  <strong>SWFI Subscription</strong>
+                  <span class="status-chip tone-ok">Live</span>
+                </div>
+                <p>Use the subscription for profiles, transactions, RFPs and opportunities, key people, asset allocation, briefings, and news.</p>
+                <a class="source-link" href="https://www.swfinstitute.org/services/subscription" target="_blank" rel="noreferrer">Learn more</a>
+              </article>
+              <article class="stack-card tone-ok">
+                <div class="readiness-head">
+                  <strong>Datafeeds/API</strong>
+                  <span class="status-chip tone-ok">Live</span>
+                </div>
+                <p>Use the REST API and custom CSV/JSON datafeeds for direct integration into your own systems.</p>
+                <a class="source-link" href="https://www.swfinstitute.org/services/datafeed-api" target="_blank" rel="noreferrer">Request API access</a>
+              </article>
+              <article class="stack-card tone-partial">
+                <div class="readiness-head">
+                  <strong>SWFI Dashboard</strong>
+                  <span class="status-chip tone-partial">Controlled</span>
+                </div>
+                <p>Controlled-access dashboard routes include protected workspaces, exports, research responses, and client delivery views.</p>
+                <a class="source-link" href="/login?next=/dashboard">Login to dashboard</a>
+              </article>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-left">
+          <span class="footer-brand">◆ SWFI</span>
+          <span class="footer-sep">·</span>
+          <span class="footer-sub">Institutional investor data and intelligence</span>
+        </div>
+        <div class="footer-right">
+          <span><a href="https://api.swfi.com/" target="_blank" rel="noreferrer">api.swfi.com</a></span>
+          <span class="footer-sep">·</span>
+          <span><a href="/login?next=/dashboard">SWFI Dashboard login</a></span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

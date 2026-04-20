@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import hashlib
 import html
@@ -26,6 +27,7 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parent
+INPUTS_ROOT = ROOT / "data" / "inputs"
 
 SHEET_CSV_URL = (
     "https://docs.google.com/spreadsheets/d/1dVHsh2zmWrWsxSpMg3zEr7Je27XmAsnO/gviz/tq"
@@ -41,19 +43,19 @@ PROPOSAL_SHEET_URL = (
 TARGET_LIST_XLSX = Path(
     os.environ.get(
         "SWFI_TARGET_LIST_XLSX",
-        "/Users/mirror-admin/Downloads/target_list_top250_list_toClose(1).xlsx",
+        str(INPUTS_ROOT / "target_list_top250_list_toClose(1).xlsx"),
     )
 )
 SWF_GLOBAL_CSV = Path(
     os.environ.get(
         "SWFI_SWF_GLOBAL_CSV",
-        "/Users/mirror-admin/Downloads/SWFs Global - Sheet4.csv",
+        str(INPUTS_ROOT / "SWFs Global - Sheet4.csv"),
     )
 )
 PLATFORM_IMPROVEMENTS_CSV = Path(
     os.environ.get(
         "SWFI_PLATFORM_IMPROVEMENTS_CSV",
-        "/Users/mirror-admin/Downloads/Platform Improvements - Sheet1.csv",
+        str(INPUTS_ROOT / "Platform Improvements - Sheet1.csv"),
     )
 )
 
@@ -78,6 +80,7 @@ RESEARCH_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SWFI_RESEARCH_RATE_LIMIT_PE
 EXPORT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SWFI_EXPORT_RATE_LIMIT_PER_MINUTE", "10"))
 LOGIN_RATE_LIMIT_PER_15_MIN = int(os.environ.get("SWFI_LOGIN_RATE_LIMIT_PER_15_MIN", "12"))
 PREVIEW_SESSION_TTL_SECONDS = int(os.environ.get("SWFI_PREVIEW_SESSION_TTL_SECONDS", "43200"))
+CONNECTOR_PROBE_TTL_SECONDS = int(os.environ.get("SWFI_CONNECTOR_PROBE_TTL_SECONDS", "21600"))
 
 ATLAS_URI = os.environ.get("SWFI_ATLAS_URI", "").strip()
 ATLAS_DB = os.environ.get("SWFI_ATLAS_DB", "swfi_terminal_preview").strip() or "swfi_terminal_preview"
@@ -153,20 +156,20 @@ CLIENT_PRESETS = {
     "MSCI": {
         "status": "active",
         "cadence": "Rolling delivery + quarterly revisit cycle",
-        "focus": "People/account mapping, allocation automation, and managed-assets splits",
-        "deliverable": "People export contract + account mapping export lane",
+        "focus": "Key People, Asset Allocation, and managed-assets splits",
+        "deliverable": "Key People export and account mapping",
     },
     "Bloomberg": {
         "status": "active",
         "cadence": "Quarterly delivery lane",
-        "focus": "Financial institution coverage, FX normalization, and allocation math",
-        "deliverable": "Structured feed with currency-normalized outputs",
+        "focus": "Financial institution coverage, currency-normalized AUM, and Asset Allocation fields",
+        "deliverable": "Datafeed with normalized AUM outputs",
     },
     "IFC": {
         "status": "scaffolded",
         "cadence": "Pending detailed workflow pack",
-        "focus": "Private delivery lane scaffold from proposal scope",
-        "deliverable": "Controlled client output lane",
+        "focus": "Alternatives coverage, profiles, and controlled delivery",
+        "deliverable": "Controlled client output",
     },
 }
 
@@ -583,7 +586,7 @@ EXTERNAL_API_MATRIX = [
         "access": "free_public",
         "status": "ok",
         "use_case": "Legal-entity normalization, parent-child resolution, fuzzy matching, LEI backfill.",
-        "note": "Official public API. Free and no registration required per GLEIF references.",
+        "note": "Official production API. Supports ownership data, fuzzy matching, and mapped identifiers such as BIC or ISIN.",
         "url": "https://www.gleif.org/en/lei-data/gleif-lei-look-up-api/access-the-api",
     },
     {
@@ -591,7 +594,7 @@ EXTERNAL_API_MATRIX = [
         "access": "free_public",
         "status": "ok",
         "use_case": "Filings, XBRL company facts, submissions, and RSS-based filing monitoring.",
-        "note": "Official public APIs and HTTPS file system. Follow SEC fair-access guidance and user-agent rules.",
+        "note": "Official public JSON APIs, HTTPS filing access, and RSS feeds. Follow SEC fair-access guidance and user-agent rules.",
         "url": "https://www.sec.gov/about/developer-resources",
     },
     {
@@ -615,7 +618,7 @@ EXTERNAL_API_MATRIX = [
         "access": "free_public",
         "status": "partial",
         "use_case": "Instrument identifier normalization for securities-linked transaction and holdings rails.",
-        "note": "Free public API. Useful if the demo expands into mapped instrument analytics.",
+        "note": "Free public API with lower unauthenticated rate limits. Use v3; OpenFIGI documents v2 sunset on July 1, 2026.",
         "url": "https://www.openfigi.com/api/documentation",
     },
     {
@@ -623,7 +626,7 @@ EXTERNAL_API_MATRIX = [
         "access": "hybrid_open_or_paid",
         "status": "watch",
         "use_case": "Cross-jurisdiction company backfill and reconciliation.",
-        "note": "Open data exists, but at-scale API and commercial use should be treated as hybrid rather than fully free.",
+        "note": "Free for open-data projects under share-alike terms; commercial use and broader rights move into paid API accounts.",
         "url": "https://api.opencorporates.com/",
     },
     {
@@ -786,6 +789,7 @@ _dashboard_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _sandbox_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _msci_people_summary_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _msci_people_export_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
+_external_probe_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _request_rate_cache: dict[tuple[str, str], list[float]] = defaultdict(list)
 _session_store: dict[str, dict[str, object]] = {}
 _sandbox_last_request = 0.0
@@ -817,8 +821,13 @@ OPENAI_API_KEY = load_secret_from_env_or_keychain("OPENAI_API_KEY")
 GEMINI_API_KEY = load_secret_from_env_or_keychain("GEMINI_API_KEY", "GOOGLE_API_KEY")
 SWFI_SANDBOX_API_KEY = load_secret_from_env_or_keychain("SWFI_SANDBOX_API_KEY")
 SWFI_PRIVATE_EXPORT_TOKEN = load_secret_from_env_or_keychain("SWFI_PRIVATE_EXPORT_TOKEN")
-SWFI_PREVIEW_AUTH_USERNAME = load_secret_from_env_or_keychain("SWFI_PREVIEW_AUTH_USERNAME") or "swfi"
-SWFI_PREVIEW_AUTH_PASSWORD = load_secret_from_env_or_keychain("SWFI_PREVIEW_AUTH_PASSWORD") or "swfi123"
+COMPANIES_HOUSE_API_KEY = load_secret_from_env_or_keychain("COMPANIES_HOUSE_API_KEY")
+OPENCORPORATES_API_TOKEN = load_secret_from_env_or_keychain("OPENCORPORATES_API_TOKEN")
+NEWSAPI_KEY = load_secret_from_env_or_keychain("NEWSAPI_KEY")
+_PREVIEW_AUTH_USERNAME_SECRET = load_secret_from_env_or_keychain("SWFI_PREVIEW_AUTH_USERNAME")
+_PREVIEW_AUTH_PASSWORD_SECRET = load_secret_from_env_or_keychain("SWFI_PREVIEW_AUTH_PASSWORD")
+SWFI_PREVIEW_AUTH_USERNAME = _PREVIEW_AUTH_USERNAME_SECRET or "swfi-preview"
+SWFI_PREVIEW_AUTH_PASSWORD = _PREVIEW_AUTH_PASSWORD_SECRET or secrets.token_urlsafe(24)
 SWFI_SESSION_SECRET = load_secret_from_env_or_keychain("SWFI_SESSION_SECRET") or secrets.token_urlsafe(32)
 SESSION_COOKIE_NAME = "swfi_preview_session"
 
@@ -1499,23 +1508,23 @@ def classify_row(row: dict[str, object]) -> dict[str, str]:
     ).lower()
 
     if "mapping" in tags:
-        title = "Canonicalize people-to-account mapping"
+        title = "Align Key People with Profiles"
     elif "subsidiaries" in tags:
-        title = "Add subsidiary-aware AUM coverage"
+        title = "Expand AUM coverage for subsidiaries"
     elif "currency" in tags:
-        title = "Automate currency normalization"
+        title = "Normalize AUM currency fields"
     elif "manual_ops" in tags and "allocation" in lowered:
-        title = "Automate allocation percentage calculations"
+        title = "Complete Asset Allocation fields"
     elif "alt_assets" in tags:
-        title = "Add alternative asset coverage"
+        title = "Extend Alternatives coverage"
     elif "people" in tags and ("gap in the availability" in lowered or "comprehensive" in lowered):
-        title = "Expand people profile coverage"
+        title = "Expand Key People coverage"
     elif "missing_fields" in tags and "profile" in lowered:
-        title = "Backfill missing profile fields"
+        title = "Complete Profile fields"
     elif "missing_fields" in tags:
-        title = "Add missing dashboard fields"
+        title = "Complete Datafeeds/API fields"
     elif "capacity" in tags:
-        title = "Increase delivery bandwidth for priority feeds"
+        title = "Increase Datafeeds/API refresh"
     else:
         title = shorten(str(row["requirement"] or row["challenge"]), width=72, placeholder="...")
 
@@ -1534,50 +1543,50 @@ def classify_row(row: dict[str, object]) -> dict[str, str]:
 
 
 CONCERN_BRIEFS = {
-    "Automate allocation percentage calculations": {
-        "requirement": "Move allocation math and managed-assets classification into the delivery pipeline.",
-        "challenge": "Replace spreadsheet-only calculations with structured fields, rules, and refresh jobs that can power API and CSV delivery.",
-        "recommendation": "This makes recurring MSCI allocation updates repeatable, reviewable, and much easier to ship on schedule.",
+    "Complete Asset Allocation fields": {
+        "requirement": "Complete Asset Allocation fields used in MSCI and client delivery.",
+        "challenge": "Move allocation percentages, managed assets, and classification fields into repeatable export-ready records.",
+        "recommendation": "This improves Asset Allocation tables, AUM views, and Datafeeds/API delivery.",
     },
-    "Add subsidiary-aware AUM coverage": {
-        "requirement": "Model subsidiary-level AUM and managed-assets relationships directly in the entity layer.",
-        "challenge": "Add the fields and joins required to roll parent and subsidiary records into one consistent delivery surface.",
-        "recommendation": "This closes an important gap in account views and makes downstream AUM exports more complete.",
+    "Expand AUM coverage for subsidiaries": {
+        "requirement": "Expand AUM and managed-assets coverage across subsidiaries and child funds.",
+        "challenge": "Add the profile fields and joins required to connect parent entities, subsidiaries, and related funds.",
+        "recommendation": "This improves profile completeness and makes AUM exports more reliable.",
     },
-    "Increase delivery bandwidth for priority feeds": {
-        "requirement": "Scale high-volume refresh and QA paths for the largest institutional feed lanes.",
-        "challenge": "Increase throughput across ingestion, review, and publishing so major entity sets can be updated reliably.",
-        "recommendation": "This keeps recurring client deliveries on cadence without relying on manual overtime or fragile workflows.",
+    "Increase Datafeeds/API refresh": {
+        "requirement": "Increase refresh capacity for the largest institutional datafeeds.",
+        "challenge": "Improve update throughput across ingestion, review, and publishing for high-volume profiles and transactions.",
+        "recommendation": "This keeps recurring deliveries on schedule and reduces stale records.",
     },
-    "Backfill missing profile fields": {
-        "requirement": "Complete the core institution profile schema required by exports and integrations.",
-        "challenge": "Promote missing identity, location, and reference fields into the structured product model.",
-        "recommendation": "This improves trust in demos and raises the completeness of API and feed outputs.",
+    "Complete Profile fields": {
+        "requirement": "Complete the core profile fields used across subscriptions, exports, and direct integrations.",
+        "challenge": "Backfill institution identity, location, and reference fields where profiles are still thin.",
+        "recommendation": "This improves trust in profiles and raises the completeness of feeds and exports.",
     },
-    "Add missing dashboard fields": {
-        "requirement": "Add the structured fields needed by downstream exports and API consumers.",
-        "challenge": "Close the remaining gaps between what operators track manually and what the product exposes directly.",
-        "recommendation": "This reduces one-off handling and makes the delivery surface easier to automate.",
+    "Complete Datafeeds/API fields": {
+        "requirement": "Complete the fields needed by downstream Datafeeds/API consumers.",
+        "challenge": "Close the remaining gaps between tracked internal fields and the records surfaced directly in exports.",
+        "recommendation": "This reduces one-off handling and makes delivery easier to automate.",
     },
-    "Canonicalize people-to-account mapping": {
-        "requirement": "Standardize how contacts, accounts, and entity histories join across the export stack.",
-        "challenge": "Use stable identifiers and canonical joins so people-to-account mapping is consistent across every file and API response.",
-        "recommendation": "This is the foundation for trustworthy MSCI people exports, review files, and audit trails.",
+    "Align Key People with Profiles": {
+        "requirement": "Align Key People, contacts, and institution profiles with stable account references.",
+        "challenge": "Use consistent identifiers and joins so people-to-profile mapping stays stable across exports and APIs.",
+        "recommendation": "This is the foundation for trustworthy MSCI Key People files and review workflows.",
     },
-    "Automate currency normalization": {
-        "requirement": "Normalize currency handling in the platform instead of relying on analyst-side conversions.",
+    "Normalize AUM currency fields": {
+        "requirement": "Normalize currency handling across AUM, managed assets, and account-level outputs.",
         "challenge": "Apply shared FX conversion and currency metadata rules across feeds and exports.",
-        "recommendation": "This keeps AUM and account-level outputs consistent for downstream consumers.",
+        "recommendation": "This keeps profile and AUM outputs consistent for downstream consumers.",
     },
-    "Add alternative asset coverage": {
-        "requirement": "Extend the dashboard model to include alternative asset coverage for IFC delivery workflows.",
-        "challenge": "Add the entity types, fields, and download paths required to expose alternative asset data directly in the product.",
-        "recommendation": "This closes a visible product gap and makes IFC extraction work possible without side handling.",
+    "Extend Alternatives coverage": {
+        "requirement": "Extend Alternatives and Real Assets coverage for institutions where that data is still thin.",
+        "challenge": "Add the fields and profile types required to surface alternatives directly in the product.",
+        "recommendation": "This closes a visible coverage gap and reduces manual side handling.",
     },
-    "Expand people profile coverage": {
-        "requirement": "Improve the depth and consistency of people records used in IFC delivery work.",
-        "challenge": "Enrich profile coverage, refresh cadence, and supporting joins so people data is complete enough for downstream use.",
-        "recommendation": "This raises confidence in contact-level outputs and reduces manual follow-up during delivery.",
+    "Expand Key People coverage": {
+        "requirement": "Improve the depth and consistency of Key People records used in delivery work.",
+        "challenge": "Enrich contact coverage, refresh cadence, and supporting joins so people records are usable downstream.",
+        "recommendation": "This raises confidence in contact-level outputs and reduces manual follow-up.",
     },
 }
 
@@ -1589,10 +1598,30 @@ def sanitize_concern_copy(row: dict[str, object]) -> dict[str, str]:
         return mapped
     client = str(row.get("client") or "delivery")
     return {
-        "requirement": f"{title} is part of the {client} delivery lane and still needs product work before it can be treated as routine.",
-        "challenge": "Focus areas span field coverage, automation, and delivery controls.",
-        "recommendation": "This affects export completeness, API reliability, and operator confidence across the lane.",
+        "requirement": f"{title} sits inside the {client} lane and still needs fuller coverage before it can be treated as routine.",
+        "challenge": "Focus areas span profiles, key people, asset allocation, and delivery controls.",
+        "recommendation": "This affects export completeness, Datafeeds/API reliability, and operator confidence across the lane.",
     }
+
+
+def normalize_use_case(value: str) -> str:
+    text = (value or "").strip()
+    lowered = text.lower()
+    if not text:
+        return "Datafeeds/API"
+    if "api" in lowered:
+        return "Datafeeds/API"
+    if "rfp" in lowered or "mandate" in lowered:
+        return "RFPs and Opportunities"
+    if "people" in lowered or "contact" in lowered:
+        return "Key People"
+    if "allocation" in lowered or "aum" in lowered:
+        return "Asset Allocation"
+    if "deal" in lowered or "transaction" in lowered:
+        return "Transactions"
+    if "profile" in lowered:
+        return "Profiles"
+    return text
 
 
 def load_concern_rows() -> dict[str, object]:
@@ -1627,7 +1656,7 @@ def load_concern_rows() -> dict[str, object]:
             tags = derive_tags(requirement, challenge, recommendation)
             row: dict[str, object] = {
                 "client": client or "General",
-                "use_case": use_case or "Feed delivery",
+                "use_case": normalize_use_case(use_case or "Datafeeds/API"),
                 "requirement": requirement,
                 "challenge": challenge,
                 "recommendation": recommendation,
@@ -2155,53 +2184,53 @@ def build_action_queue(concerns: list[dict[str, object]]) -> list[dict[str, obje
 
     curated = [
         {
-            "title": "Fix top-500 entity data quality",
+            "title": "Improve top 500 Profiles",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "Feedback points to contacts, AUM, and transactions as the highest-leverage trust fix.",
+            "impact": "Profiles, Key People, AUM, and Transactions remain the highest-leverage trust fix.",
         },
         {
-            "title": "Publish sourced canonical schema",
+            "title": "Add source and timestamp detail",
             "lane": "All",
             "status": "partial",
             "priority": "P1",
-            "impact": "Every field needs source system, retrieval time, extraction method, confidence, and evidence pointers.",
+            "impact": "Every important field should show source, retrieval time, method, confidence, and evidence.",
         },
         {
-            "title": "Build MSCI people export lane",
+            "title": "MSCI Key People export",
             "lane": "MSCI",
             "status": "partial",
             "priority": "P1",
-            "impact": "The authenticated export path now exists; next priority is contact verification, authorization, and audit logging.",
+            "impact": "The export path exists; the next step is stronger contact verification, authorization, and audit history.",
         },
         {
-            "title": "Stabilize search and demo performance",
+            "title": "Platform speed and search",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "Sales feedback calls out platform speed and reliability as systemic conversion blockers.",
+            "impact": "Speed and search quality are recurring blockers in live demos and client evaluation.",
         },
         {
-            "title": "Add AI search and saved alerts",
+            "title": "Search and alerts",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "Natural-language search and explainable alerts are now table stakes in demos.",
+            "impact": "Clients expect natural-language search, saved searches, and alerts across profiles and transactions.",
         },
         {
-            "title": "Wire CRM and warehouse connectors",
+            "title": "CRM and Datafeeds/API delivery",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "One-click CSV is not enough; Salesforce, Snowflake, Graph, and export jobs need to exist.",
+            "impact": "CSV alone is not enough; enterprise clients expect CRM delivery, warehouse sync, and scheduled exports.",
         },
         {
-            "title": "Add entitlements, monitoring, and unified data model controls",
+            "title": "Access controls and monitoring",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "Bloomberg-class enterprise delivery now assumes entitlements control, activity monitoring, and unified field delivery.",
+            "impact": "Enterprise delivery expects controlled access, usage monitoring, and consistent fields across every delivery channel.",
         },
     ]
 
@@ -2286,8 +2315,8 @@ def build_metric_cards(
 ) -> list[dict[str, str]]:
     people_counts = people_summary.get("summary", {})
     return [
-        {"label": "Canonical models", "value": str(len(CANONICAL_SCHEMA)), "note": "Institution, fund, AUM, people, document, RFP, filing, news"},
-        {"label": "Delivery priorities", "value": str(len(concerns)), "note": "Current build themes surfaced from the live client feedback sheet"},
+        {"label": "Coverage models", "value": str(len(CANONICAL_SCHEMA)), "note": "Institution, fund, AUM, people, document, RFP, filing, news"},
+        {"label": "Coverage items", "value": str(len(concerns)), "note": "Current items surfaced from the live delivery sheet"},
         {
             "label": "Target accounts",
             "value": str(target_summary.get("total_targets", 0)),
@@ -2296,7 +2325,7 @@ def build_metric_cards(
         {
             "label": "Accessible key people",
             "value": str(people_counts.get("people_total", 0) or "0"),
-            "note": "Authenticated people list available for MSCI export when sandbox access is configured",
+            "note": "Authenticated Key People list available for MSCI export",
         },
     ]
 
@@ -2614,6 +2643,7 @@ def build_msci_workbench(
         "type_breakdown": summary.get("type_breakdown", []),
         "state_breakdown": summary.get("state_breakdown", []),
         "people_export": people_export,
+        "analytics": build_msci_analytics(target_bundle, people_summary),
         "sovereign_seed_summary": swf_summary,
     }
 
@@ -3044,6 +3074,7 @@ def build_dashboard_payload() -> dict[str, object]:
         },
         "benchmark_matrix": BENCHMARK_MATRIX,
         "required_api_stack": REQUIRED_API_STACK,
+        "external_api_matrix": EXTERNAL_API_MATRIX,
         "connector_maturity": build_maturity_groups(),
         "platform_feedback": PLATFORM_FEEDBACK,
         "email_streams": EMAIL_AUTOMATION_STREAMS,
@@ -3339,6 +3370,7 @@ def build_research_payload(query_text: str) -> dict[str, object]:
         "data_coverage": payload["data_coverage"],
         "msci_workbench": payload["msci_workbench"],
         "sandbox_api": payload["sandbox_api"],
+        "external_api_matrix": payload["external_api_matrix"],
         "benchmark_matrix": payload["benchmark_matrix"],
         "gaps": payload["gaps"],
         "security_controls": payload["security_controls"],
@@ -3519,6 +3551,461 @@ def build_people_template_csv() -> str:
     return output.getvalue()
 
 
+def clear_runtime_caches() -> None:
+    with _cache_lock:
+        _dashboard_cache["timestamp"] = 0.0
+        _dashboard_cache["payload"] = None
+        _sandbox_cache["timestamp"] = 0.0
+        _sandbox_cache["payload"] = None
+        _msci_people_summary_cache["timestamp"] = 0.0
+        _msci_people_summary_cache["payload"] = None
+        _msci_people_export_cache["timestamp"] = 0.0
+        _msci_people_export_cache["payload"] = None
+        _external_probe_cache["timestamp"] = 0.0
+        _external_probe_cache["payload"] = None
+
+
+def probe_gleif_live() -> dict[str, object]:
+    url = "https://api.gleif.org/api/v1/lei-records?filter%5Bentity.legalName%5D=State%20Street%20Corporation&page%5Bsize%5D=1"
+    payload = fetch_json(url, timeout=10)
+    record = (payload.get("data") or [{}])[0]
+    attributes = record.get("attributes") or {}
+    legal_name = (
+        (attributes.get("entity") or {}).get("legalName", {}) or {}
+    ).get("name") or "State Street Corporation"
+    lei = record.get("id") or attributes.get("lei") or "unknown"
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": f"Matched {legal_name} to LEI {lei}.",
+        "probe_url": url,
+        "checked_at": iso_now(),
+    }
+
+
+def probe_sec_live() -> dict[str, object]:
+    url = "https://data.sec.gov/submissions/CIK0000093751.json"
+    payload = fetch_json(url, timeout=10, headers={"User-Agent": "SWFI Terminal/0.4 admin@swfi.com"})
+    recent = (payload.get("filings") or {}).get("recent") or {}
+    forms = recent.get("form") or []
+    filing_dates = recent.get("filingDate") or []
+    latest_form = forms[0] if forms else "unknown"
+    latest_date = filing_dates[0] if filing_dates else "unknown"
+    company_name = payload.get("name") or "State Street Corp"
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": f"Fetched SEC submissions for {company_name}; latest filing {latest_form} on {latest_date}.",
+        "probe_url": url,
+        "checked_at": iso_now(),
+    }
+
+
+def probe_ofac_live() -> dict[str, object]:
+    url = "https://ofac.treasury.gov/ofac-sanctions-lists"
+    html_text = fetch_text(url, timeout=10)
+    if "Sanctions List Service" not in html_text:
+        raise RuntimeError("unexpected_ofac_response")
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": "Sanctions List Service page responded and exposed the current OFAC download/search surface.",
+        "probe_url": url,
+        "checked_at": iso_now(),
+    }
+
+
+def probe_openfigi_live() -> dict[str, object]:
+    url = "https://api.openfigi.com/v3/mapping"
+    payload = fetch_json(
+        url,
+        payload=[{"idType": "TICKER", "idValue": "STT", "exchCode": "US"}],
+        timeout=10,
+        headers={"Content-Type": "application/json"},
+    )
+    rows = payload[0].get("data") if isinstance(payload, list) and payload else []
+    first = rows[0] if rows else {}
+    figi = first.get("figi", "unknown")
+    security = first.get("securityDescription") or first.get("name") or "State Street Corp"
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": f"Mapped STT (US) to FIGI {figi} for {security}.",
+        "probe_url": url,
+        "checked_at": iso_now(),
+    }
+
+
+def probe_companies_house_live() -> dict[str, object]:
+    if not COMPANIES_HOUSE_API_KEY:
+        return {
+            "live_status": "blocked",
+            "probe_tone": "blocked",
+            "probe_note": "API key not configured on this runtime. Public docs are mapped, but live registry lookups are not enabled.",
+            "probe_url": "https://developer.company-information.service.gov.uk/get-started",
+            "checked_at": iso_now(),
+        }
+    auth = base64.b64encode(f"{COMPANIES_HOUSE_API_KEY}:".encode("utf-8")).decode("ascii")
+    url = "https://api.company-information.service.gov.uk/search/companies?q=state%20street"
+    payload = fetch_json(url, timeout=10, headers={"Authorization": f"Basic {auth}"})
+    first = (payload.get("items") or [{}])[0]
+    title = first.get("title") or "State Street candidate"
+    company_number = first.get("company_number") or "unknown"
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": f"Registry search returned {title} ({company_number}).",
+        "probe_url": url,
+        "checked_at": iso_now(),
+    }
+
+
+def probe_opencorporates_live() -> dict[str, object]:
+    if not OPENCORPORATES_API_TOKEN:
+        return {
+            "live_status": "watch",
+            "probe_tone": "watch",
+            "probe_note": "API token not configured. This rail stays mapped as hybrid open-or-paid until commercial rights are confirmed.",
+            "probe_url": "https://api.opencorporates.com/documentation/API-Reference",
+            "checked_at": iso_now(),
+        }
+    url = f"https://api.opencorporates.com/v0.4/companies/search?q=state%20street&api_token={parse.quote(OPENCORPORATES_API_TOKEN)}"
+    payload = fetch_json(url, timeout=10)
+    companies = (((payload.get("results") or {}).get("companies")) or [])
+    first = companies[0].get("company", {}) if companies else {}
+    name = first.get("name") or "State Street candidate"
+    jurisdiction = first.get("jurisdiction_code") or "unknown"
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": f"Company search returned {name} in jurisdiction {jurisdiction}.",
+        "probe_url": url,
+        "checked_at": iso_now(),
+    }
+
+
+def probe_newsapi_live() -> dict[str, object]:
+    if not NEWSAPI_KEY:
+        return {
+            "live_status": "blocked",
+            "probe_tone": "blocked",
+            "probe_note": "API key not configured. NewsAPI remains a paid production rail, not a live dependency in this runtime.",
+            "probe_url": "https://newsapi.org/pricing",
+            "checked_at": iso_now(),
+        }
+    url = f"https://newsapi.org/v2/everything?q=sovereign%20wealth%20fund&pageSize=1&apiKey={parse.quote(NEWSAPI_KEY)}"
+    payload = fetch_json(url, timeout=10)
+    total = int(payload.get("totalResults", 0))
+    return {
+        "live_status": "ok",
+        "probe_tone": "ok",
+        "probe_note": f"Search returned {total} matching articles for the sample sovereign-wealth query.",
+        "probe_url": "https://newsapi.org/v2/everything",
+        "checked_at": iso_now(),
+    }
+
+
+def build_live_external_api_matrix() -> list[dict[str, object]]:
+    probes = {
+        "GLEIF LEI API": probe_gleif_live,
+        "SEC EDGAR / data.sec.gov": probe_sec_live,
+        "Companies House API": probe_companies_house_live,
+        "OFAC Sanctions List Service": probe_ofac_live,
+        "OpenFIGI API": probe_openfigi_live,
+        "OpenCorporates API": probe_opencorporates_live,
+        "NewsAPI": probe_newsapi_live,
+    }
+    results: list[dict[str, object]] = []
+    for item in EXTERNAL_API_MATRIX:
+        enriched = dict(item)
+        probe_fn = probes.get(str(item.get("name", "")))
+        try:
+            probe_payload = probe_fn() if probe_fn else {
+                "live_status": "watch",
+                "probe_tone": "watch",
+                "probe_note": "No runtime probe implemented for this connector.",
+                "probe_url": item.get("url"),
+                "checked_at": iso_now(),
+            }
+        except Exception as exc:
+            probe_payload = {
+                "live_status": "blocked",
+                "probe_tone": "blocked",
+                "probe_note": f"Live probe failed: {exc.__class__.__name__}",
+                "probe_url": item.get("url"),
+                "checked_at": iso_now(),
+            }
+        enriched.update(probe_payload)
+        results.append(enriched)
+    return results
+
+
+def get_live_external_api_matrix() -> list[dict[str, object]]:
+    now = time.time()
+    with _cache_lock:
+        cached = _external_probe_cache.get("payload")
+        timestamp = float(_external_probe_cache.get("timestamp", 0.0))
+        if cached and now - timestamp < CONNECTOR_PROBE_TTL_SECONDS:
+            return cached
+
+    payload = build_live_external_api_matrix()
+    with _cache_lock:
+        _external_probe_cache["timestamp"] = now
+        _external_probe_cache["payload"] = payload
+    return payload
+
+
+def read_export_audit_events(limit: int = 50) -> list[dict[str, object]]:
+    if not SWFI_EXPORT_AUDIT_LOG.exists():
+        return []
+    try:
+        lines = SWFI_EXPORT_AUDIT_LOG.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return []
+    events: list[dict[str, object]] = []
+    for line in reversed(lines):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except Exception:
+            continue
+        if len(events) >= limit:
+            break
+    return events
+
+
+def build_msci_analytics(target_bundle: dict[str, object], people_summary: dict[str, object]) -> dict[str, object]:
+    summary = target_bundle.get("summary", {})
+    people_counts = people_summary.get("summary", {})
+    total_people = max(int(people_counts.get("people_total", 0)), 1)
+    analytics_cards = [
+        {
+            "label": "Target accounts",
+            "value": str(summary.get("total_targets", 0)),
+            "note": "High-confidence target rows loaded from the workbook",
+        },
+        {
+            "label": "People with email",
+            "value": f"{round((int(people_counts.get('with_email', 0)) / total_people) * 100)}%",
+            "note": f"{people_counts.get('with_email', 0)} of {people_counts.get('people_total', 0)} accessible people",
+        },
+        {
+            "label": "People with phone",
+            "value": f"{round((int(people_counts.get('with_phone', 0)) / total_people) * 100)}%",
+            "note": f"{people_counts.get('with_phone', 0)} phone values currently available",
+        },
+        {
+            "label": "Entity-linked preview rows",
+            "value": f"{round((int(people_counts.get('preview_with_entity_reference', 0)) / max(int(people_counts.get('preview_rows', 0)), 1)) * 100)}%",
+            "note": f"{people_counts.get('preview_with_entity_reference', 0)} of {people_counts.get('preview_rows', 0)} preview rows carry an entity reference",
+        },
+    ]
+    return {
+        "cards": analytics_cards,
+        "downloads": {
+            "msci_analytics_csv": "/api/reports/msci-analytics.csv",
+            "external_api_matrix_csv": "/api/reports/external-api-matrix.csv",
+            "export_history_csv": "/api/reports/export-history.csv",
+            "phase1_summary_md": "/api/reports/phase1-summary.md",
+        },
+    }
+
+
+def build_msci_analytics_csv() -> str:
+    target_bundle = load_target_accounts()
+    people_summary = get_msci_people_summary(target_bundle)
+    analytics = build_msci_analytics(target_bundle, people_summary)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Metric", "Value", "Note"])
+    for card in analytics["cards"]:
+        writer.writerow([card["label"], card["value"], card["note"]])
+    return output.getvalue()
+
+
+def build_external_api_matrix_csv() -> str:
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["API", "Access", "Status", "Live Status", "Checked At", "Use Case", "Note", "Live Note", "URL", "Probe URL"])
+    for item in get_live_external_api_matrix():
+        writer.writerow(
+            [
+                item["name"],
+                item["access"],
+                item["status"],
+                item.get("live_status", ""),
+                item.get("checked_at", ""),
+                item["use_case"],
+                item["note"],
+                item.get("probe_note", ""),
+                item["url"],
+                item.get("probe_url", ""),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_export_history_csv(limit: int = 200) -> str:
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Timestamp", "Route", "Outcome", "Auth Mode", "Host", "Client IP", "User Agent"])
+    for item in read_export_audit_events(limit):
+        writer.writerow(
+            [
+                item.get("timestamp", ""),
+                item.get("route", ""),
+                item.get("outcome", ""),
+                item.get("auth_mode", ""),
+                item.get("host", ""),
+                item.get("client_ip", ""),
+                item.get("user_agent", ""),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_phase1_summary_md() -> str:
+    target_bundle = load_target_accounts()
+    people_summary = get_msci_people_summary(target_bundle)
+    export_payload = get_cached_msci_people_export_payload(include_stale=True) or {
+        "summary": {
+            "rows_exported": int(people_summary.get("summary", {}).get("people_total", 0)),
+            "review_queue": 0,
+        }
+    }
+    dashboard = get_cached_dashboard_payload(include_stale=True) or {}
+    lines = [
+        "# SWFI Beta - Capital Intelligence Layer v0.1",
+        "",
+        f"Generated: {iso_now()}",
+        "",
+        "## Phase 1 wedge",
+        "- Controlled-access landing and login",
+        "- MSCI Key People workspace",
+        "- Clean CSV export path with audit logging",
+        "- Trust layer with source, status, timestamp, and confidence",
+        "",
+        "## MSCI numbers",
+        f"- Target accounts: {target_bundle.get('summary', {}).get('total_targets', 0)}",
+        f"- Accessible people: {people_summary.get('summary', {}).get('people_total', 0)}",
+        f"- People with email: {people_summary.get('summary', {}).get('with_email', 0)}",
+        f"- People with phone: {people_summary.get('summary', {}).get('with_phone', 0)}",
+        f"- Export rows: {export_payload.get('summary', {}).get('rows_exported', 0)}",
+        f"- Review queue: {export_payload.get('summary', {}).get('review_queue', 0)}",
+        "",
+        "## Free/public external rails identified",
+    ]
+    for item in EXTERNAL_API_MATRIX:
+        lines.append(f"- {item['name']}: {item['access']} - {item['use_case']}")
+    gaps = dashboard.get("gaps", []) if isinstance(dashboard, dict) else []
+    if gaps:
+        lines.extend(
+            [
+                "",
+                "## Current blockers",
+            ]
+        )
+        for gap in gaps[:6]:
+            lines.append(f"- {gap['title']}: {gap['detail']}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def get_cached_dashboard_payload(*, include_stale: bool = True) -> dict[str, object] | None:
+    now = time.time()
+    with _cache_lock:
+        cached = _dashboard_cache.get("payload")
+        timestamp = float(_dashboard_cache.get("timestamp", 0.0))
+        if not cached:
+            return None
+        if include_stale or now - timestamp < CACHE_TTL_SECONDS:
+            return cached
+    return None
+
+
+def get_cached_msci_people_export_payload(*, include_stale: bool = True) -> dict[str, object] | None:
+    now = time.time()
+    with _cache_lock:
+        cached = _msci_people_export_cache.get("payload")
+        timestamp = float(_msci_people_export_cache.get("timestamp", 0.0))
+        if not cached:
+            return None
+        if include_stale or now - timestamp < MSCI_EXPORT_TTL_SECONDS:
+            return cached
+    return None
+
+
+def build_admin_payload() -> dict[str, object]:
+    dashboard = get_cached_dashboard_payload(include_stale=True) or {}
+    target_bundle = load_target_accounts()
+    people_summary = get_msci_people_summary(target_bundle)
+    live_external_matrix = get_live_external_api_matrix()
+    export_payload = get_cached_msci_people_export_payload(include_stale=True) or {
+        "tone": "ok" if people_summary.get("status") == "ok" else "watch",
+        "summary": {
+            "rows_exported": int(people_summary.get("summary", {}).get("people_total", 0)),
+        },
+    }
+    audit_events = read_export_audit_events(100)
+    atlas_status = dashboard.get("atlas", {}) if isinstance(dashboard, dict) else {}
+    sandbox_status = dashboard.get("sandbox_api", {}) if isinstance(dashboard, dict) else {}
+    if not atlas_status:
+        atlas_status = {
+            "status": "not_warmed",
+            "tone": "watch",
+            "note": "Dashboard packet has not been warmed yet on this runtime.",
+        }
+    if not sandbox_status:
+        sandbox_status = {
+            "tone": "ok" if SWFI_SANDBOX_API_KEY else "blocked",
+            "source": {
+                "note": (
+                    "Sandbox credentials are configured on this runtime."
+                    if SWFI_SANDBOX_API_KEY
+                    else "Sandbox credentials are not configured on this runtime."
+                )
+            },
+        }
+    errors: list[dict[str, str]] = []
+    if atlas_status.get("status") != "materialized":
+        errors.append({"title": "Atlas preview storage", "detail": str(atlas_status.get("note", "")), "status": str(atlas_status.get("tone", "watch"))})
+    if people_summary.get("summary", {}).get("with_phone", 0) < 250:
+        errors.append({"title": "Phone coverage remains thin", "detail": "MSCI export is populated, but phone coverage is still low for high-confidence outreach use.", "status": "partial"})
+    statuses = [
+        {"label": "Dashboard packet", "status": "ok" if dashboard else "watch", "note": f"Last built {dashboard.get('generated_at', 'not warmed yet') if isinstance(dashboard, dict) else 'not warmed yet'}"},
+        {"label": "MSCI target workbook", "status": "ok" if target_bundle.get('summary', {}).get('total_targets', 0) else "blocked", "note": f"{target_bundle.get('summary', {}).get('total_targets', 0)} target accounts parsed"},
+        {"label": "People export", "status": str(export_payload.get("tone", "watch")), "note": f"{export_payload.get('summary', {}).get('rows_exported', 0)} rows exported"},
+        {"label": "Export audit log", "status": "ok" if SWFI_EXPORT_AUDIT_LOG.exists() else "watch", "note": f"{len(audit_events)} recent events loaded"},
+        {"label": "Sandbox API", "status": str(sandbox_status.get('tone', 'watch')), "note": str(sandbox_status.get('source', {}).get('note', ''))},
+        {"label": "Public connector probes", "status": "ok" if sum(1 for item in live_external_matrix if item.get("live_status") == "ok") >= 4 else "partial", "note": f"{sum(1 for item in live_external_matrix if item.get('live_status') == 'ok')} connectors responded on the latest probe"},
+    ]
+    return {
+        "schema_version": ADMIN_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary_cards": [
+            {"label": "Target accounts", "value": str(target_bundle.get("summary", {}).get("total_targets", 0)), "note": "Rows parsed into the MSCI workspace"},
+            {"label": "Accessible people", "value": str(people_summary.get("summary", {}).get("people_total", 0)), "note": "Authenticated people records"},
+            {"label": "Exports logged", "value": str(len(audit_events)), "note": "Recent export audit events"},
+            {"label": "Live public probes", "value": str(sum(1 for item in live_external_matrix if item.get("live_status") == "ok")), "note": "Public/free connector probes responding on the latest check"},
+        ],
+        "statuses": statuses,
+        "errors": errors,
+        "export_history": audit_events,
+        "analytics": build_msci_analytics(target_bundle, people_summary),
+        "external_api_matrix": live_external_matrix,
+        "reports": [
+            {"label": "MSCI analytics CSV", "url": "/api/reports/msci-analytics.csv"},
+            {"label": "External API matrix CSV", "url": "/api/reports/external-api-matrix.csv"},
+            {"label": "Connector status JSON", "url": "/api/connectors/v1"},
+            {"label": "Export history CSV", "url": "/api/reports/export-history.csv"},
+            {"label": "Phase 1 summary", "url": "/api/reports/phase1-summary.md"},
+        ],
+        "rebuild": {"url": "/api/admin/rebuild", "method": "POST"},
+    }
+
+
 def parse_request_host(headers) -> str:
     forwarded = headers.get("X-Forwarded-Host", "").split(",")[0].strip()
     host = forwarded or headers.get("Host", "")
@@ -3597,9 +4084,15 @@ def clear_session(handler: "SiteHandler") -> None:
 
 
 def request_is_authenticated(handler: "SiteHandler") -> bool:
+    return authenticated_request_mode(handler) is not None
+
+
+def authenticated_request_mode(handler: "SiteHandler") -> str | None:
     if is_local_request(handler):
-        return True
-    return get_session(handler) is not None
+        return "localhost"
+    if get_session(handler) is not None:
+        return "session"
+    return None
 
 
 def sanitize_next_path(value: str | None) -> str:
@@ -3923,11 +4416,26 @@ def redact_requestline_tokens(requestline: str) -> str:
 
 def build_site_meta(host: str, proto: str) -> dict[str, object]:
     public = is_public_host(host)
-    title = "SWFI | Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, API Access"
+    title = "SWFI | Institutional Investor Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, API Access"
     description = (
-        "Institutional investor data across Profiles, Transactions, Mandates, RFPs, Key People, "
-        "Asset Allocation, Datafeeds, and API Access."
+        "Institutional investor data across sovereign wealth funds, public pensions, central banks, "
+        "endowments, family offices, Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, "
+        "Datafeeds, and API Access."
     )
+    keywords = [
+        "sovereign wealth fund data",
+        "institutional investor profiles",
+        "public pension data",
+        "central bank profiles",
+        "family office profiles",
+        "transactions",
+        "mandates",
+        "RFPs",
+        "key people",
+        "asset allocation",
+        "datafeeds",
+        "API access",
+    ]
     canonical = f"{request_origin(host, proto)}/"
     robots = "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" if public else "noindex,nofollow,noarchive"
     # Attribute the Organization and WebSite entities to the current origin.
@@ -3941,6 +4449,7 @@ def build_site_meta(host: str, proto: str) -> dict[str, object]:
             "@type": "Organization",
             "name": "SWFI",
             "url": entity_url,
+            "keywords": keywords,
         },
         {
             "@context": "https://schema.org",
@@ -3948,6 +4457,7 @@ def build_site_meta(host: str, proto: str) -> dict[str, object]:
             "name": "SWFI",
             "url": entity_url,
             "description": description,
+            "keywords": keywords,
         },
         {
             "@context": "https://schema.org",
@@ -3955,7 +4465,13 @@ def build_site_meta(host: str, proto: str) -> dict[str, object]:
             "name": title,
             "url": canonical,
             "description": description,
+            "keywords": keywords,
             "about": [
+                "Sovereign Wealth Funds",
+                "Public Pensions",
+                "Central Banks",
+                "Endowments",
+                "Family Offices",
                 "Profiles",
                 "Transactions",
                 "Mandates",
@@ -3972,6 +4488,7 @@ def build_site_meta(host: str, proto: str) -> dict[str, object]:
         "description": description,
         "canonical": canonical,
         "robots": robots,
+        "keywords": keywords,
         "json_ld": json_ld,
         "public": public,
     }
@@ -3990,6 +4507,7 @@ def build_page_meta(
     public = is_public_host(host) and not force_private
     canonical = f"{request_origin(host, proto)}{path}"
     robots = "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" if public else "noindex,nofollow,noarchive"
+    keywords = about + ["SWFI", "institutional investor data", "datafeeds", "API access"]
     # Attribute the Organization entity to the current origin on preview hosts
     # (see build_site_meta for rationale).
     entity_url = SWFI_PUBLIC_SITE_ORIGIN if public else f"{request_origin(host, proto)}/"
@@ -3999,6 +4517,7 @@ def build_page_meta(
             "@type": "Organization",
             "name": "SWFI",
             "url": entity_url.rstrip("/") if entity_url != SWFI_PUBLIC_SITE_ORIGIN else SWFI_PUBLIC_SITE_ORIGIN,
+            "keywords": keywords,
         },
         {
             "@context": "https://schema.org",
@@ -4006,6 +4525,7 @@ def build_page_meta(
             "name": title,
             "url": canonical,
             "description": description,
+            "keywords": keywords,
             "about": about,
         },
     ]
@@ -4014,6 +4534,7 @@ def build_page_meta(
         "description": description,
         "canonical": canonical,
         "robots": robots,
+        "keywords": keywords,
         "json_ld": json_ld,
         "public": public,
     }
@@ -4031,6 +4552,9 @@ def render_template_html(template_name: str, meta: dict[str, object], csp_nonce:
     )
     injection = f"""
     <meta name="robots" content="{html.escape(str(meta["robots"]))}" />
+    <meta name="googlebot" content="{html.escape(str(meta["robots"]))}" />
+    <meta name="keywords" content="{html.escape(', '.join(meta.get("keywords", [])))}" />
+    <meta name="application-name" content="SWFI" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="{html.escape(str(meta["title"]))}" />
     <meta property="og:description" content="{html.escape(str(meta["description"]))}" />
@@ -4049,6 +4573,34 @@ def render_index_html(host: str, proto: str, csp_nonce: str) -> str:
     return render_template_html("index.html", build_site_meta(host, proto), csp_nonce)
 
 
+def render_landing_html(host: str, proto: str, csp_nonce: str) -> str:
+    meta = build_page_meta(
+        host,
+        proto,
+        path="/",
+        title="SWFI | Institutional Investor Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, API Access",
+        description=(
+            "Institutional investor data across sovereign wealth funds, public pensions, central banks, "
+            "endowments, family offices, Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, and API Access."
+        ),
+        about=[
+            "Sovereign Wealth Funds",
+            "Public Pensions",
+            "Central Banks",
+            "Endowments",
+            "Family Offices",
+            "Profiles",
+            "Transactions",
+            "RFPs",
+            "Key People",
+            "Asset Allocation",
+            "Datafeeds",
+            "API Access",
+        ],
+    )
+    return render_template_html("landing.html", meta, csp_nonce)
+
+
 def render_msci_html(host: str, proto: str, csp_nonce: str) -> str:
     meta = build_page_meta(
         host,
@@ -4059,6 +4611,19 @@ def render_msci_html(host: str, proto: str, csp_nonce: str) -> str:
         about=["MSCI", "Key People", "Profiles", "Datafeeds", "API Access", "Asset Allocation"],
     )
     return render_template_html("msci.html", meta, csp_nonce)
+
+
+def render_admin_html(host: str, proto: str, csp_nonce: str) -> str:
+    meta = build_page_meta(
+        host,
+        proto,
+        path="/admin",
+        title="SWFI | Admin Console",
+        description="Hidden SWFI admin console for feed status, export history, audit logs, analytics, and controlled rebuild actions.",
+        about=["Admin Console", "Datafeeds", "API Access", "Profiles", "Key People"],
+        force_private=True,
+    )
+    return render_template_html("admin.html", meta, csp_nonce)
 
 
 def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | None = None, next_path: str = "/") -> str:
@@ -4123,6 +4688,9 @@ def render_template_html_text(html_text: str, meta: dict[str, object], csp_nonce
     )
     injection = f"""
     <meta name="robots" content="{html.escape(str(meta["robots"]))}" />
+    <meta name="googlebot" content="{html.escape(str(meta["robots"]))}" />
+    <meta name="keywords" content="{html.escape(', '.join(meta.get("keywords", [])))}" />
+    <meta name="application-name" content="SWFI" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="{html.escape(str(meta["title"]))}" />
     <meta property="og:description" content="{html.escape(str(meta["description"]))}" />
@@ -4146,7 +4714,22 @@ def build_robots_txt(host: str) -> str:
                 "User-agent: OAI-SearchBot",
                 "Allow: /",
                 "",
+                "User-agent: Google-Extended",
+                "Allow: /",
+                "",
+                "User-agent: OAI-AdsBot",
+                "Allow: /",
+                "",
                 "User-agent: GPTBot",
+                "Allow: /",
+                "",
+                "User-agent: Claude-SearchBot",
+                "Allow: /",
+                "",
+                "User-agent: Claude-User",
+                "Allow: /",
+                "",
+                "User-agent: ClaudeBot",
                 "Allow: /",
                 "",
                 f"Sitemap: {SWFI_PUBLIC_SITE_ORIGIN}/sitemap.xml",
@@ -4169,9 +4752,11 @@ def build_llms_txt(host: str) -> str:
             "Primary path: /",
             "",
             "Machine-readable surfaces:",
-            "- /api/dashboard/v1",
-            "- /api/research/v1",
-            "- /api/msci/workbench/v1",
+            "- /sitemap.xml",
+            "- /robots.txt",
+            "- https://api.swfi.com/",
+            "- https://api.swfi.com/collections",
+            "- https://api.swfi.com/collections/aum",
             "",
             "Notes:",
             "- Public discovery should target swfi.com rather than preview hosts.",
@@ -4407,7 +4992,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
 
     def _write_method_not_allowed(self, path: str, *, head_only: bool = False) -> None:
         allow = "GET, HEAD, OPTIONS"
-        if path == "/auth/login":
+        if path in {"/auth/login", "/api/admin/rebuild"}:
             allow = "POST, OPTIONS"
         if path.startswith("/api/") or path.startswith("/auth/"):
             self._write_json({"error": "method not allowed"}, status=405, head_only=head_only, extra_headers={"Allow": allow})
@@ -4580,9 +5165,23 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
+        if parsed.path in ("/landing", "/landing.html"):
+            csp_nonce = secrets.token_urlsafe(18)
+            self._write_html(render_landing_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            return True
+
         if parsed.path == "/msci.js":
             self._write_text(
                 (ROOT / "msci.js").read_text(encoding="utf-8"),
+                "application/javascript; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+
+        if parsed.path == "/admin.js":
+            self._write_text(
+                (ROOT / "admin.js").read_text(encoding="utf-8"),
                 "application/javascript; charset=utf-8",
                 cache_control="no-store",
                 head_only=head_only,
@@ -4641,6 +5240,27 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
                 return True
             self._write_json(get_dashboard_payload()["msci_workbench"], head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/admin", "/api/admin/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_admin_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/connectors", "/api/connectors/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": "swfi.connectors.v1",
+                    "generated_at": iso_now(),
+                    "connectors": get_live_external_api_matrix(),
+                },
+                head_only=head_only,
+            )
             return True
 
         if parsed.path == "/api/msci/export/accounts.csv":
@@ -4707,6 +5327,92 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_csv(build_people_template_csv(), "swfi-msci-people-template.csv", head_only=head_only)
             return True
 
+        if parsed.path == "/api/reports/msci-analytics.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_msci_analytics_csv(), "swfi-msci-analytics.csv", head_only=head_only)
+            return True
+
+        if parsed.path == "/api/reports/external-api-matrix.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_external_api_matrix_csv(), "swfi-external-api-matrix.csv", head_only=head_only)
+            return True
+
+        if parsed.path == "/api/reports/export-history.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_export_history_csv(), "swfi-export-history.csv", head_only=head_only)
+            return True
+
+        if parsed.path == "/api/reports/phase1-summary.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_phase1_summary_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-phase1-summary.md"'},
+            )
+            return True
+
         path = self.translate_path(parsed.path)
         if parsed.path in ("/msci", "/msci.html"):
             if not request_is_authenticated(self):
@@ -4716,12 +5422,32 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_html(render_msci_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
-        if parsed.path in ("/", "/index.html", PREVIEW_ROUTE, f"{PREVIEW_ROUTE}/"):
+        if parsed.path in ("/admin", "/admin.html"):
+            if not request_is_authenticated(self):
+                self._write_redirect(f"/login?next={parse.quote('/admin', safe='/')}")
+                return True
+            csp_nonce = secrets.token_urlsafe(18)
+            self._write_html(render_admin_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            return True
+
+        if parsed.path in ("/dashboard", "/dashboard/", PREVIEW_ROUTE, f"{PREVIEW_ROUTE}/"):
             if not request_is_authenticated(self):
                 next_path = sanitize_next_path(parsed.path or "/")
                 self._write_redirect(f"/login?next={parse.quote(next_path, safe='/')}")
                 return True
             csp_nonce = secrets.token_urlsafe(18)
+            self._write_html(render_index_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            return True
+
+        if parsed.path in ("/", "/index.html"):
+            csp_nonce = secrets.token_urlsafe(18)
+            if is_public_host(host):
+                self._write_html(render_landing_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+                return True
+            if not request_is_authenticated(self):
+                next_path = sanitize_next_path(parsed.path or "/")
+                self._write_redirect(f"/login?next={parse.quote(next_path, safe='/')}")
+                return True
             self._write_html(render_index_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
@@ -4752,7 +5478,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         parsed = parse.urlparse(self.path)
         allow = "GET, HEAD, OPTIONS"
-        if parsed.path == "/auth/login":
+        if parsed.path in {"/auth/login", "/api/admin/rebuild"}:
             allow = "POST, OPTIONS"
         self._write_empty(status=204, extra_headers={"Allow": allow})
 
@@ -4805,6 +5531,44 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_json(result, status=200)
             return
         # --- end /demo/api/ask ----------------------------------------------
+
+        if parsed.path == "/api/admin/rebuild":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401)
+                return
+            allowed, retry_after = check_rate_limit("admin_rebuild", client_ip, 6)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "rebuild rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return
+            clear_runtime_caches()
+
+            def warm_runtime_packets() -> None:
+                try:
+                    get_dashboard_payload()
+                    build_admin_payload()
+                    get_live_external_api_matrix()
+                except Exception:
+                    return
+
+            threading.Thread(target=warm_runtime_packets, daemon=True).start()
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_json(
+                {
+                    "status": "ok",
+                    "message": "Runtime caches cleared. Packet warm-up has started in the background.",
+                    "dashboard_generated_at": iso_now(),
+                    "admin_generated_at": iso_now(),
+                },
+                status=200,
+            )
+            return
 
         if parsed.path != "/auth/login":
             self._write_json({"error": "method not allowed"}, status=405)

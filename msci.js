@@ -8,9 +8,19 @@ const previewTable = $("msci-preview-table");
 const readyList = $("msci-ready-list");
 const blockedList = $("msci-blocked-list");
 const downloadsEl = $("msci-downloads");
+const reportDownloadsEl = $("msci-report-downloads");
 const targetsEl = $("msci-targets");
 const breakdownList = $("msci-breakdown-list");
 const statusStrip = $("msci-status-strip");
+
+function resetInitialViewport() {
+  if ("scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
+}
 
 function esc(value) {
   return String(value ?? "")
@@ -25,7 +35,9 @@ function tone(status) {
   return ({
     ok: "ok",
     active: "ok",
+    verified: "ok",
     partial: "partial",
+    derived: "partial",
     watch: "watch",
     blocked: "blocked",
     missing: "blocked",
@@ -138,12 +150,18 @@ function renderPreviewRows(workbench) {
     previewTable.innerHTML = '<p class="panel-note">No preview rows are currently surfaced.</p>';
     return;
   }
+  const rowStatus = (row) => {
+    if (row.email && row.has_entity_reference) return "Verified";
+    if (row.has_entity_reference) return "Derived";
+    return "Missing";
+  };
   previewTable.innerHTML = `
     <div class="msci-table-row msci-table-head">
       <span>Name</span>
       <span>Title</span>
       <span>Email</span>
       <span>Phone</span>
+      <span>Status</span>
       <span>Account ref</span>
     </div>
     ${rows
@@ -154,6 +172,7 @@ function renderPreviewRows(workbench) {
             <span>${esc(row.title || "—")}</span>
             <span>${esc(row.email || "—")}</span>
             <span>${esc(row.phone || "—")}</span>
+            <span><span class="status-chip tone-${tone(rowStatus(row).toLowerCase())}">${esc(rowStatus(row))}</span></span>
             <span>${row.has_entity_reference ? "Yes" : "No"}</span>
           </div>
         `,
@@ -174,6 +193,7 @@ function renderLists(workbench) {
 
 function renderDownloads(workbench) {
   const downloads = workbench.people_export?.downloads || {};
+  const analyticsDownloads = workbench.analytics?.downloads || {};
   const items = [
     { label: "Accounts CSV", href: downloads.accounts_csv },
     { label: "People CSV", href: downloads.people_csv },
@@ -181,6 +201,15 @@ function renderDownloads(workbench) {
     { label: "Template CSV", href: downloads.people_template_csv },
   ].filter((item) => item.href);
   downloadsEl.innerHTML = items
+    .map((item) => `<a class="nav-cta mini-cta" href="${esc(item.href)}">${esc(item.label)}</a>`)
+    .join("");
+  const reportItems = [
+    { label: "Analytics CSV", href: analyticsDownloads.msci_analytics_csv },
+    { label: "API Matrix CSV", href: analyticsDownloads.external_api_matrix_csv },
+    { label: "History CSV", href: analyticsDownloads.export_history_csv },
+    { label: "Phase 1 Summary", href: analyticsDownloads.phase1_summary_md },
+  ].filter((item) => item.href);
+  reportDownloadsEl.innerHTML = reportItems
     .map((item) => `<a class="nav-cta mini-cta" href="${esc(item.href)}">${esc(item.label)}</a>`)
     .join("");
 }
@@ -195,7 +224,7 @@ function renderTargets(workbench) {
     <div class="msci-table-row msci-table-head compact">
       <span>Account</span>
       <span>Type</span>
-      <span>Priority</span>
+      <span>Tier</span>
     </div>
     ${targets
       .slice(0, 12)
@@ -214,8 +243,8 @@ function renderTargets(workbench) {
 
 function renderBreakdown(workbench) {
   const items = [
-    ...(workbench.type_breakdown || []).map((item) => `${item.label}: ${item.value}`),
-    ...(workbench.state_breakdown || []).map((item) => `${item.label}: ${item.value}`),
+    ...(workbench.type_breakdown || []).map((item) => `${item.name}: ${item.count}`),
+    ...(workbench.state_breakdown || []).map((item) => `${item.name}: ${item.count}`),
   ];
   if (!items.length) {
     breakdownList.innerHTML = '<article class="stack-card"><p>Type and state breakdowns are not yet populated from the target account workbook.</p></article>';
@@ -247,7 +276,11 @@ async function loadWorkbench() {
   renderDownloads(workbench);
   renderTargets(workbench);
   renderBreakdown(workbench);
+  resetInitialViewport();
 }
+
+resetInitialViewport();
+window.addEventListener("pageshow", resetInitialViewport);
 
 loadWorkbench().catch((error) => {
   console.error(error);

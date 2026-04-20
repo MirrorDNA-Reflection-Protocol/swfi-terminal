@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SWFI | Admin Console</title>
+    <meta name="description" content="Hidden SWFI admin console for feed status, export history, audit logs, and rebuild controls." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ticker-wrap" aria-hidden="true">
+      <div class="ticker-track" id="ticker-tape"></div>
+    </div>
+
+    <div class="page-shell">
+      <nav class="topnav">
+        <div class="nav-left">
+          <a class="nav-brand" href="/">
+            <span class="brand-diamond">◆</span>
+            <span class="brand-text">SWFI</span>
+          </a>
+          <a href="/" class="nav-link">Terminal</a>
+          <a href="/msci" class="nav-link">MSCI</a>
+          <a href="/admin" class="nav-link">Admin</a>
+        </div>
+        <div class="nav-right">
+          <span class="nav-status-dot nav-status-dot--controlled"></span>
+          <span class="nav-status-label">Hidden console</span>
+          <a href="/auth/logout" class="nav-link">Sign out</a>
+        </div>
+      </nav>
+
+      <main class="main-stack msci-stack">
+        <header class="panel msci-hero">
+          <div class="msci-hero-copy">
+            <p class="sys-label">Operational control</p>
+            <h1>Admin Console</h1>
+            <p class="msci-copy">Feed status, export history, audit trail, analytics, and controlled rebuild actions for the SWFI Beta wedge.</p>
+            <div class="status-strip msci-status-strip" id="admin-status-strip"></div>
+          </div>
+          <div class="msci-download-panel">
+            <p class="sys-label">Reports</p>
+            <div class="download-row" id="admin-report-downloads"></div>
+            <div class="section-block">
+              <p class="sys-label">Actions</p>
+              <div class="download-row">
+                <button type="button" class="nav-cta mini-cta" id="admin-rebuild-button">Rebuild runtime</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="metric-grid" id="admin-summary-grid"></section>
+
+        <section class="workspace-grid msci-grid">
+          <section class="center-column">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Feed status</p>
+                  <h3>Runtime health</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="admin-status-list"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Analytics</p>
+                  <h3>MSCI wedge metrics</h3>
+                </div>
+              </div>
+              <div class="api-summary-grid" id="admin-analytics-grid"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Export history</p>
+                  <h3>Audit trail</h3>
+                </div>
+              </div>
+              <div class="msci-table admin-table" id="admin-export-history"></div>
+            </article>
+          </section>
+
+          <aside class="right-rail">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Current blockers</p>
+                  <h3>Error queue</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="admin-error-list"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">External rails</p>
+                  <h3>Free and paid APIs</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="admin-api-matrix"></div>
+            </article>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <script src="./admin.js" type="module"></script>
+  </body>
+</html>

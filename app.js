@@ -140,6 +140,151 @@ const INTEL_TAB_PROMPTS = {
   "active-rfps": "Show active RFPs and mandate activity by strategy from the current packet.",
 };
 
+const OFFERING_CARDS = [
+  {
+    label: "Subscription",
+    value: "Profiles · Transactions · RFPs",
+    note: "Deals, key executives, strategy notes, mandates, asset allocation data, news, and profiles.",
+  },
+  {
+    label: "Key People",
+    value: "Contacts within Profiles",
+    note: "Work history, education, phone numbers, emails, and related profile detail.",
+  },
+  {
+    label: "Datafeeds/API",
+    value: "JSON and CSV delivery",
+    note: "Profiles, AUM, asset allocation, transactions, RFPs, and contacts for direct integration.",
+  },
+];
+
+function buildPublicDiscoveryDashboard() {
+  return {
+    generated_at: new Date().toISOString(),
+    statuses: [
+      { source: "Controlled access", note: "Sign in for client workspaces, protected exports, and research responses.", status: "partial" },
+      { source: "Profiles", note: "Sovereign wealth funds, public pensions, central banks, endowments, and family offices.", status: "ok" },
+      { source: "Transactions", note: "Deals, mandates, RFPs, and institutional allocation activity.", status: "ok" },
+      { source: "Datafeeds/API", note: "JSON and CSV delivery through SWFI REST API and custom feed workflows.", status: "ok" },
+    ],
+    metric_cards: [
+      { label: "Profiles", value: "595,040", note: "Public SWFI homepage count" },
+      { label: "Transactions", value: "172,518", note: "Public SWFI homepage count" },
+      { label: "RFPs", value: "4,844", note: "Public SWFI homepage count" },
+      { label: "People & contacts", value: "123,217", note: "Public SWFI homepage count" },
+    ],
+    lanes: [],
+    concerns: [
+      {
+        client: "SWFI",
+        use_case: "Datafeeds/API",
+        title: "Controlled access",
+        state: "partial",
+        priority: "P1",
+        requirement: "Sign in is required for MSCI workspaces, protected exports, research responses, and client delivery views.",
+        challenge: "Public discovery focuses on Profiles, Transactions, RFPs, Key People, Asset Allocation, and Datafeeds/API.",
+        recommendation: "Use the public site for discovery and sign in for client delivery workspaces.",
+        tags: ["exports", "profile", "people"],
+      },
+    ],
+    action_queue: [
+      { title: "Profiles", lane: "Subscription", status: "ok", priority: "P1", impact: "Institution profiles across sovereign wealth funds, public pensions, central banks, endowments, and family offices." },
+      { title: "Transactions", lane: "Subscription", status: "ok", priority: "P1", impact: "Direct investments, fund commitments, and historical transaction activity across institutional investors." },
+      { title: "RFPs and Opportunities", lane: "Subscription", status: "ok", priority: "P1", impact: "Mandates and business leads by strategy, institution, and region." },
+      { title: "Key People", lane: "Subscription", status: "ok", priority: "P1", impact: "Contacts, work history, education, phone numbers, emails, and related profile detail." },
+    ],
+    aum_docs: {
+      title: "SWFI Data Feeds & REST API",
+      path: "https://api.swfi.com/collections/aum",
+      query_parameters: [
+        { name: "entity_id", type: "string", description: "Filter AUM records to a specific profile or related entity." },
+        { name: "year", type: "number", description: "Request historical AUM snapshots by period." },
+        { name: "sort", type: "string", description: "Sort output for delivery or reporting views." },
+        { name: "limit", type: "number", description: "Control the number of returned rows." },
+      ],
+      example_fields: ["assets", "managedAssets", "equities", "realAssets", "realEstate", "infrastructure", "entityId", "period"],
+      collections: [
+        { label: "Entities" },
+        { label: "Financials" },
+        { label: "People" },
+        { label: "Transactions" },
+        { label: "RFPs" },
+        { label: "News" },
+      ],
+    },
+    readiness: [
+      { title: "Subscription", status: "ok", note: "Profiles, Transactions, RFPs, Key People, Asset Allocation, briefings, and news." },
+      { title: "Datafeeds/API", status: "ok", note: "JSON and CSV delivery for direct integration and custom reporting." },
+      { title: "Controlled client workspaces", status: "partial", note: "Protected views such as MSCI remain available after sign-in." },
+    ],
+    proposal: {
+      deliverables: [
+        "Profiles",
+        "Transactions",
+        "RFPs and Opportunities",
+        "Key People",
+        "Asset Allocation",
+        "Datafeeds/API",
+      ],
+    },
+    platform_reference: {
+      observed_at: "Public SWFI categories",
+      counts: [
+        { label: "Profiles", value: "595,040", note: "Public SWFI homepage count" },
+        { label: "Transactions", value: "172,518", note: "Public SWFI homepage count" },
+        { label: "RFPs", value: "4,844", note: "Public SWFI homepage count" },
+        { label: "People & contacts", value: "123,217", note: "Public SWFI homepage count" },
+      ],
+      surfaces: [
+        { label: "Subscription", value: "swfi.com", note: "Profiles, Transactions, RFPs, Key People, Asset Allocation, and briefings." },
+        { label: "Datafeeds/API", value: "api.swfi.com", note: "REST API, collections, and AUM documentation." },
+        { label: "Public Fund Monitor", value: "Newsletter surface", note: "Public institutional investor news distribution." },
+      ],
+    },
+    benchmark_matrix: [
+      {
+        name: "SWFI Subscription",
+        tone: "ok",
+        headline: "Profiles, Transactions, RFPs and Opportunities, Key People, Asset Allocation, and briefings.",
+        signals: ["Public fund coverage", "Institutional investor intelligence", "Controlled-access client workspaces"],
+        url: "https://www.swfinstitute.org/services/subscription",
+        source: "Official source",
+      },
+      {
+        name: "SWFI Datafeeds/API",
+        tone: "ok",
+        headline: "JSON and CSV delivery with REST API access and custom data structures.",
+        signals: ["api.swfi.com", "Collections docs", "AUM docs"],
+        url: "https://www.swfinstitute.org/services/datafeed-api",
+        source: "Official source",
+      },
+    ],
+    required_api_stack: [
+      {
+        name: "SWFI REST API",
+        status: "ok",
+        why: "Public REST documentation for collection access and data integration.",
+        gap: "Private delivery routes and protected exports still require sign-in.",
+        sources: [{ label: "API home", url: "https://api.swfi.com/" }],
+      },
+      {
+        name: "AUM collection",
+        status: "ok",
+        why: "Historical assets under management and related financial fields.",
+        gap: "Deeper account mapping and protected client exports remain controlled.",
+        sources: [{ label: "AUM docs", url: "https://api.swfi.com/collections/aum" }],
+      },
+      {
+        name: "Collections surface",
+        status: "ok",
+        why: "Public object-family discovery across the API surface.",
+        gap: "Authenticated collections and deeper delivery lanes remain private.",
+        sources: [{ label: "Collections", url: "https://api.swfi.com/collections" }],
+      },
+    ],
+  };
+}
+
 const state = {
   dashboard: null,
   lane: "All",
@@ -248,84 +393,84 @@ function tone(status) {
 }
 
 const STATUS_LABELS = {
-  ok: "Ready",
+  ok: "Available",
   active: "Live",
-  partial: "In progress",
-  blocked: "Build now",
-  watch: "Scoping",
-  scaffolded: "Scaffolded",
+  partial: "Partial",
+  blocked: "Needed",
+  watch: "Tracked",
+  scaffolded: "Defined",
 };
 
 const PRIORITY_LABELS = {
-  P1: "Priority",
+  P1: "Immediate",
   P2: "Next",
 };
 
 const TAG_LABELS = {
-  automation: "Backend automation",
-  capacity: "Scale",
-  classification: "Classification logic",
-  exports: "Export surface",
-  high_volume: "High-volume refresh",
-  manual_ops: "Manual workflow",
-  mapping: "Canonical mapping",
-  missing_fields: "Field model",
-  alt_assets: "Alternative assets",
-  people: "People coverage",
-  profile: "Profile coverage",
-  subsidiaries: "Subsidiary coverage",
+  automation: "Automation",
+  capacity: "Refresh scale",
+  classification: "Asset Allocation",
+  exports: "Datafeeds/API",
+  high_volume: "High-volume coverage",
+  manual_ops: "Manual handling",
+  mapping: "Key People mapping",
+  missing_fields: "Profile fields",
+  alt_assets: "Alternatives",
+  people: "Key People",
+  profile: "Profiles",
+  subsidiaries: "Subsidiaries",
 };
 
 const CONCERN_CONTENT = {
-  "Automate allocation percentage calculations": {
-    summary: "Move allocation math and managed-assets classification into the backend feed pipeline.",
-    build: "Replace spreadsheet-only calculations with structured fields, rules, and refresh jobs that can power API and CSV delivery.",
-    impact: "This makes recurring MSCI allocation updates repeatable, reviewable, and much easier to ship on schedule.",
+  "Complete Asset Allocation fields": {
+    summary: "Complete Asset Allocation fields used in MSCI and client delivery.",
+    build: "Move allocation percentages, managed assets, and classification fields into repeatable export-ready records.",
+    impact: "This improves Asset Allocation tables, AUM views, and Datafeeds/API delivery.",
   },
-  "Add subsidiary-aware AUM coverage": {
-    summary: "Model subsidiary-level AUM and managed-assets relationships directly in the entity layer.",
-    build: "Add the fields and joins required to roll parent and subsidiary records into one consistent delivery surface.",
-    impact: "This closes an important gap in account views and makes downstream AUM exports more complete.",
+  "Expand AUM coverage for subsidiaries": {
+    summary: "Expand AUM and managed-assets coverage across subsidiaries and child funds.",
+    build: "Add the profile fields and joins required to connect parent entities, subsidiaries, and related funds.",
+    impact: "This improves profile completeness and makes AUM exports more reliable.",
   },
-  "Increase delivery bandwidth for priority feeds": {
-    summary: "Scale high-volume refresh and QA paths for the largest institutional feed lanes.",
-    build: "Increase throughput across ingestion, review, and publishing so major entity sets can be updated reliably.",
-    impact: "This keeps recurring client deliveries on cadence without relying on manual overtime or fragile workflows.",
+  "Increase Datafeeds/API refresh": {
+    summary: "Increase refresh capacity for the largest institutional datafeeds.",
+    build: "Improve update throughput across ingestion, review, and publishing for high-volume profiles and transactions.",
+    impact: "This keeps recurring deliveries on schedule and reduces stale records.",
   },
-  "Backfill missing profile fields": {
-    summary: "Complete the core institution profile schema required by exports and integrations.",
-    build: "Promote missing identity, location, and reference fields into the structured product model.",
-    impact: "This improves trust in demos and raises the completeness of API and feed outputs.",
+  "Complete Profile fields": {
+    summary: "Complete the core profile fields used across subscriptions, exports, and direct integrations.",
+    build: "Backfill institution identity, location, and reference fields where profiles are still thin.",
+    impact: "This improves trust in profiles and raises the completeness of feeds and exports.",
   },
-  "Add missing dashboard fields": {
-    summary: "Add the structured fields needed by downstream exports and API consumers.",
-    build: "Close the remaining gaps between what operators track manually and what the product exposes directly.",
-    impact: "This reduces one-off handling and makes the delivery surface easier to automate.",
+  "Complete Datafeeds/API fields": {
+    summary: "Complete the fields needed by downstream Datafeeds/API consumers.",
+    build: "Close the remaining gaps between tracked internal fields and the records surfaced directly in exports.",
+    impact: "This reduces one-off handling and makes delivery easier to automate.",
   },
-  "Canonicalize people-to-account mapping": {
-    summary: "Standardize how contacts, accounts, and entity histories join across the export stack.",
-    build: "Use stable identifiers and canonical joins so people-to-account mapping is consistent across every file and API response.",
-    impact: "This is the foundation for trustworthy MSCI people exports, review files, and audit trails.",
+  "Align Key People with Profiles": {
+    summary: "Align Key People, contacts, and institution profiles with stable account references.",
+    build: "Use consistent identifiers and joins so people-to-profile mapping stays stable across exports and APIs.",
+    impact: "This is the foundation for trustworthy MSCI Key People files and review workflows.",
   },
-  "Automate currency normalization": {
-    summary: "Normalize currency handling in the platform instead of relying on analyst-side conversions.",
+  "Normalize AUM currency fields": {
+    summary: "Normalize currency handling across AUM, managed assets, and account-level outputs.",
     build: "Apply shared FX conversion and currency metadata rules across feeds and exports.",
-    impact: "This keeps AUM and account-level outputs consistent for downstream consumers.",
+    impact: "This keeps profile and AUM outputs consistent for downstream consumers.",
   },
-  "Add alternative asset coverage": {
-    summary: "Extend the dashboard model to include alternative asset coverage for IFC delivery workflows.",
-    build: "Add the entity types, fields, and download paths required to expose alternative asset data directly in the product.",
-    impact: "This closes a visible product gap and makes IFC extraction work possible without side handling.",
+  "Extend Alternatives coverage": {
+    summary: "Extend Alternatives and Real Assets coverage for institutions where that data is still thin.",
+    build: "Add the fields and profile types required to surface alternatives directly in the product.",
+    impact: "This closes a visible coverage gap and reduces manual side handling.",
   },
-  "Expand people profile coverage": {
-    summary: "Improve the depth and consistency of people records used in IFC delivery work.",
-    build: "Enrich profile coverage, refresh cadence, and supporting joins so people data is complete enough for downstream use.",
-    impact: "This raises confidence in contact-level outputs and reduces manual follow-up during delivery.",
+  "Expand Key People coverage": {
+    summary: "Improve the depth and consistency of Key People records used in delivery work.",
+    build: "Enrich contact coverage, refresh cadence, and supporting joins so people records are usable downstream.",
+    impact: "This raises confidence in contact-level outputs and reduces manual follow-up.",
   },
 };
 
 function displayStatus(status) {
-  return STATUS_LABELS[status] || String(status || "Scoping");
+  return STATUS_LABELS[status] || String(status || "Tracked");
 }
 
 function displayPriority(priority) {
@@ -334,6 +479,40 @@ function displayPriority(priority) {
 
 function displayTags(tags) {
   return (tags || []).map((tag) => TAG_LABELS[tag] || String(tag || "").replaceAll("_", " "));
+}
+
+function displayTitle(title) {
+  return ({
+    "Automate allocation percentage calculations": "Complete Asset Allocation fields",
+    "Add subsidiary-aware AUM coverage": "Expand AUM coverage for subsidiaries",
+    "Increase delivery bandwidth for priority feeds": "Increase Datafeeds/API refresh",
+    "Backfill missing profile fields": "Complete Profile fields",
+    "Add missing dashboard fields": "Complete Datafeeds/API fields",
+    "Canonicalize people-to-account mapping": "Align Key People with Profiles",
+    "Automate currency normalization": "Normalize AUM currency fields",
+    "Add alternative asset coverage": "Extend Alternatives coverage",
+    "Expand people profile coverage": "Expand Key People coverage",
+    "Fix top-500 entity data quality": "Improve top 500 Profiles",
+    "Publish sourced canonical schema": "Add source and timestamp detail",
+    "Build MSCI people export lane": "MSCI Key People export",
+    "Stabilize search and demo performance": "Platform speed and search",
+    "Add AI search and saved alerts": "Search and alerts",
+    "Wire CRM and warehouse connectors": "CRM and Datafeeds/API delivery",
+    "Add entitlements, monitoring, and unified data model controls": "Access controls and monitoring",
+  })[title] || title || "Coverage update";
+}
+
+function displayUseCase(value) {
+  const text = String(value || "").trim();
+  const lowered = text.toLowerCase();
+  if (!text) return "Datafeeds/API";
+  if (lowered.includes("api")) return "Datafeeds/API";
+  if (lowered.includes("rfp") || lowered.includes("mandate")) return "RFPs and Opportunities";
+  if (lowered.includes("people") || lowered.includes("contact")) return "Key People";
+  if (lowered.includes("allocation") || lowered.includes("aum")) return "Asset Allocation";
+  if (lowered.includes("deal") || lowered.includes("transaction")) return "Transactions";
+  if (lowered.includes("profile")) return "Profiles";
+  return text;
 }
 
 function concernNarrative(row) {
@@ -348,12 +527,26 @@ function concernNarrative(row) {
   if (mapped) return mapped;
   const focusAreas = displayTags(row.tags).slice(0, 3);
   return {
-    summary: `${row.title} is part of the ${row.client} delivery lane and still needs product work before it can be treated as routine.`,
+    summary: `${displayTitle(row.title)} sits inside the ${row.client} lane and still needs fuller coverage before it can be treated as routine.`,
     build: focusAreas.length
       ? `Focus areas: ${focusAreas.join(", ")}.`
-      : "Focus areas span field coverage, automation, and delivery controls.",
-    impact: "This affects export completeness, API reliability, and operator confidence across the lane.",
+      : "Focus areas span profiles, key people, asset allocation, and delivery controls.",
+    impact: "This affects export completeness, Datafeeds/API reliability, and operator confidence across the lane.",
   };
+}
+
+function resetInitialViewport() {
+  if ("scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
+}
+
+function isPublicDiscoveryHost() {
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "swfi.com" || host === "www.swfi.com";
 }
 
 function getHeroView() {
@@ -552,24 +745,17 @@ function renderLaneSelectors() {
 }
 
 function renderProposalBrief() {
-  const proposal = state.dashboard?.proposal;
-  if (!proposal) {
-    proposalBrief.innerHTML = "";
-    return;
-  }
-  const payments = Array.isArray(proposal.payments) ? proposal.payments.map(esc).join(" · ") : "";
   proposalBrief.innerHTML = `
     <div class="brief-grid">
-      <article class="brief-card">
-        <span class="metric-label">Project fee</span>
-        <strong>${esc(proposal.fee)}</strong>
-        <p>${esc(proposal.goal)}</p>
-      </article>
-      <article class="brief-card">
-        <span class="metric-label">Timeline</span>
-        <strong>${esc(proposal.timeline)}</strong>
-        <p>${payments}</p>
-      </article>
+      ${OFFERING_CARDS.map(
+        (card) => `
+          <article class="brief-card">
+            <span class="metric-label">${esc(card.label)}</span>
+            <strong>${esc(card.value)}</strong>
+            <p>${esc(card.note)}</p>
+          </article>
+        `,
+      ).join("")}
     </div>
   `;
 }
@@ -664,7 +850,7 @@ function renderActionList() {
       (item) => `
         <article class="action-card tone-${tone(item.status)}">
           <div class="action-head">
-            <strong>${esc(item.title)}</strong>
+            <strong>${esc(displayTitle(item.title))}</strong>
             <span>${esc(displayPriority(item.priority))}</span>
           </div>
           <p>${esc(item.impact)}</p>
@@ -693,8 +879,8 @@ function filteredConcerns() {
 function renderConcernList() {
   const concerns = filteredConcerns();
   concernCount.textContent = concerns.length
-    ? `${concerns.length} priorit${concerns.length === 1 ? "y" : "ies"}`
-    : "No priorities yet";
+    ? `${concerns.length} item${concerns.length === 1 ? "" : "s"}`
+    : "No items";
   if (!concerns.length) {
     concernList.innerHTML = `
       <article class="empty-state">
@@ -713,17 +899,17 @@ function renderConcernList() {
         <article class="concern-card tone-${tone(row.state)}">
           <div class="concern-head-row">
             <div>
-              <p class="eyebrow">${esc(row.client)} · ${esc(row.use_case)}</p>
-              <h4>${esc(row.title)}</h4>
+              <p class="eyebrow">${esc(row.client)} · ${esc(displayUseCase(row.use_case))}</p>
+              <h4>${esc(displayTitle(row.title))}</h4>
             </div>
             <div class="tag-column">
               <span class="status-chip tone-${tone(row.state)}">${esc(displayStatus(row.state))}</span>
               <span class="priority-chip">${esc(displayPriority(row.priority))}</span>
             </div>
           </div>
-          <div class="concern-block"><span>Client need</span><p>${esc(narrative.summary)}</p></div>
-          <div class="concern-block"><span>Product work</span><p>${esc(narrative.build)}</p></div>
-          <div class="concern-block"><span>Why it matters</span><p>${esc(narrative.impact)}</p></div>
+          <div class="concern-block"><span>Coverage need</span><p>${esc(narrative.summary)}</p></div>
+          <div class="concern-block"><span>Current gap</span><p>${esc(narrative.build)}</p></div>
+          <div class="concern-block"><span>Delivery impact</span><p>${esc(narrative.impact)}</p></div>
           <div class="tag-row">${tags.map((tag) => `<span class="data-pill">${esc(tag)}</span>`).join("")}</div>
         </article>
       `;
@@ -788,7 +974,7 @@ function renderReadiness() {
         <article class="readiness-card tone-${tone(item.status)}">
           <div class="readiness-head">
             <strong>${esc(item.title)}</strong>
-            <span class="status-chip tone-${tone(item.status)}">${esc(item.status)}</span>
+            <span class="status-chip tone-${tone(item.status)}">${esc(displayStatus(item.status))}</span>
           </div>
           <p>${esc(item.note)}</p>
         </article>
@@ -841,7 +1027,7 @@ function renderBenchmarkPanel() {
         <article class="stack-card tone-${tone(item.status)}">
           <div class="readiness-head">
             <strong>${esc(item.name)}</strong>
-            <span class="status-chip tone-${tone(item.status)}">${esc(String(item.status).replaceAll("_", " "))}</span>
+            <span class="status-chip tone-${tone(item.status)}">${esc(displayStatus(item.status))}</span>
           </div>
           <p>${esc(item.why)}</p>
           <div class="concern-block compact">
@@ -1302,12 +1488,19 @@ function renderAll() {
 async function loadDashboard() {
   const response = await fetch("/api/dashboard/v1");
   if (response.status === 401) {
+    if (isPublicDiscoveryHost()) {
+      state.dashboard = buildPublicDiscoveryDashboard();
+      renderAll();
+      resetInitialViewport();
+      return;
+    }
     window.location.href = `/login?next=${encodeURIComponent(window.location.pathname || "/")}`;
     return;
   }
   if (!response.ok) throw new Error(`dashboard ${response.status}`);
   state.dashboard = await response.json();
   renderAll();
+  resetInitialViewport();
 }
 
 concernSearch?.addEventListener("input", (event) => {
@@ -1339,6 +1532,9 @@ intelTabButtons.forEach((button) =>
     activateIntelTab(button.dataset.intelTab || "top-swfs", true);
   }),
 );
+
+resetInitialViewport();
+window.addEventListener("pageshow", resetInitialViewport);
 
 renderHero();
 

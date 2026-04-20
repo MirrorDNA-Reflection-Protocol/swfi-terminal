@@ -23,7 +23,10 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: auto;
+  overflow-x: hidden;
+}
 body {
   margin: 0;
   min-height: 100vh;
@@ -32,6 +35,7 @@ body {
   font-size: 13px;
   line-height: 1.55;
   background: #030505;
+  overflow-x: hidden;
 }
 
 /* ── SCANLINE + GRID OVERLAY ── */
@@ -61,7 +65,7 @@ button { cursor: pointer; }
 .page-shell {
   position: relative;
   z-index: 1;
-  width: min(1560px, calc(100vw - 20px));
+  width: min(1720px, calc(100vw - 24px));
   margin: 0 auto;
   padding-bottom: 40px;
 }
@@ -916,6 +920,50 @@ button { cursor: pointer; }
 }
 
 /* Auth */
+.landing-stack {
+  gap: 16px;
+  margin-top: 16px;
+}
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+}
+.landing-hero h1 {
+  margin: 8px 0 12px;
+  max-width: 14ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  line-height: 0.92;
+}
+.landing-copy {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--soft);
+}
+.landing-hero-actions {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  background: rgba(8, 16, 14, 0.48);
+}
+.landing-cta {
+  justify-content: center;
+  min-height: 42px;
+}
+.landing-link {
+  display: inline-flex;
+  justify-content: center;
+  border: 1px solid var(--line);
+}
+.landing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 14px;
+}
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -1037,6 +1085,9 @@ button { cursor: pointer; }
 .msci-table-row.compact {
   grid-template-columns: 1.5fr 1fr 0.8fr;
 }
+.admin-table-row {
+  grid-template-columns: 1.05fr 1.4fr 0.8fr 0.8fr 1fr 0.95fr 1.4fr;
+}
 .msci-table-head {
   color: var(--muted);
   font-size: 10.5px;
@@ -1073,6 +1124,7 @@ button { cursor: pointer; }
   .metric-grid, .api-summary-grid, .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .right-rail { grid-template-columns: 1fr; }
   .brief-grid, .reference-cards { grid-template-columns: 1fr; }
+  .landing-hero, .landing-grid,
   .msci-hero, .msci-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
