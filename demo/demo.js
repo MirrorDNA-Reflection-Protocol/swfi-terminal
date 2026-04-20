@@ -8,6 +8,7 @@ const answer = document.getElementById("ask-answer");
 const presetsEl = document.getElementById("ask-presets");
 const coverageCount = document.getElementById("coverage-count");
 const coverageMeta = document.getElementById("coverage-meta");
+const clearBtn = document.getElementById("clear-btn");
 
 async function loadCoverage() {
   try {
@@ -97,6 +98,7 @@ async function ask(q) {
           conversationHistory.push({ role: "model", text: cleanText });
           if (conversationHistory.length > 6) conversationHistory = conversationHistory.slice(-6);
           answer.innerHTML = renderAnswer({ text: cleanText, sources: evt.sources || [], status: "ok" });
+          if (clearBtn) clearBtn.hidden = false;
         } else if (evt.type === "error") {
           answer.textContent = evt.text || "Something went wrong. Please try again.";
         }
@@ -107,9 +109,28 @@ async function ask(q) {
   }
 }
 
+function mdToHtml(raw) {
+  // Escape HTML, then apply markdown patterns in safe order
+  let s = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  s = s.replace(/^### (.+)$/gm, "<h4>$1</h4>");
+  s = s.replace(/^## (.+)$/gm, "<h3>$1</h3>");
+  s = s.replace(/^# (.+)$/gm, "<h2>$1</h2>");
+  s = s.replace(/\*\*\*(.+?)\*\*\*/gs, "<strong><em>$1</em></strong>");
+  s = s.replace(/\*\*(.+?)\*\*/gs, "<strong>$1</strong>");
+  s = s.replace(/\*([^*\n]+?)\*/g, "<em>$1</em>");
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  s = s.replace(/^[-*•] (.+)$/gm, "<li>$1</li>");
+  s = s.replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>");
+  s = s.replace(/\n\n+/g, "</p><p>");
+  s = "<p>" + s + "</p>";
+  s = s.replace(/<p>\s*(<h[2-4]>)/g, "$1").replace(/(<\/h[2-4]>)\s*<\/p>/g, "$1");
+  s = s.replace(/<p>\s*(<ul>)/g, "$1").replace(/(<\/ul>)\s*<\/p>/g, "$1");
+  return s.replace(/<p>\s*<\/p>/g, "");
+}
+
 function renderAnswer(data) {
   if (!data || !data.text) return "<p>No answer returned.</p>";
-  const text = escapeHtml(data.text);
+  const text = mdToHtml(data.text);
   const sources = (data.sources || []);
   const pills = sources
     .filter(s => s.label || s.url)
@@ -163,6 +184,18 @@ function startVoice() {
 
 if (micBtn) {
   micBtn.addEventListener("click", (e) => { e.preventDefault(); startVoice(); });
+}
+
+function clearConversation() {
+  conversationHistory = [];
+  answer.innerHTML = "";
+  input.value = "";
+  if (clearBtn) clearBtn.hidden = true;
+  input.focus();
+}
+
+if (clearBtn) {
+  clearBtn.addEventListener("click", clearConversation);
 }
 
 loadCoverage();

@@ -35,6 +35,9 @@ html, body { background: var(--bg); color: var(--ink); font-family: 'Inter', sys
 .mic-btn:hover { border-color: var(--accent); color: var(--accent); }
 .mic-btn.recording { border-color: #ff4d4d; color: #ff4d4d; animation: mic-pulse 1s ease-in-out infinite; }
 @keyframes mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,77,77,0.4); } 50% { box-shadow: 0 0 0 6px rgba(255,77,77,0); } }
+.ask-thread-bar { margin-top: 12px; min-height: 20px; }
+.clear-btn { background: transparent; border: none; color: var(--ink-muted); font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; padding: 4px 0; opacity: 0.7; }
+.clear-btn:hover { color: var(--ink); opacity: 1; }
 .answer-stream { white-space: pre-wrap; }
 .stream-cursor { display: inline-block; color: var(--accent, #b5ff6e); animation: cur-blink 0.9s step-end infinite; margin-left: 1px; }
 @keyframes cur-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
