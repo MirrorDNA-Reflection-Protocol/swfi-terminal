@@ -125,5 +125,35 @@ presetsEl.addEventListener("click", (e) => {
   ask(btn.dataset.q);
 });
 
+// ── Voice input ──────────────────────────────────────────────────────────────
+const micBtn = document.getElementById("mic-btn");
+
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    if (micBtn) micBtn.title = "Voice input not supported in this browser";
+    return;
+  }
+  const rec = new SR();
+  rec.lang = "en-US";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  if (micBtn) micBtn.classList.add("recording");
+  rec.onresult = (e) => {
+    const transcript = e.results[0][0].transcript.trim();
+    if (transcript) {
+      input.value = transcript;
+      ask(transcript);
+    }
+  };
+  rec.onerror = () => { if (micBtn) micBtn.classList.remove("recording"); };
+  rec.onend   = () => { if (micBtn) micBtn.classList.remove("recording"); };
+  rec.start();
+}
+
+if (micBtn) {
+  micBtn.addEventListener("click", (e) => { e.preventDefault(); startVoice(); });
+}
+
 loadCoverage();
 loadPresets();
