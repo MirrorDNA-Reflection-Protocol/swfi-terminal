@@ -3692,13 +3692,15 @@ def call_gemini_for_demo(query: str, entities: dict) -> dict:
     }
 
 
-def stream_gemini_demo(query: str, entities: dict):
+def stream_gemini_demo(query: str, entities: dict, history: list | None = None):
     """Generator: yields SSE-formatted bytes token by token from Gemini streaming API.
 
     Event shapes:
       data: {"type":"token","text":"..."}\\n\\n   — incremental text chunk
       data: {"type":"done","sources":[...],"model":"..."}\\n\\n  — terminal event
       data: {"type":"error","text":"..."}\\n\\n   — on failure
+
+    history: list of {role: "user"|"model", text: "..."} for multi-turn context.
     """
     if not GEMINI_API_KEY:
         yield b'data: {"type":"error","text":"AI search not configured on this runtime."}\n\n'
@@ -3707,6 +3709,15 @@ def stream_gemini_demo(query: str, entities: dict):
     system_prompt = build_demo_stream_prompt(entities)
     # flash first for lower TTFT; fall back to pro
     models = ["gemini-2.5-flash", "gemini-2.5-pro"]
+
+    # Build multi-turn contents from history + current query
+    contents: list[dict] = []
+    for turn in (history or [])[-6:]:  # cap at last 3 exchanges (6 turns)
+        role = turn.get("role", "user")
+        text = str(turn.get("text", "")).strip()
+        if role in ("user", "model") and text:
+            contents.append({"role": role, "parts": [{"text": text}]})
+    contents.append({"role": "user", "parts": [{"text": query}]})
 
     for model in models:
         full_text_parts: list[str] = []
@@ -3717,7 +3728,7 @@ def stream_gemini_demo(query: str, entities: dict):
             )
             body = json.dumps({
                 "system_instruction": {"parts": [{"text": system_prompt}]},
-                "contents": [{"role": "user", "parts": [{"text": query}]}],
+                "contents": contents,
                 "generationConfig": {"temperature": 0.3},
             }).encode("utf-8")
             req = request.Request(
@@ -4431,6 +4442,16 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             if not allowed_hourly:
                 self._write_json({"error": "hourly limit reached", "retry_after": 3600}, status=429)
                 return True
+            # parse optional conversation history (last N turns for follow-up context)
+            history: list[dict] = []
+            history_raw = query_params.get("history", [""])[0].strip()
+            if history_raw:
+                try:
+                    parsed_h = json.loads(history_raw)
+                    if isinstance(parsed_h, list):
+                        history = parsed_h
+                except Exception:
+                    pass
             entities = get_demo_entities()
             # SSE: write headers directly — no Content-Length
             self.send_response(200)
@@ -4441,7 +4462,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             t0 = time.monotonic()
             try:
-                for chunk in stream_gemini_demo(q_param, entities):
+                for chunk in stream_gemini_demo(q_param, entities, history=history):
                     self.wfile.write(chunk)
                     self.wfile.flush()
             except Exception:

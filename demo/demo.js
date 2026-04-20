@@ -52,13 +52,20 @@ function escapeAttr(s) {
   return String(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+let conversationHistory = []; // [{role:"user"|"model", text:"..."}] — last 3 exchanges
+
 async function ask(q) {
   if (!q) return;
   answer.innerHTML = '<div class="answer-stream" id="answer-stream"></div><span class="stream-cursor" aria-hidden="true">▋</span>';
   const streamEl = document.getElementById("answer-stream");
 
+  // Send PREVIOUS history (before appending current turn)
+  const historyParam = conversationHistory.length
+    ? `&history=${encodeURIComponent(JSON.stringify(conversationHistory))}`
+    : "";
+
   try {
-    const resp = await fetch(`/demo/api/ask/stream?q=${encodeURIComponent(q)}`);
+    const resp = await fetch(`/demo/api/ask/stream?q=${encodeURIComponent(q)}${historyParam}`);
     if (resp.status === 429) {
       answer.textContent = "Rate limit reached. Please wait a moment and try again.";
       return;
@@ -82,10 +89,13 @@ async function ask(q) {
         try { evt = JSON.parse(line.slice(6)); } catch (_) { continue; }
         if (evt.type === "token") {
           fullText += evt.text;
-          // Show text as-is during streaming; SOURCES_JSON line stripped on done
           streamEl.textContent = fullText;
         } else if (evt.type === "done") {
           const cleanText = fullText.replace(/\n*SOURCES_JSON:.*$/s, "").trim();
+          // Append this exchange to conversation history (cap at 6 turns = 3 exchanges)
+          conversationHistory.push({ role: "user", text: q });
+          conversationHistory.push({ role: "model", text: cleanText });
+          if (conversationHistory.length > 6) conversationHistory = conversationHistory.slice(-6);
           answer.innerHTML = renderAnswer({ text: cleanText, sources: evt.sources || [], status: "ok" });
         } else if (evt.type === "error") {
           answer.textContent = evt.text || "Something went wrong. Please try again.";
