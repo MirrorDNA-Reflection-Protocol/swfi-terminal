@@ -88,6 +88,7 @@ ATLAS_COLLECTION = (
 DASHBOARD_SCHEMA_VERSION = "swfi.dashboard.v1"
 RESEARCH_SCHEMA_VERSION = "swfi.research.v1"
 MSCI_SCHEMA_VERSION = "swfi.msci_workbench.v1"
+ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PREVIEW_ROUTE = "/preview"
 
 XLSX_NS = {
@@ -573,6 +574,65 @@ REQUIRED_API_STACK = [
             {"label": "Bloomberg AI", "url": "https://professional.bloomberg.com/solutions/ai"},
             {"label": "Aladdin Copilot", "url": "https://www.blackrock.com/aladdin/solutions/aladdin-copilot"},
         ],
+    },
+]
+
+EXTERNAL_API_MATRIX = [
+    {
+        "name": "GLEIF LEI API",
+        "access": "free_public",
+        "status": "ok",
+        "use_case": "Legal-entity normalization, parent-child resolution, fuzzy matching, LEI backfill.",
+        "note": "Official public API. Free and no registration required per GLEIF references.",
+        "url": "https://www.gleif.org/en/lei-data/gleif-lei-look-up-api/access-the-api",
+    },
+    {
+        "name": "SEC EDGAR / data.sec.gov",
+        "access": "free_public",
+        "status": "ok",
+        "use_case": "Filings, XBRL company facts, submissions, and RSS-based filing monitoring.",
+        "note": "Official public APIs and HTTPS file system. Follow SEC fair-access guidance and user-agent rules.",
+        "url": "https://www.sec.gov/about/developer-resources",
+    },
+    {
+        "name": "Companies House API",
+        "access": "free_public_with_key",
+        "status": "ok",
+        "use_case": "UK entity registry lookups, officers, filings history, and sandbox testing.",
+        "note": "Official API is public but requires registration and an API key. Default rate limit is 600 requests per 5 minutes.",
+        "url": "https://developer.company-information.service.gov.uk/get-started",
+    },
+    {
+        "name": "OFAC Sanctions List Service",
+        "access": "free_public",
+        "status": "ok",
+        "use_case": "Compliance-event enrichment, sanctions watch checks, and downloadable screening data.",
+        "note": "Official public sanctions data service and search interface.",
+        "url": "https://ofac.treasury.gov/ofac-sanctions-lists",
+    },
+    {
+        "name": "OpenFIGI API",
+        "access": "free_public",
+        "status": "partial",
+        "use_case": "Instrument identifier normalization for securities-linked transaction and holdings rails.",
+        "note": "Free public API. Useful if the demo expands into mapped instrument analytics.",
+        "url": "https://www.openfigi.com/api/documentation",
+    },
+    {
+        "name": "OpenCorporates API",
+        "access": "hybrid_open_or_paid",
+        "status": "watch",
+        "use_case": "Cross-jurisdiction company backfill and reconciliation.",
+        "note": "Open data exists, but at-scale API and commercial use should be treated as hybrid rather than fully free.",
+        "url": "https://api.opencorporates.com/",
+    },
+    {
+        "name": "NewsAPI",
+        "access": "paid_for_production",
+        "status": "blocked",
+        "use_case": "Headline/news enrichment.",
+        "note": "Developer tier is free only for development and testing, not production use.",
+        "url": "https://newsapi.org/pricing",
     },
 ]
 
@@ -3605,6 +3665,36 @@ def get_demo_entities() -> dict:
         return _demo_entity_cache
 
 
+def _compact_entity(e: dict) -> dict:
+    """Return a stripped-down entity record for the system prompt.
+    Drops enrichment arrays (_aum_series, contacts detail, etc.) to keep
+    prompt size small. Keeps the fields needed for grounded answers.
+    """
+    latest = e.get("_aum_latest") or {}
+    aum = (
+        e.get("assets") or e.get("managed_assets") or e.get("aum")
+        or latest.get("assets") or ""
+    )
+    contacts = e.get("contacts") or []
+    first_contact = ""
+    if contacts and isinstance(contacts, list):
+        c = contacts[0]
+        first_contact = " ".join(filter(None, [c.get("name"), c.get("title")])).strip()
+    prov = e.get("provenance") or {}
+    return {k: v for k, v in {
+        "id": e.get("_id") or e.get("id"),
+        "name": e.get("name"),
+        "type": e.get("type"),
+        "country": e.get("country"),
+        "region": e.get("region"),
+        "aum_usd": aum,
+        "aum_period": latest.get("period"),
+        "summary": (e.get("summary") or e.get("background") or "")[:300],
+        "contact": first_contact or None,
+        "source": prov.get("evidence_url_or_pointer"),
+    }.items() if v not in (None, "", 0)}
+
+
 def build_demo_system_prompt(entities: dict) -> str:
     entity_list = entities.get("entities", [])
     count = entities.get("count", len(entity_list))
@@ -3623,7 +3713,7 @@ def build_demo_system_prompt(entities: dict) -> str:
         "5. Return your answer as a JSON object only — no text outside it:\n"
         '   {"text": "...", "sources": [{"label": "...", "url": "...", "field": "..."}], "status": "ok"}\n\n'
         "ENTITY PACKET:\n"
-        + json.dumps(entity_list, ensure_ascii=False)
+        + json.dumps([_compact_entity(e) for e in entity_list], ensure_ascii=False)
     )
 
 
@@ -3644,7 +3734,7 @@ def build_demo_stream_prompt(entities: dict) -> str:
         "   SOURCES_JSON: [{\"label\":\"...\",\"url\":\"...\",\"field\":\"...\"},...]\n"
         "   This must be valid compact JSON. Nothing after this line.\n\n"
         "ENTITY PACKET:\n"
-        + json.dumps(entity_list, ensure_ascii=False)
+        + json.dumps([_compact_entity(e) for e in entity_list], ensure_ascii=False)
     )
 
 
