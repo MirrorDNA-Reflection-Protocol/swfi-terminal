@@ -3627,6 +3627,27 @@ def build_demo_system_prompt(entities: dict) -> str:
     )
 
 
+def build_demo_stream_prompt(entities: dict) -> str:
+    """System prompt for streaming mode — plain prose + SOURCES_JSON trailer line."""
+    entity_list = entities.get("entities", [])
+    count = entities.get("count", len(entity_list))
+    return (
+        "You are the SWFI verified-intelligence assistant. "
+        f"You have access ONLY to the following curated packet of {count} verified "
+        "sovereign wealth and institutional investor entities.\n"
+        "Rules you MUST follow:\n"
+        "1. Answer ONLY from facts present in the entity packet below.\n"
+        "2. If the data does not contain what the user asked about, say so — do not fabricate.\n"
+        "3. Every numeric claim (AUM, allocation %, date) MUST trace to a source in the packet.\n"
+        "4. Write your answer in fluent, specific, data-rich prose. No JSON wrapper.\n"
+        "5. After a blank line at the very end of your response, output EXACTLY one line:\n"
+        "   SOURCES_JSON: [{\"label\":\"...\",\"url\":\"...\",\"field\":\"...\"},...]\n"
+        "   This must be valid compact JSON. Nothing after this line.\n\n"
+        "ENTITY PACKET:\n"
+        + json.dumps(entity_list, ensure_ascii=False)
+    )
+
+
 def call_gemini_for_demo(query: str, entities: dict) -> dict:
     """Call Gemini 2.5 Pro (fallback: 2.5 Flash). Returns parsed response dict."""
     if not GEMINI_API_KEY:
@@ -3669,6 +3690,89 @@ def call_gemini_for_demo(query: str, entities: dict) -> dict:
         "status": "error",
         "_last_err": last_err,
     }
+
+
+def stream_gemini_demo(query: str, entities: dict):
+    """Generator: yields SSE-formatted bytes token by token from Gemini streaming API.
+
+    Event shapes:
+      data: {"type":"token","text":"..."}\\n\\n   — incremental text chunk
+      data: {"type":"done","sources":[...],"model":"..."}\\n\\n  — terminal event
+      data: {"type":"error","text":"..."}\\n\\n   — on failure
+    """
+    if not GEMINI_API_KEY:
+        yield b'data: {"type":"error","text":"AI search not configured on this runtime."}\n\n'
+        return
+
+    system_prompt = build_demo_stream_prompt(entities)
+    # flash first for lower TTFT; fall back to pro
+    models = ["gemini-2.5-flash", "gemini-2.5-pro"]
+
+    for model in models:
+        full_text_parts: list[str] = []
+        try:
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
+                f":streamGenerateContent?alt=sse&key={GEMINI_API_KEY}"
+            )
+            body = json.dumps({
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"role": "user", "parts": [{"text": query}]}],
+                "generationConfig": {"temperature": 0.3},
+            }).encode("utf-8")
+            req = request.Request(
+                url, data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=60) as resp:
+                for raw_line in resp:
+                    line = raw_line.decode("utf-8", errors="replace").rstrip("\r\n")
+                    if not line.startswith("data:"):
+                        continue
+                    data_str = line[5:].strip()
+                    if not data_str or data_str == "[DONE]":
+                        continue
+                    try:
+                        chunk = json.loads(data_str)
+                        text_piece = (
+                            chunk.get("candidates", [{}])[0]
+                            .get("content", {})
+                            .get("parts", [{}])[0]
+                            .get("text", "")
+                        )
+                    except (json.JSONDecodeError, IndexError):
+                        continue
+                    if not text_piece:
+                        continue
+                    full_text_parts.append(text_piece)
+                    evt = json.dumps({"type": "token", "text": text_piece}, ensure_ascii=False)
+                    yield f"data: {evt}\n\n".encode("utf-8")
+
+            # Parse SOURCES_JSON trailer from accumulated text
+            full_text = "".join(full_text_parts)
+            sources: list[dict] = []
+            for ln in reversed(full_text.splitlines()):
+                ln = ln.strip()
+                if ln.startswith("SOURCES_JSON:"):
+                    try:
+                        sources = json.loads(ln[len("SOURCES_JSON:"):].strip())
+                    except Exception:
+                        pass
+                    break
+
+            done_evt = json.dumps(
+                {"type": "done", "sources": sources, "model": model},
+                ensure_ascii=False,
+            )
+            yield f"data: {done_evt}\n\n".encode("utf-8")
+            return
+
+        except Exception:
+            continue  # try next model
+
+    err_evt = json.dumps({"type": "error", "text": "AI search temporarily unavailable."})
+    yield f"data: {err_evt}\n\n".encode("utf-8")
 
 
 def log_demo_ask(ip_raw: str, query: str, model: str, latency_ms: int) -> None:
@@ -4309,6 +4413,40 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             except Exception:
                 presets_data = {"presets": []}
             self._write_json(presets_data, head_only=head_only)
+            return True
+
+        if parsed.path == "/demo/api/ask/stream":
+            if head_only:
+                self._write_json({}, head_only=True)
+                return True
+            q_param = query_params.get("q", [""])[0].strip()[:1000]
+            if not q_param:
+                self._write_json({"error": "missing q"}, status=400)
+                return True
+            allowed, retry_after = check_rate_limit("demo_ask", client_ip, 30, window_seconds=60)
+            if not allowed:
+                self._write_json({"error": "rate limit", "retry_after": retry_after}, status=429)
+                return True
+            allowed_hourly, _ = check_rate_limit("demo_ask_hourly", client_ip, 200, window_seconds=3600)
+            if not allowed_hourly:
+                self._write_json({"error": "hourly limit reached", "retry_after": 3600}, status=429)
+                return True
+            entities = get_demo_entities()
+            # SSE: write headers directly — no Content-Length
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store")
+            self.send_header("X-Accel-Buffering", "no")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            t0 = time.monotonic()
+            try:
+                for chunk in stream_gemini_demo(q_param, entities):
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+            except Exception:
+                pass
+            log_demo_ask(client_ip, q_param, "stream", int((time.monotonic() - t0) * 1000))
             return True
 
         # --- end /demo -------------------------------------------------------

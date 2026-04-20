@@ -54,25 +54,45 @@ function escapeAttr(s) {
 
 async function ask(q) {
   if (!q) return;
-  answer.innerHTML = '<span class="thinking">Thinking…</span>';
+  answer.innerHTML = '<div class="answer-stream" id="answer-stream"></div><span class="stream-cursor" aria-hidden="true">▋</span>';
+  const streamEl = document.getElementById("answer-stream");
+
   try {
-    const r = await fetch("/demo/api/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ q }),
-    });
-    if (r.status === 429) {
+    const resp = await fetch(`/demo/api/ask/stream?q=${encodeURIComponent(q)}`);
+    if (resp.status === 429) {
       answer.textContent = "Rate limit reached. Please wait a moment and try again.";
       return;
     }
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    if (data.status === "error") {
-      answer.textContent = data.text || "Something went wrong. Please try again.";
-      return;
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let fullText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop(); // hold back incomplete line
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(6)); } catch (_) { continue; }
+        if (evt.type === "token") {
+          fullText += evt.text;
+          // Show text as-is during streaming; SOURCES_JSON line stripped on done
+          streamEl.textContent = fullText;
+        } else if (evt.type === "done") {
+          const cleanText = fullText.replace(/\n*SOURCES_JSON:.*$/s, "").trim();
+          answer.innerHTML = renderAnswer({ text: cleanText, sources: evt.sources || [], status: "ok" });
+        } else if (evt.type === "error") {
+          answer.textContent = evt.text || "Something went wrong. Please try again.";
+        }
+      }
     }
-    answer.innerHTML = renderAnswer(data);
-  } catch (err) {
+  } catch (_) {
     answer.textContent = "Could not reach the server. Please try again.";
   }
 }

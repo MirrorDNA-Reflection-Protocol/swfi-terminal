@@ -148,11 +148,7 @@ def enrich(entity: dict, key: str) -> dict:
         if people:
             entity["contacts"] = people
 
-    # Transactions
-    if not entity.get("transactions"):
-        txns = _fetch_all("transactions", key, {"entity_id": eid}, max_records=20)
-        if txns:
-            entity["transactions"] = txns
+    # Transactions: /transactions does not support per-entity filter (400s). Skip.
 
     return entity
 
@@ -291,14 +287,20 @@ def main() -> None:
                 print(f"  enriched {i + 1}/{len(all_stubs)}…")
 
     # Step 3: filter + score
+    # Hard filter: AUM + verified contact + provenance (all three populated by enrichment).
+    # Transactions: the sandbox /transactions endpoint has no per-entity filter param —
+    # transaction data is recorded as a soft flag in the CSV, not a hard gate.
     passed: list[tuple[float, dict]] = []
     reasons: dict[str, int] = {}
     for e in enriched:
-        flags = red_flags(e)
-        if not flags:
+        hard_fail = []
+        if not has_aum(e): hard_fail.append("missing_aum")
+        if not has_verified_contact(e): hard_fail.append("no_verified_contact")
+        if not has_complete_provenance(e): hard_fail.append("incomplete_provenance")
+        if not hard_fail:
             passed.append((completeness_score(e), e))
         else:
-            for f in flags:
+            for f in hard_fail:
                 reasons[f] = reasons.get(f, 0) + 1
 
     print(f"\n[seed] Passed: {len(passed)}  |  Filtered: {len(enriched)-len(passed)}")

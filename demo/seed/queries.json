@@ -1,0 +1,9 @@
+{
+  "_note": "Event-mode presets. Pre-loaded queries so walk-up demos never start cold.",
+  "presets": [
+    { "label": "Top 5 SWFs", "q": "Top 5 sovereign wealth funds by AUM" },
+    { "label": "GCC \u2192 PE", "q": "GCC sovereign allocations to private equity" },
+    { "label": "Asia RFPs", "q": "Active RFPs from Asian pension funds" },
+    { "label": "Family offices > $10B", "q": "Family offices over $10B AUM" }
+  ]
+}
