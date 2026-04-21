@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://swfi.com/schemas/nugget_schema_v1.json",
+  "title": "SWFI Nugget Schema v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "entity_id",
+    "entity_type",
+    "claim",
+    "observed_fact",
+    "status",
+    "confidence",
+    "commercial_relevance",
+    "novelty_score",
+    "recency_score",
+    "evidence_strength",
+    "source_refs",
+    "contradictions",
+    "review_required",
+    "why_it_matters",
+    "policy_version",
+    "prompt_version",
+    "model_id",
+    "generated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "swfi.nugget.v1"
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "Profile",
+        "Fund",
+        "KeyPerson",
+        "Transaction",
+        "Mandate",
+        "RFP",
+        "AssetAllocation",
+        "Document"
+      ]
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observed_fact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "derived_implication": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Verified",
+        "Derived",
+        "Conflicted",
+        "Missing",
+        "NeedsReview",
+        "Rejected"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low",
+        "None"
+      ]
+    },
+    "commercial_relevance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "novelty_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "recency_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evidence_strength": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "why_it_matters": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_required": {
+      "type": "boolean"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy_version": {
+      "type": "string",
+      "pattern": "^swfi\\.policy\\.[a-z0-9._-]+$"
+    },
+    "prompt_version": {
+      "type": "string",
+      "pattern": "^swfi\\.prompt\\.[a-z0-9._-]+$"
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source_ref"
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/contradiction"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "source_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_system",
+        "source_type",
+        "pointer",
+        "retrieved_at",
+        "excerpt",
+        "authority_rank",
+        "extraction_method"
+      ],
+      "properties": {
+        "source_system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "Primary",
+            "Secondary",
+            "PlatformInternal",
+            "ExternalStructured"
+          ]
+        },
+        "pointer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "published_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "excerpt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field_path_or_location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_rank": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "extraction_method": {
+          "type": "string",
+          "enum": [
+            "api_field",
+            "deterministic_rule",
+            "ocr_plus_llm",
+            "document_extraction",
+            "manual_review"
+          ]
+        }
+      }
+    },
+    "contradiction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "left_pointer",
+        "right_pointer",
+        "issue"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "left_pointer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "right_pointer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

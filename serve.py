@@ -28,6 +28,8 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parent
 INPUTS_ROOT = ROOT / "data" / "inputs"
+DOCS_ROOT = ROOT / "docs"
+AI_DOCS_ROOT = DOCS_ROOT / "ai"
 
 SHEET_CSV_URL = (
     "https://docs.google.com/spreadsheets/d/1dVHsh2zmWrWsxSpMg3zEr7Je27XmAsnO/gviz/tq"
@@ -3913,6 +3915,24 @@ def build_phase1_summary_md() -> str:
     return "\n".join(lines)
 
 
+def read_ai_doc(filename: str) -> str:
+    path = AI_DOCS_ROOT / filename
+    return path.read_text(encoding="utf-8")
+
+
+def build_ai_governance_md() -> str:
+    return read_ai_doc("SWFI_AI_GOVERNANCE.md")
+
+
+def build_nugget_schema_json() -> str:
+    raw = read_ai_doc("nugget_schema_v1.json")
+    return json.dumps(json.loads(raw), indent=2) + "\n"
+
+
+def build_prompt_registry_yaml() -> str:
+    return read_ai_doc("prompt_registry.yaml")
+
+
 def get_cached_dashboard_payload(*, include_stale: bool = True) -> dict[str, object] | None:
     now = time.time()
     with _cache_lock:
@@ -4001,6 +4021,9 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Connector status JSON", "url": "/api/connectors/v1"},
             {"label": "Export history CSV", "url": "/api/reports/export-history.csv"},
             {"label": "Phase 1 summary", "url": "/api/reports/phase1-summary.md"},
+            {"label": "AI governance spec", "url": "/api/reports/ai-governance.md"},
+            {"label": "Nugget schema JSON", "url": "/api/reports/nugget-schema.json"},
+            {"label": "Prompt registry YAML", "url": "/api/reports/prompt-registry.yaml"},
         ],
         "rebuild": {"url": "/api/admin/rebuild", "method": "POST"},
     }
@@ -5410,6 +5433,84 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-phase1-summary.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/ai-governance.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_ai_governance_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-ai-governance.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/nugget-schema.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_nugget_schema_json(),
+                "application/schema+json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-nugget-schema-v1.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/prompt-registry.yaml":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_prompt_registry_yaml(),
+                "application/yaml; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-prompt-registry.yaml"'},
             )
             return True
 

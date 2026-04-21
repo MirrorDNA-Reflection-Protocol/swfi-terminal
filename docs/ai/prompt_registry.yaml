@@ -1,0 +1,148 @@
+registry_version: swfi.prompt_registry.v1
+policy_version: swfi.policy.ai_governance.v0_1
+defaults:
+  response_contract: swfi.nugget.v1
+  refusal_language:
+    - Not verified from current SWFI sources
+    - Conflicting source evidence
+    - Insufficient support for a reliable conclusion
+    - Requires analyst review
+  tone_rules:
+    - institutional
+    - factual
+    - sparse
+    - source-aware
+    - no hype
+    - no overclaiming
+    - no generic AI phrasing
+  guardrails:
+    - Never invent a field, number, or source.
+    - Separate observed_fact from derived_implication.
+    - If sources disagree, set status to Conflicted.
+    - If support is weak, lower confidence or refuse.
+    - Output valid JSON only when a JSON schema is specified.
+
+prompts:
+  - id: swfi.prompt.extract.document_v1
+    task: Extract candidate institutional facts from approved documents
+    owner: research
+    model_preference:
+      primary: anthropic
+      fallback: openai
+    input_contract:
+      required:
+        - entity_context
+        - source_packet
+        - extraction_targets
+    instructions: |
+      Read only the approved source packet. Extract explicit facts relevant to sovereign funds,
+      public pensions, central banks, mandates, RFPs, key people, transactions, and asset allocation.
+      Do not infer beyond the text. Return only facts that can be tied to an evidence excerpt.
+    output_shape:
+      type: json
+      fields:
+        - candidate_facts[]
+        - source_refs[]
+
+  - id: swfi.prompt.classify.nugget_v1
+    task: Turn approved facts into candidate nuggets
+    owner: product
+    model_preference:
+      primary: openai
+      fallback: anthropic
+    input_contract:
+      required:
+        - entity_id
+        - entity_type
+        - candidate_facts
+        - source_refs
+    instructions: |
+      Produce candidate nuggets that conform to swfi.nugget.v1.
+      Separate observed_fact from derived_implication.
+      Use Derived only when the implication is reasonable and bounded by the evidence.
+      If support is insufficient, mark status as NeedsReview or Rejected.
+    output_shape:
+      type: json
+      schema_ref: https://swfi.com/schemas/nugget_schema_v1.json
+
+  - id: swfi.prompt.detect.conflict_v1
+    task: Compare approved sources and surface contradictions
+    owner: research
+    model_preference:
+      primary: anthropic
+      fallback: openai
+    input_contract:
+      required:
+        - normalized_records
+        - source_refs
+    instructions: |
+      Compare only the supplied records. Detect contradictions in AUM, managed assets,
+      titles, dates, transaction amounts, strategy labels, and entity identity.
+      Do not resolve the conflict unless the source priority rules clearly allow it.
+    output_shape:
+      type: json
+      fields:
+        - contradictions[]
+        - recommended_status
+        - review_required
+
+  - id: swfi.prompt.rank.nugget_v1
+    task: Rank nuggets for client usefulness
+    owner: product
+    model_preference:
+      primary: openai
+      fallback: anthropic
+    input_contract:
+      required:
+        - nugget_candidates
+        - scoring_policy
+    instructions: |
+      Score each nugget for commercial relevance, novelty, recency, and evidence strength.
+      Do not change claim wording beyond tightening for precision.
+      Do not upgrade a nugget's confidence or status.
+    output_shape:
+      type: json
+      fields:
+        - ranked_nuggets[]
+
+  - id: swfi.prompt.answer.grounded_v1
+    task: Answer a user question only from approved SWFI records
+    owner: application
+    model_preference:
+      primary: anthropic
+      fallback: openai
+    input_contract:
+      required:
+        - question
+        - approved_context
+    instructions: |
+      Answer only from the approved context. If the answer is not supported, refuse using the
+      approved refusal language. Keep the response institutional and concise. Cite the supporting
+      source pointers in the answer metadata.
+    output_shape:
+      type: json
+      fields:
+        - answer
+        - status
+        - confidence
+        - source_refs[]
+
+  - id: swfi.prompt.refuse.unsupported_v1
+    task: Produce controlled refusal output when support is insufficient
+    owner: policy
+    model_preference:
+      primary: openai
+      fallback: anthropic
+    input_contract:
+      required:
+        - question
+        - reason
+    instructions: |
+      Return a concise refusal. Do not add speculation, alternatives, or filler.
+      The refusal must explicitly signal that the current SWFI sources do not support a reliable answer.
+    output_shape:
+      type: json
+      fields:
+        - answer
+        - status
+        - confidence
