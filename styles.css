@@ -970,6 +970,23 @@ button { cursor: pointer; }
   grid-template-columns: minmax(0, 1fr) 380px;
   gap: 14px;
 }
+.landing-route-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.route-card h3 {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.05;
+}
+.landing-guide-copy {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -1188,7 +1205,7 @@ button { cursor: pointer; }
   .metric-grid, .api-summary-grid, .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .right-rail { grid-template-columns: 1fr; }
   .brief-grid, .reference-cards { grid-template-columns: 1fr; }
-  .landing-hero, .landing-grid,
+  .landing-hero, .landing-grid, .landing-route-grid,
   .msci-hero, .msci-grid,
   .profiles-hero, .profiles-grid, .profiles-lower-grid,
   .research-hero, .research-grid { grid-template-columns: 1fr; }

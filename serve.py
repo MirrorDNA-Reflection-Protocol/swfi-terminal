@@ -6644,8 +6644,31 @@ def render_template_html(template_name: str, meta: dict[str, object], csp_nonce:
     return html_text.replace("</head>", f"{injection}\n  </head>", 1)
 
 
-def render_index_html(host: str, proto: str, csp_nonce: str) -> str:
-    return render_template_html("index.html", build_site_meta(host, proto), csp_nonce)
+def render_dashboard_html(host: str, proto: str, csp_nonce: str) -> str:
+    meta = build_page_meta(
+        host,
+        proto,
+        path="/dashboard",
+        title="SWFI | Dashboard",
+        description=(
+            "Subscriber dashboard for Profiles, Transactions, Mandates, RFPs, Key People, "
+            "Asset Allocation, VIP briefings, Datafeeds/API, and MSCI delivery."
+        ),
+        about=[
+            "Dashboard",
+            "Profiles",
+            "Transactions",
+            "Mandates",
+            "RFPs",
+            "Key People",
+            "Asset Allocation",
+            "VIP Briefings",
+            "Datafeeds",
+            "API Access",
+        ],
+        force_private=True,
+    )
+    return render_template_html("index.html", meta, csp_nonce)
 
 
 def render_landing_html(host: str, proto: str, csp_nonce: str) -> str:
@@ -8009,7 +8032,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 self._write_redirect(f"/login?next={parse.quote(next_path, safe='/')}")
                 return True
             csp_nonce = secrets.token_urlsafe(18)
-            self._write_html(render_index_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            self._write_html(render_dashboard_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
         if parsed.path in ("/", "/index.html"):
@@ -8021,7 +8044,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 next_path = sanitize_next_path(parsed.path or "/")
                 self._write_redirect(f"/login?next={parse.quote(next_path, safe='/')}")
                 return True
-            self._write_html(render_index_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            self._write_html(render_dashboard_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
         if parsed.path != "/" and not Path(path).exists() and not parsed.path.startswith("/api/"):
@@ -8029,7 +8052,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 self._write_redirect(f"/login?next={parse.quote(sanitize_next_path(parsed.path), safe='/')}")
                 return True
             csp_nonce = secrets.token_urlsafe(18)
-            self._write_html(render_index_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            self._write_html(render_dashboard_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
         if parsed.path.startswith("/api/"):
