@@ -12,6 +12,7 @@ const nuggetList = $("admin-nugget-list");
 const exportHistoryEl = $("admin-export-history");
 const errorList = $("admin-error-list");
 const apiMatrixEl = $("admin-api-matrix");
+const sourceWatchlistEl = $("admin-source-watchlist");
 const reviewQueueEl = $("admin-review-queue");
 const reviewHistoryEl = $("admin-review-history");
 const researchEvalEl = $("admin-research-eval");
@@ -318,6 +319,63 @@ function renderApiMatrix(payload) {
     .join("");
 }
 
+function renderSourceWatchlist(payload) {
+  const summary = payload.source_watchlist?.summary || {};
+  const groups = payload.source_watchlist?.groups || [];
+  if (!groups.length) {
+    sourceWatchlistEl.innerHTML = '<article class="stack-card tone-watch"><strong>No official source watches have been staged.</strong><p>Add board, mandate, and oversight rails to build the next collection queue.</p></article>';
+    return;
+  }
+  const head = `
+    <article class="stack-card tone-watch">
+      <div class="readiness-head">
+        <strong>${esc(summary.total_sources || 0)} official source watches</strong>
+        <span class="status-chip tone-watch">${esc(`${summary.high_priority || 0} high priority`)}</span>
+      </div>
+      <p>${esc(`${summary.board_materials || 0} board materials · ${summary.mandates_rfps || 0} mandates/RFPs · ${summary.oversight_strategy || 0} strategy and oversight sources`)}</p>
+      <div class="detail-line">
+        <a class="nav-link" href="/api/reports/source-watchlist.csv">Download CSV</a>
+      </div>
+    </article>
+  `;
+  const body = groups
+    .map(
+      (group) => `
+        <article class="stack-card tone-watch">
+          <div class="readiness-head">
+            <strong>${esc(group.family)}</strong>
+            <span class="status-chip tone-watch">${esc(`${(group.items || []).length} sources`)}</span>
+          </div>
+          <div class="panel-stack">
+            ${(group.items || [])
+              .map(
+                (item) => `
+                  <article class="stack-card tone-${tone(item.tone || item.priority)}">
+                    <div class="readiness-head">
+                      <strong>${esc(item.source_name)}</strong>
+                      <span class="status-chip tone-${tone(item.tone || item.priority)}">${esc(item.priority)}</span>
+                    </div>
+                    <p>${esc(item.focus)}</p>
+                    <div class="detail-line">
+                      <span>${esc(item.collection)}</span>
+                      <span>${esc(item.cadence)}</span>
+                    </div>
+                    <p>${esc(item.why_it_matters)}</p>
+                    <div class="detail-line">
+                      <a class="nav-link" href="${esc(item.url)}" target="_blank" rel="noreferrer">Open source</a>
+                    </div>
+                  </article>
+                `,
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+  sourceWatchlistEl.innerHTML = head + body;
+}
+
 function renderReviewQueue(payload) {
   const items = payload.nugget_pipeline?.review_queue || [];
   if (!items.length) {
@@ -433,6 +491,7 @@ function renderPayload(payload) {
   renderExportHistory(payload);
   renderErrors(payload);
   renderApiMatrix(payload);
+  renderSourceWatchlist(payload);
   renderReviewQueue(payload);
   renderReviewHistory(payload);
   renderResearchEval(payload);

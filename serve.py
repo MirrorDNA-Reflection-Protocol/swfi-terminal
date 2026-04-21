@@ -665,6 +665,152 @@ REQUIRED_API_STACK = [
     },
 ]
 
+OFFICIAL_SOURCE_WATCHLIST = [
+    {
+        "family": "Board materials",
+        "source_name": "CalPERS Investment Committee",
+        "collection": "Asset Allocation",
+        "focus": "Committee packets, manager reviews, allocation shifts, performance updates",
+        "cadence": "Meeting cycle",
+        "priority": "High",
+        "tone": "watch",
+        "why_it_matters": "Large public-plan committee packets often surface allocation changes and manager actions before downstream databases update.",
+        "url": "https://www.calpers.ca.gov/about/board/board-meetings/invest-202603",
+    },
+    {
+        "family": "Board materials",
+        "source_name": "NYC Comptroller Investment Meetings",
+        "collection": "Profiles",
+        "focus": "Investment meeting agendas, books, and follow-up actions",
+        "cadence": "Meeting cycle",
+        "priority": "High",
+        "tone": "watch",
+        "why_it_matters": "Public meeting materials provide direct evidence for profile changes, manager oversight, and capital-planning decisions.",
+        "url": "https://comptroller.nyc.gov/services/financial-matters/pension/investment-meetings/",
+    },
+    {
+        "family": "Board materials",
+        "source_name": "Kentucky Public Pensions Authority meetings",
+        "collection": "Asset Allocation",
+        "focus": "Board and committee calendars, agendas, and supporting packets",
+        "cadence": "Monthly",
+        "priority": "Medium",
+        "tone": "watch",
+        "why_it_matters": "Meeting packets create an evidence trail for pacing, consultant use, and allocation discussions.",
+        "url": "https://www.kyret.ky.gov/About/Pages/Meeting-Schedule.aspx",
+    },
+    {
+        "family": "Board materials",
+        "source_name": "Texas Pension Review Board meetings",
+        "collection": "Profiles",
+        "focus": "Oversight board agendas, compliance materials, and review packets",
+        "cadence": "Meeting cycle",
+        "priority": "Medium",
+        "tone": "watch",
+        "why_it_matters": "Oversight materials help flag risk, governance changes, and institution-level review events.",
+        "url": "https://www.prb.texas.gov/board-and-agency-info/board-meetings/",
+    },
+    {
+        "family": "Mandates and RFPs",
+        "source_name": "Massachusetts Retirement Board RFP Notices",
+        "collection": "RFPs",
+        "focus": "Official retirement-board procurement notices and manager searches",
+        "cadence": "Weekly",
+        "priority": "High",
+        "tone": "watch",
+        "why_it_matters": "Direct RFP notices are the cleanest early source for mandate activity and deadline tracking.",
+        "url": "https://www.mass.gov/info-details/request-for-proposal-rfp-notices",
+    },
+    {
+        "family": "Mandates and RFPs",
+        "source_name": "Maryland State Retirement RFIs and RFPs",
+        "collection": "RFPs",
+        "focus": "Current RFIs, RFPs, and procurement notices",
+        "cadence": "Weekly",
+        "priority": "High",
+        "tone": "watch",
+        "why_it_matters": "This is a repeatable source for official opportunity capture without relying on secondary coverage.",
+        "url": "https://sra.maryland.gov/current-rfisrfps",
+    },
+    {
+        "family": "Mandates and RFPs",
+        "source_name": "Find a Tender",
+        "collection": "Mandates",
+        "focus": "UK public tender notices for investment, consulting, and technology buys",
+        "cadence": "Daily",
+        "priority": "High",
+        "tone": "watch",
+        "why_it_matters": "National procurement rails expand mandate visibility beyond institutions that publish clean RFP pages.",
+        "url": "https://www.find-tender.service.gov.uk/",
+    },
+    {
+        "family": "Mandates and RFPs",
+        "source_name": "FPIF investment procurement",
+        "collection": "Mandates",
+        "focus": "Investment procurement updates and official opportunity notices",
+        "cadence": "Weekly",
+        "priority": "Medium",
+        "tone": "watch",
+        "why_it_matters": "Institution-specific procurement pages expose search activity that competitors often discover late.",
+        "url": "https://ifpif.org/investments/investment-procurement/",
+    },
+    {
+        "family": "Public records and oversight",
+        "source_name": "PIF 2026-2030 strategy approval",
+        "collection": "Profiles",
+        "focus": "Official strategy approvals and policy direction",
+        "cadence": "Event-driven",
+        "priority": "High",
+        "tone": "watch",
+        "why_it_matters": "Strategy releases reveal capital direction and national priorities before portfolio data catches up.",
+        "url": "https://www.spa.gov.sa/en/N2560354",
+    },
+    {
+        "family": "Public records and oversight",
+        "source_name": "Saudi Ministry of Finance FY2026 budget",
+        "collection": "Asset Allocation",
+        "focus": "Budget statements, fiscal priorities, and public-capital context",
+        "cadence": "Annual",
+        "priority": "Medium",
+        "tone": "watch",
+        "why_it_matters": "Budget documents shape sovereign capital priorities and provide context for allocation shifts.",
+        "url": "https://www.mof.gov.sa/en/MediaCenter/news/Pages/News_02122025.aspx",
+    },
+    {
+        "family": "Public records and oversight",
+        "source_name": "NASRA investment survey",
+        "collection": "Asset Allocation",
+        "focus": "Public pension investment benchmarks and allocation reference points",
+        "cadence": "Annual",
+        "priority": "Medium",
+        "tone": "partial",
+        "why_it_matters": "Benchmark context helps explain whether institution-level moves are outliers or part of a broader allocation trend.",
+        "url": "https://www.nasra.org/investment",
+    },
+    {
+        "family": "Public records and oversight",
+        "source_name": "PBGC FOIA",
+        "collection": "Profiles",
+        "focus": "Public-record request channel for governance and oversight materials",
+        "cadence": "As needed",
+        "priority": "Medium",
+        "tone": "partial",
+        "why_it_matters": "Public-record request rails are slow, but they create an edge for difficult oversight and governance evidence.",
+        "url": "https://www.pbgc.gov/about/foia",
+    },
+    {
+        "family": "Public records and oversight",
+        "source_name": "PRIM public records",
+        "collection": "Profiles",
+        "focus": "Records-of-interest archive and request surface",
+        "cadence": "As needed",
+        "priority": "Medium",
+        "tone": "partial",
+        "why_it_matters": "Records portals provide a structured path for difficult-to-source board and investment materials.",
+        "url": "https://www.mapension.com/records-of-interest/",
+    },
+]
+
 EXTERNAL_API_MATRIX = [
     {
         "name": "GLEIF LEI API",
@@ -5133,6 +5279,7 @@ def build_msci_analytics(target_bundle: dict[str, object], people_summary: dict[
         "downloads": {
             "msci_analytics_csv": "/api/reports/msci-analytics.csv",
             "external_api_matrix_csv": "/api/reports/external-api-matrix.csv",
+            "source_watchlist_csv": "/api/reports/source-watchlist.csv",
             "export_history_csv": "/api/reports/export-history.csv",
             "phase1_summary_md": "/api/reports/phase1-summary.md",
         },
@@ -5168,6 +5315,45 @@ def build_external_api_matrix_csv() -> str:
                 item.get("probe_note", ""),
                 item["url"],
                 item.get("probe_url", ""),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_source_watchlist_payload() -> dict[str, object]:
+    items = [dict(item) for item in OFFICIAL_SOURCE_WATCHLIST]
+    grouped: dict[str, list[dict[str, str]]] = {}
+    for item in items:
+        grouped.setdefault(str(item["family"]), []).append(item)
+    high_priority = sum(1 for item in items if item.get("priority") == "High")
+    return {
+        "summary": {
+            "total_sources": len(items),
+            "high_priority": high_priority,
+            "board_materials": sum(1 for item in items if item.get("family") == "Board materials"),
+            "mandates_rfps": sum(1 for item in items if item.get("family") == "Mandates and RFPs"),
+            "oversight_strategy": sum(1 for item in items if item.get("family") == "Public records and oversight"),
+        },
+        "groups": [{"family": family, "items": group} for family, group in grouped.items()],
+        "items": items,
+    }
+
+
+def build_source_watchlist_csv() -> str:
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Family", "Source", "Collection", "Focus", "Cadence", "Priority", "Why It Matters", "URL"])
+    for item in OFFICIAL_SOURCE_WATCHLIST:
+        writer.writerow(
+            [
+                item["family"],
+                item["source_name"],
+                item["collection"],
+                item["focus"],
+                item["cadence"],
+                item["priority"],
+                item["why_it_matters"],
+                item["url"],
             ]
         )
     return output.getvalue()
@@ -5291,6 +5477,7 @@ def build_admin_payload() -> dict[str, object]:
     target_bundle = load_target_accounts()
     people_summary = get_msci_people_summary(target_bundle)
     live_external_matrix = get_live_external_api_matrix()
+    source_watchlist = build_source_watchlist_payload()
     nuggets = apply_nugget_review_state(build_governed_nuggets(dashboard)) if isinstance(dashboard, dict) and dashboard else []
     review_queue = build_nugget_review_queue(nuggets)
     review_events = list(reversed(read_nugget_review_events(20)))
@@ -5334,6 +5521,7 @@ def build_admin_payload() -> dict[str, object]:
         {"label": "Export audit log", "status": "ok" if SWFI_EXPORT_AUDIT_LOG.exists() else "watch", "note": f"{len(audit_events)} recent events loaded"},
         {"label": "Sandbox API", "status": str(sandbox_status.get('tone', 'watch')), "note": str(sandbox_status.get('source', {}).get('note', ''))},
         {"label": "Public connector probes", "status": "ok" if sum(1 for item in live_external_matrix if item.get("live_status") == "ok") >= 4 else "partial", "note": f"{sum(1 for item in live_external_matrix if item.get('live_status') == 'ok')} connectors responded on the latest probe"},
+        {"label": "Official source watches", "status": "ok" if source_watchlist.get("summary", {}).get("total_sources", 0) else "watch", "note": f"{source_watchlist.get('summary', {}).get('high_priority', 0)} high-priority official sources staged for collection"},
         {"label": "Review ledger", "status": "ok" if review_events else "watch", "note": f"{len(review_events)} recent analyst actions loaded"},
     ]
     approved_count = sum(1 for item in nuggets if (item.get("review") or {}).get("state") == "approved")
@@ -5350,12 +5538,14 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Governed nuggets", "value": str(len(nuggets)), "note": f"{len(review_queue)} currently require analyst review"},
             {"label": "Approved / promoted", "value": str(approved_count + promoted_count), "note": f"{rejected_count} currently rejected"},
             {"label": "Top repair score", "value": str(quality_loop.get("summary", {}).get("top_score", 0)), "note": str(quality_loop.get("summary", {}).get("top_target", "No target"))},
+            {"label": "Official watches", "value": str(source_watchlist.get("summary", {}).get("total_sources", 0)), "note": f"{source_watchlist.get('summary', {}).get('high_priority', 0)} high-priority official rails"},
         ],
         "statuses": statuses,
         "errors": errors,
         "export_history": audit_events,
         "analytics": build_msci_analytics(target_bundle, people_summary),
         "external_api_matrix": live_external_matrix,
+        "source_watchlist": source_watchlist,
         "nugget_pipeline": {
             "items": nuggets,
             "review_queue": review_queue,
@@ -5372,6 +5562,8 @@ def build_admin_payload() -> dict[str, object]:
         "reports": [
             {"label": "MSCI analytics CSV", "url": "/api/reports/msci-analytics.csv"},
             {"label": "External API matrix CSV", "url": "/api/reports/external-api-matrix.csv"},
+            {"label": "Source watchlist CSV", "url": "/api/reports/source-watchlist.csv"},
+            {"label": "Source watchlist JSON", "url": "/api/source-watchlist/v1"},
             {"label": "Connector status JSON", "url": "/api/connectors/v1"},
             {"label": "Export history CSV", "url": "/api/reports/export-history.csv"},
             {"label": "Phase 1 summary", "url": "/api/reports/phase1-summary.md"},
@@ -6825,6 +7017,20 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
+        if parsed.path in ("/api/source-watchlist", "/api/source-watchlist/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": "swfi.source_watchlist.v1",
+                    "generated_at": iso_now(),
+                    "source_watchlist": build_source_watchlist_payload(),
+                },
+                head_only=head_only,
+            )
+            return True
+
         if parsed.path == "/api/msci/export/accounts.csv":
             auth_mode = private_export_auth_mode(self, parsed)
             if not auth_mode:
@@ -6927,6 +7133,26 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 return True
             append_export_audit_event(self, parsed.path, "ok", auth_mode)
             self._write_csv(build_external_api_matrix_csv(), "swfi-external-api-matrix.csv", head_only=head_only)
+            return True
+
+        if parsed.path == "/api/reports/source-watchlist.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_source_watchlist_csv(), "swfi-source-watchlist.csv", head_only=head_only)
             return True
 
         if parsed.path == "/api/reports/export-history.csv":
