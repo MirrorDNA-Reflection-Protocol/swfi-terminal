@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SWFI | Profiles</title>
+    <meta name="description" content="Controlled-access SWFI profile workspace for sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, Datafeeds, and API Access." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ticker-wrap" aria-hidden="true">
+      <div class="ticker-track" id="ticker-tape"></div>
+    </div>
+
+    <div class="page-shell">
+      <nav class="topnav">
+        <div class="nav-left">
+          <a class="nav-brand" href="/dashboard">
+            <span class="brand-diamond">◆</span>
+            <span class="brand-text">SWFI</span>
+          </a>
+          <a href="/profiles" class="nav-link">Profiles</a>
+          <a href="/msci" class="nav-link">MSCI</a>
+          <a href="/admin" class="nav-link">Admin</a>
+          <a href="/api/profiles/v1" class="nav-link">API Access</a>
+        </div>
+        <div class="nav-right">
+          <span class="nav-status-dot nav-status-dot--controlled"></span>
+          <span class="nav-status-label">Controlled preview</span>
+          <a href="/auth/logout" class="nav-link">Sign out</a>
+        </div>
+      </nav>
+
+      <main class="main-stack profiles-stack">
+        <header class="panel msci-hero profiles-hero">
+          <div class="msci-hero-copy">
+            <p class="sys-label">Profiles workspace</p>
+            <h1>Institution Profiles</h1>
+            <p class="msci-copy">Controlled-access review surface for sovereign wealth funds, public pensions, central banks, Key People coverage, source-backed profile status, and governed profile signals.</p>
+            <div class="status-strip msci-status-strip" id="profile-status-strip"></div>
+          </div>
+          <div class="msci-download-panel">
+            <p class="sys-label">Downloads</p>
+            <div class="download-row" id="profile-downloads"></div>
+            <div class="section-block">
+              <p class="sys-label">Profile source status</p>
+              <div class="panel-stack" id="profile-source-status"></div>
+            </div>
+          </div>
+        </header>
+
+        <section class="metric-grid" id="profile-summary-grid"></section>
+
+        <section class="workspace-grid profiles-grid">
+          <aside class="left-rail">
+            <article class="panel profiles-directory-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Directory</p>
+                  <h3>Profiles</h3>
+                </div>
+                <span class="panel-note" id="profile-count">0 profiles</span>
+              </div>
+              <label class="terminal-search" for="profile-search">
+                <span class="search-prompt">⌕</span>
+                <input id="profile-search" type="search" autocomplete="off" placeholder="Search profiles, countries, or Key People..." />
+              </label>
+              <div class="section-block">
+                <p class="sys-label">Type</p>
+                <div class="filter-row" id="profile-type-filters"></div>
+              </div>
+              <div class="section-block">
+                <p class="sys-label">Region</p>
+                <div class="filter-row" id="profile-region-filters"></div>
+              </div>
+              <div class="lane-list" id="profile-list"></div>
+            </article>
+          </aside>
+
+          <section class="center-column">
+            <article class="panel profile-detail-panel">
+              <div class="profile-detail-head">
+                <div class="profile-title-row">
+                  <div>
+                    <p class="sys-label" id="profile-detail-eyebrow">Profile</p>
+                    <h2 id="profile-detail-name">Loading</h2>
+                  </div>
+                  <div class="profile-title-actions">
+                    <span class="status-chip tone-watch" id="profile-detail-status">Loading</span>
+                    <span class="status-chip tone-watch" id="profile-detail-confidence">Review</span>
+                  </div>
+                </div>
+                <div class="detail-line" id="profile-detail-meta"></div>
+                <p class="profile-copy" id="profile-detail-summary"></p>
+              </div>
+
+              <div class="api-summary-grid" id="profile-fact-grid"></div>
+            </article>
+
+            <div class="lower-grid profiles-lower-grid">
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="sys-label">Profile signals</p>
+                    <h3>What Changed</h3>
+                  </div>
+                </div>
+                <div class="panel-stack" id="profile-signal-list"></div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="sys-label">Trust layer</p>
+                    <h3>Sources and evidence</h3>
+                  </div>
+                </div>
+                <div class="panel-stack" id="profile-source-list"></div>
+              </article>
+            </div>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Key People</p>
+                  <h3>Current coverage</h3>
+                </div>
+                <span class="panel-note" id="profile-key-people-count">0 people</span>
+              </div>
+              <div class="msci-table" id="profile-key-people"></div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./profiles.js" type="module"></script>
+  </body>
+</html>

@@ -95,6 +95,7 @@ DASHBOARD_SCHEMA_VERSION = "swfi.dashboard.v1"
 RESEARCH_SCHEMA_VERSION = "swfi.research.v1"
 MSCI_SCHEMA_VERSION = "swfi.msci_workbench.v1"
 ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
+PROFILES_SCHEMA_VERSION = "swfi.profiles.v1"
 PREVIEW_ROUTE = "/preview"
 AI_POLICY_VERSION = "swfi.policy.ai_governance.v0_1"
 PROMPT_REGISTRY_VERSION = "swfi.prompt_registry.v1"
@@ -811,6 +812,7 @@ _request_rate_lock = threading.Lock()
 _audit_log_lock = threading.Lock()
 _session_lock = threading.Lock()
 _dashboard_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
+_profiles_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _sandbox_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _msci_people_summary_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _msci_people_export_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
@@ -3807,6 +3809,342 @@ def build_client_brief_md() -> str:
     return "\n".join(lines) + "\n"
 
 
+PROFILE_RELEVANT_TYPES = {
+    "sovereign wealth fund",
+    "public pension",
+    "pension",
+    "central bank",
+    "endowment",
+    "family office",
+}
+
+
+def profile_slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").strip().lower()).strip("-")
+    return slug or "profile"
+
+
+def compact_date(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text[:10]
+
+
+def hostname_from_url(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        return parse.urlparse(text).netloc.lower().removeprefix("www.")
+    except Exception:
+        return ""
+
+
+def clean_profile_copy(value: object, *, limit: int = 560) -> str:
+    cleaned = strip_tags(str(value or ""))
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[: limit - 1].rstrip() + "…"
+
+
+def profile_primary_contact(contact: dict[str, object]) -> str:
+    history = pick_person_history_row(contact)
+    return normalize_text(str(history.get("title") or contact.get("title") or ""))
+
+
+def build_profiles_payload() -> dict[str, object]:
+    seed_bundle = load_swf_seeds()
+    demo_entities = get_demo_entities()
+    seed_rows = seed_bundle.get("rows", [])
+    seed_by_name = {normalize_company_key(str(row.get("name", ""))): row for row in seed_rows if str(row.get("name", "")).strip()}
+    seed_by_host = {
+        hostname_from_url(str(row.get("website", ""))): row
+        for row in seed_rows
+        if hostname_from_url(str(row.get("website", "")))
+    }
+
+    records: list[dict[str, object]] = []
+    for entity in demo_entities.get("entities", []):
+        if not isinstance(entity, dict):
+            continue
+        entity_type = str(entity.get("type") or "").strip()
+        normalized_type = entity_type.lower()
+        if not any(marker in normalized_type for marker in PROFILE_RELEVANT_TYPES):
+            continue
+
+        seed_row = seed_by_name.get(normalize_company_key(str(entity.get("name") or "")))
+        if not seed_row:
+            seed_row = seed_by_host.get(hostname_from_url(str(entity.get("website") or "")))
+
+        contacts = [item for item in (entity.get("contacts") or []) if isinstance(item, dict)]
+        current_contacts: list[dict[str, object]] = []
+        email_count = 0
+        phone_count = 0
+        linkedin_count = 0
+        for contact in contacts:
+            title = profile_primary_contact(contact)
+            active_history = pick_person_history_row(contact)
+            if str(contact.get("email") or "").strip():
+                email_count += 1
+            if str(contact.get("phone") or "").strip():
+                phone_count += 1
+            if str(contact.get("linkedin") or "").strip():
+                linkedin_count += 1
+            current_contacts.append(
+                {
+                    "id": str(contact.get("_id") or ""),
+                    "name": str(contact.get("name") or "Unknown"),
+                    "title": title or "Role not specified",
+                    "email": str(contact.get("email") or ""),
+                    "phone": str(contact.get("phone") or ""),
+                    "linkedin": str(contact.get("linkedin") or ""),
+                    "updated_at": str(contact.get("updated_at") or contact.get("created_at") or ""),
+                    "country": str(contact.get("country") or entity.get("country") or ""),
+                    "history_entity_id": str(active_history.get("entity_id") or ""),
+                    "provenance": make_provenance(
+                        "swfi_sandbox_api/people",
+                        iso_now(),
+                        "entity_packet_contact_extract",
+                        "medium",
+                        "sourced",
+                        evidence_url=f"{SWFI_SANDBOX_API_ROOT}/people",
+                    ),
+                }
+            )
+
+        current_contacts.sort(
+            key=lambda item: (
+                0 if item.get("email") else 1,
+                0 if item.get("phone") else 1,
+                item.get("name", ""),
+            )
+        )
+
+        aum_value = to_number(entity.get("assets") or entity.get("managed_assets") or entity.get("aum") or 0)
+        established_at = compact_date(entity.get("established_at"))
+        updated_at = compact_date(entity.get("updated_at"))
+        provenance = entity.get("provenance") if isinstance(entity.get("provenance"), dict) else {}
+        seed_verified = normalize_text(str((seed_row or {}).get("verified") or ""))
+
+        trust_status = "NeedsReview"
+        trust_confidence = "Medium"
+        trust_note = "Authenticated profile packet exists, but the record still needs field-level review."
+        verified_lower = seed_verified.lower()
+        if verified_lower == "yes":
+            trust_status = "Verified"
+            trust_confidence = "High"
+            trust_note = "Verified in the SWFs Global seed and present in the authenticated profile packet."
+        elif "no longer exist" in verified_lower:
+            trust_status = "Conflicted"
+            trust_confidence = "High"
+            trust_note = "Marked as no longer existing in the SWFs Global seed; keep as historical context only."
+        elif seed_verified:
+            trust_status = "NeedsReview"
+            trust_confidence = "Medium"
+            trust_note = f"SWFI seed note: {seed_verified}"
+        elif str(provenance.get("status") or "").strip() == "sourced":
+            trust_status = "Derived"
+            trust_confidence = "Medium"
+            trust_note = "Profile is sourced from the authenticated packet but is not yet marked verified in the curated seed."
+
+        source_refs = [
+            {
+                "label": "Authenticated profile packet",
+                "url": str(provenance.get("evidence_url_or_pointer") or ""),
+                "source": str(provenance.get("source_system") or "SWFI entity packet"),
+                "retrieved_at": str(provenance.get("retrieval_time") or ""),
+                "status": str(provenance.get("status") or "sourced"),
+            }
+        ]
+        if str(entity.get("website") or "").strip():
+            source_refs.append(
+                {
+                    "label": "Institution website",
+                    "url": str(entity.get("website") or ""),
+                    "source": "Institution website",
+                    "retrieved_at": "",
+                    "status": "public",
+                }
+            )
+        if seed_row:
+            source_refs.append(
+                {
+                    "label": "SWFs Global seed",
+                    "url": "",
+                    "source": "SWFs Global CSV",
+                    "retrieved_at": str((seed_row.get("provenance") or {}).get("retrieval_time") or ""),
+                    "status": str((seed_row.get("provenance") or {}).get("status") or "sourced"),
+                }
+            )
+
+        signals: list[dict[str, object]] = [
+            {
+                "id": f"{profile_slug(str(entity.get('name') or 'profile'))}-verification",
+                "title": "Profile verification",
+                "status": trust_status,
+                "confidence": trust_confidence,
+                "summary": trust_note,
+                "observed_at": str(provenance.get("retrieval_time") or updated_at or ""),
+                "source_refs": source_refs[:2],
+            },
+            {
+                "id": f"{profile_slug(str(entity.get('name') or 'profile'))}-aum",
+                "title": "Asset scale",
+                "status": "Verified" if aum_value else "Missing",
+                "confidence": "High" if aum_value else "None",
+                "summary": human_number(aum_value) if aum_value else "AUM is not populated in the current packet.",
+                "observed_at": updated_at or str(provenance.get("retrieval_time") or ""),
+                "source_refs": source_refs[:1],
+            },
+            {
+                "id": f"{profile_slug(str(entity.get('name') or 'profile'))}-people",
+                "title": "Key People coverage",
+                "status": "Verified" if current_contacts else "Missing",
+                "confidence": "High" if current_contacts else "None",
+                "summary": (
+                    f"{len(current_contacts)} current Key People in the packet, {email_count} with email, {phone_count} with phone."
+                    if current_contacts
+                    else "No current Key People are attached to this profile in the current packet."
+                ),
+                "observed_at": updated_at or str(provenance.get("retrieval_time") or ""),
+                "source_refs": source_refs[:1],
+            },
+            {
+                "id": f"{profile_slug(str(entity.get('name') or 'profile'))}-freshness",
+                "title": "Profile freshness",
+                "status": "Derived" if updated_at or provenance.get("retrieval_time") else "Missing",
+                "confidence": "Medium" if updated_at or provenance.get("retrieval_time") else "None",
+                "summary": (
+                    f"Profile last updated {updated_at or compact_date(provenance.get('retrieval_time'))}."
+                    if updated_at or provenance.get("retrieval_time")
+                    else "No current update date is attached to this profile."
+                ),
+                "observed_at": updated_at or str(provenance.get("retrieval_time") or ""),
+                "source_refs": source_refs[:1],
+            },
+        ]
+        if not str(entity.get("website") or "").strip():
+            signals.append(
+                {
+                    "id": f"{profile_slug(str(entity.get('name') or 'profile'))}-website",
+                    "title": "Public website",
+                    "status": "Missing",
+                    "confidence": "None",
+                    "summary": "The current packet does not include a website for this profile.",
+                    "observed_at": str(provenance.get("retrieval_time") or ""),
+                    "source_refs": source_refs[:1],
+                }
+            )
+
+        record = {
+            "id": str(entity.get("_id") or profile_slug(str(entity.get("name") or ""))),
+            "slug": profile_slug(str(entity.get("name") or "")),
+            "name": str(entity.get("name") or "Unnamed profile"),
+            "type": entity_type,
+            "country": str(entity.get("country") or ""),
+            "region": str(entity.get("region") or ""),
+            "city": str(entity.get("city") or ""),
+            "website": str(entity.get("website") or ""),
+            "legal_name": str(entity.get("legal_name") or ""),
+            "summary": clean_profile_copy(entity.get("summary") or entity.get("background") or ""),
+            "background": clean_profile_copy(entity.get("background") or entity.get("summary") or "", limit=900),
+            "assets": aum_value,
+            "managed_assets": to_number(entity.get("managed_assets") or 0),
+            "aum_display": human_number(aum_value) if aum_value else "Not disclosed",
+            "established_at": established_at,
+            "updated_at": updated_at,
+            "address": normalize_text(
+                ", ".join(
+                    part
+                    for part in [
+                        str(entity.get("address") or ""),
+                        str(entity.get("city") or ""),
+                        str(entity.get("state") or ""),
+                        str(entity.get("country") or ""),
+                    ]
+                    if str(part or "").strip()
+                )
+            ),
+            "phone": str(entity.get("phone") or ""),
+            "trust": {
+                "status": trust_status,
+                "confidence": trust_confidence,
+                "note": trust_note,
+                "verified_note": seed_verified,
+            },
+            "coverage": {
+                "key_people": len(current_contacts),
+                "with_email": email_count,
+                "with_phone": phone_count,
+                "with_linkedin": linkedin_count,
+                "has_aum": bool(aum_value),
+            },
+            "key_people": current_contacts[:12],
+            "signals": signals,
+            "source_refs": source_refs,
+            "provenance": provenance,
+            "download_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/v1",
+        }
+        records.append(record)
+
+    records.sort(key=lambda item: (-float(item.get("assets") or 0.0), str(item.get("name") or "")))
+    summary = {
+        "total_profiles": len(records),
+        "verified_profiles": sum(1 for item in records if item["trust"]["status"] == "Verified"),
+        "review_profiles": sum(1 for item in records if item["trust"]["status"] == "NeedsReview"),
+        "conflicted_profiles": sum(1 for item in records if item["trust"]["status"] == "Conflicted"),
+        "key_people": sum(int(item["coverage"]["key_people"]) for item in records),
+        "regions": [{"name": name, "count": count} for name, count in Counter(item["region"] for item in records if item["region"]).most_common(6)],
+        "types": [{"name": name, "count": count} for name, count in Counter(item["type"] for item in records if item["type"]).most_common(8)],
+        "generated_from": "Curated sovereign/public profile packet from authenticated entity data plus SWFs Global seed overlay.",
+    }
+    return {
+        "schema_version": PROFILES_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary": summary,
+        "profiles": records,
+        "sources": [
+            seed_bundle.get("source"),
+            make_source_entry(
+                "demo_entity_packet",
+                "Curated authenticated profile packet",
+                "authenticated_private_source",
+                "swfi_sandbox_api/entities",
+                iso_now(),
+                "entity_packet_filter",
+                "medium",
+                "ok",
+                evidence_url=f"{SWFI_SANDBOX_API_ROOT}/entities",
+                note="Used for governed profile pages in the protected preview.",
+            ),
+        ],
+    }
+
+
+def get_profiles_payload() -> dict[str, object]:
+    now = time.time()
+    with _cache_lock:
+        cached = _profiles_cache.get("payload")
+        timestamp = float(_profiles_cache.get("timestamp", 0.0))
+        if cached and now - timestamp < CACHE_TTL_SECONDS:
+            return cached
+
+    payload = build_profiles_payload()
+    with _cache_lock:
+        _profiles_cache["timestamp"] = now
+        _profiles_cache["payload"] = payload
+    return payload
+
+
+def get_profile_detail(slug: str) -> dict[str, object] | None:
+    target = profile_slug(slug)
+    for item in get_profiles_payload().get("profiles", []):
+        if str(item.get("slug") or "") == target:
+            return item
+    return None
+
+
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
     direct_text = str(response.get("output_text") or "").strip()
     if direct_text:
@@ -4210,6 +4548,8 @@ def clear_runtime_caches() -> None:
     with _cache_lock:
         _dashboard_cache["timestamp"] = 0.0
         _dashboard_cache["payload"] = None
+        _profiles_cache["timestamp"] = 0.0
+        _profiles_cache["payload"] = None
         _sandbox_cache["timestamp"] = 0.0
         _sandbox_cache["payload"] = None
         _msci_people_summary_cache["timestamp"] = 0.0
@@ -5304,6 +5644,19 @@ def render_msci_html(host: str, proto: str, csp_nonce: str) -> str:
     return render_template_html("msci.html", meta, csp_nonce)
 
 
+def render_profiles_html(host: str, proto: str, csp_nonce: str) -> str:
+    meta = build_page_meta(
+        host,
+        proto,
+        path="/profiles",
+        title="SWFI | Profiles",
+        description="Controlled-access SWFI profile workspace for sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, and source-backed profile review.",
+        about=["Profiles", "Key People", "Asset Allocation", "Transactions", "RFPs", "Datafeeds", "API Access"],
+        force_private=True,
+    )
+    return render_template_html("profiles.html", meta, csp_nonce)
+
+
 def render_admin_html(host: str, proto: str, csp_nonce: str) -> str:
     meta = build_page_meta(
         host,
@@ -5879,6 +6232,15 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
+        if parsed.path == "/profiles.js":
+            self._write_text(
+                (ROOT / "profiles.js").read_text(encoding="utf-8"),
+                "application/javascript; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+
         if parsed.path == "/auth/logout":
             clear_session(self)
             self._write_redirect("/login", set_cookie=self._session_cookie_value("", max_age=0))
@@ -5904,6 +6266,32 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
                 return True
             self._write_json(get_dashboard_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/profiles", "/api/profiles/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(get_profiles_payload(), head_only=head_only)
+            return True
+
+        profile_match = re.fullmatch(r"/api/profiles/([^/]+)/v1", parsed.path)
+        if profile_match:
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            profile = get_profile_detail(profile_match.group(1))
+            if not profile:
+                self._write_json({"error": "profile not found"}, status=404, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": PROFILES_SCHEMA_VERSION,
+                    "generated_at": iso_now(),
+                    "profile": profile,
+                },
+                head_only=head_only,
+            )
             return True
 
         if parsed.path in ("/api/research", "/api/research/v1"):
@@ -6289,6 +6677,16 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_html(render_msci_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
+        profile_page_match = re.fullmatch(r"/profiles(?:/([^/]+))?", parsed.path.rstrip("/")) if parsed.path.startswith("/profiles") else None
+        if parsed.path in ("/profiles", "/profiles/", "/profiles.html") or profile_page_match:
+            if not request_is_authenticated(self):
+                next_path = sanitize_next_path(parsed.path or "/profiles")
+                self._write_redirect(f"/login?next={parse.quote(next_path, safe='/')}")
+                return True
+            csp_nonce = secrets.token_urlsafe(18)
+            self._write_html(render_profiles_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            return True
+
         if parsed.path in ("/admin", "/admin.html"):
             if not request_is_authenticated(self):
                 self._write_redirect(f"/login?next={parse.quote('/admin', safe='/')}")
@@ -6419,6 +6817,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             def warm_runtime_packets() -> None:
                 try:
                     get_dashboard_payload()
+                    get_profiles_payload()
                     build_admin_payload()
                     get_live_external_api_matrix()
                 except Exception:
