@@ -6,6 +6,8 @@ const reportDownloadsEl = $("admin-report-downloads");
 const rebuildButton = $("admin-rebuild-button");
 const statusList = $("admin-status-list");
 const analyticsGrid = $("admin-analytics-grid");
+const repairQueueEl = $("admin-repair-queue");
+const publishQueueEl = $("admin-publish-queue");
 const nuggetList = $("admin-nugget-list");
 const exportHistoryEl = $("admin-export-history");
 const errorList = $("admin-error-list");
@@ -30,8 +32,12 @@ function tone(status) {
     ok: "ok",
     active: "ok",
     verified: "ok",
+    approved: "ok",
+    promoted: "ok",
+    publishable: "ok",
     partial: "partial",
     derived: "partial",
+    pending: "watch",
     needsreview: "watch",
     needs_review: "watch",
     rejected: "blocked",
@@ -153,6 +159,61 @@ function renderAnalytics(payload) {
       `,
     )
     .join("");
+}
+
+function renderQualityLoop(payload) {
+  const repairItems = payload.quality_loop?.repair_queue || [];
+  const publishItems = payload.quality_loop?.publish_queue || [];
+  if (!repairItems.length) {
+    repairQueueEl.innerHTML = '<article class="stack-card tone-watch"><strong>No repair queue was built.</strong><p>The operator loop is waiting on the current profile packet.</p></article>';
+  } else {
+    repairQueueEl.innerHTML = repairItems
+      .map(
+        (item) => `
+          <article class="stack-card tone-${tone(item.trust_status)}">
+            <div class="readiness-head">
+              <strong>${esc(item.name)}</strong>
+              <span class="status-chip tone-${tone(item.trust_status)}">${esc(item.score)}</span>
+            </div>
+            <p>${esc(item.type)} · ${esc(item.country)} · ${esc(item.aum_display)}</p>
+            <div class="detail-line">
+              <span>${esc(statusLabel(item.trust_status))}</span>
+              <span>${esc(`${item.key_people} Key People`)}</span>
+              <span>${esc(`${item.with_email} email`)}</span>
+              <span>${esc(`${item.with_phone} phone`)}</span>
+            </div>
+            <div class="tag-row">${(item.reasons || []).map((reason) => `<span class="data-pill">${esc(reason)}</span>`).join("")}</div>
+            <div class="detail-line">
+              <a class="nav-link" href="${esc(item.profile_url)}">Open profile</a>
+              <a class="nav-link" href="${esc(item.api_url)}">API</a>
+            </div>
+          </article>
+        `,
+      )
+      .join("");
+  }
+
+  if (!publishItems.length) {
+    publishQueueEl.innerHTML = '<article class="stack-card tone-watch"><strong>No publishable signals are currently surfaced.</strong><p>Approve or promote governed nuggets to strengthen the client reads layer.</p></article>';
+  } else {
+    publishQueueEl.innerHTML = publishItems
+      .map(
+        (item) => `
+          <article class="stack-card tone-${tone(item.status)}">
+            <div class="readiness-head">
+              <strong>${esc(item.title)}</strong>
+              <span class="status-chip tone-${tone(item.status)}">${esc(statusLabel(item.status))}</span>
+            </div>
+            <p>${esc(item.why_it_matters || "")}</p>
+            <div class="detail-line">
+              <span>${esc(item.confidence || "")}</span>
+              ${item.review_label ? `<span>${esc(item.review_label)}</span>` : ""}
+            </div>
+          </article>
+        `,
+      )
+      .join("");
+  }
 }
 
 function renderNuggets(payload) {
@@ -367,6 +428,7 @@ function renderPayload(payload) {
   renderReports(payload);
   renderStatusList(payload);
   renderAnalytics(payload);
+  renderQualityLoop(payload);
   renderNuggets(payload);
   renderExportHistory(payload);
   renderErrors(payload);

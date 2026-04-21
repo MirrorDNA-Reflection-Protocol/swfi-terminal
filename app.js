@@ -326,6 +326,7 @@ const aumDisplay = $("aum-display");
 const aumChange = $("aum-change");
 const aumPeriod = $("aum-period");
 const aumSource = $("aum-source");
+const heroSourceCount = $("hero-source-count");
 const statCountries = $("stat-countries");
 const statCountriesLabel = $("stat-countries-label");
 const statFunds = $("stat-funds");
@@ -381,9 +382,13 @@ function tone(status) {
     active: "ok",
     materialized: "ok",
     verified: "ok",
+    approved: "ok",
+    promoted: "ok",
+    publishable: "ok",
     partial: "partial",
     derived: "partial",
     watch: "watch",
+    pending: "watch",
     needsreview: "watch",
     needs_review: "watch",
     conflicted: "watch",
@@ -481,6 +486,15 @@ const CONCERN_CONTENT = {
 
 function displayStatus(status) {
   return STATUS_LABELS[status] || String(status || "Tracked");
+}
+
+function displayReviewAction(action) {
+  return ({
+    approve: "Approved",
+    promote: "Promoted",
+    reject: "Rejected",
+    reset: "Reset",
+  })[String(action || "").toLowerCase()] || String(action || "Tracked");
 }
 
 function displayPriority(priority) {
@@ -649,6 +663,8 @@ function renderAumChart() {
 function renderHeroStats() {
   const view = getHeroView();
   const stats = view.stats || [];
+  const sourceCount = (state.dashboard?.sources || []).length;
+  const liveTerminal = state.dashboard?.live_terminal || {};
   const first = stats[0] || { value: "—", label: "Countries" };
   const second = stats[1] || { value: "—", label: "Active Funds" };
   const third = stats[2] || { value: "—", label: "Profiles" };
@@ -662,6 +678,12 @@ function renderHeroStats() {
   }
   if (aumPeriod) aumPeriod.textContent = view.period || "";
   if (aumSource) aumSource.textContent = view.source || "";
+  if (heroSourceCount) {
+    const publishableUpdates = liveTerminal.summary?.publishable_updates || 0;
+    heroSourceCount.textContent = sourceCount
+      ? `${sourceCount} sources linked · ${publishableUpdates} updates ready`
+      : "Sources loaded";
+  }
 
   if (statCountries) statCountries.textContent = first.value;
   if (statCountriesLabel) statCountriesLabel.textContent = first.label;
@@ -705,7 +727,26 @@ function renderHero() {
 
 function renderStatusStrip() {
   const items = state.dashboard?.statuses || [];
-  statusStrip.innerHTML = items
+  const liveTerminal = state.dashboard?.live_terminal || {};
+  const spotlight = liveTerminal.spotlight || {};
+  const recentAction = (liveTerminal.recent_actions || [])[0] || {};
+  const liveItems = [];
+  if (spotlight.name) {
+    liveItems.push({
+      source: "Profile focus",
+      note: `${spotlight.name} · ${spotlight.key_people || 0} Key People · ${spotlight.with_email || 0} with email`,
+      status: String(spotlight.trust_status || "watch").toLowerCase(),
+    });
+  }
+  if (recentAction.title) {
+    liveItems.push({
+      source: "Recent review",
+      note: `${displayReviewAction(recentAction.action)} · ${recentAction.title} · ${relDate(recentAction.timestamp)}`,
+      status: String(recentAction.status || recentAction.action || "watch").toLowerCase(),
+    });
+  }
+  statusStrip.innerHTML = liveItems
+    .concat(items)
     .map(
       (item) => `
         <article class="status-pill tone-${tone(item.status)}">
@@ -917,9 +958,9 @@ function renderConcernList() {
               <span class="priority-chip">${esc(displayPriority(row.priority))}</span>
             </div>
           </div>
-          <div class="concern-block"><span>Coverage need</span><p>${esc(narrative.summary)}</p></div>
-          <div class="concern-block"><span>Current gap</span><p>${esc(narrative.build)}</p></div>
-          <div class="concern-block"><span>Delivery impact</span><p>${esc(narrative.impact)}</p></div>
+          <div class="concern-block"><span>Needed for</span><p>${esc(narrative.summary)}</p></div>
+          <div class="concern-block"><span>Current state</span><p>${esc(narrative.build)}</p></div>
+          <div class="concern-block"><span>Why it matters</span><p>${esc(narrative.impact)}</p></div>
           <div class="tag-row">${tags.map((tag) => `<span class="data-pill">${esc(tag)}</span>`).join("")}</div>
         </article>
       `;
@@ -1232,10 +1273,38 @@ function renderMaturityPanel() {
 
 function renderSignalPanel() {
   const signalStream = state.dashboard?.profile_signals || {};
+  const liveTerminal = state.dashboard?.live_terminal || {};
   const items = signalStream.items || [];
   const summary = signalStream.summary || {};
-  signalSummaryNote.textContent = `${summary.publishable || 0} publishable · ${summary.review_required || 0} review`;
-  signalList.innerHTML = items
+  const spotlight = liveTerminal.spotlight || {};
+  const recentActions = liveTerminal.recent_actions || [];
+  const signalCards = [];
+
+  if (spotlight.name) {
+    signalCards.push(`
+      <article class="stack-card tone-${tone(String(spotlight.trust_status || "").toLowerCase())}">
+        <div class="readiness-head">
+          <strong>${esc(spotlight.name)}</strong>
+          <span class="status-chip tone-${tone(String(spotlight.trust_status || "").toLowerCase())}">${esc(spotlight.aum_display || spotlight.trust_status || "Profile")}</span>
+        </div>
+        <p>${esc(spotlight.type || "Profile")} · ${esc(spotlight.country || "Coverage target")}</p>
+        <div class="detail-line">
+          <span>${esc(`${spotlight.key_people || 0} Key People`)}</span>
+          <span>${esc(`${spotlight.with_email || 0} with email`)}</span>
+          <span>${esc(`${spotlight.with_phone || 0} with phone`)}</span>
+        </div>
+        ${(spotlight.reasons || []).length ? `<div class="tag-row">${spotlight.reasons.map((reason) => `<span class="data-pill">${esc(reason)}</span>`).join("")}</div>` : ""}
+        <div class="detail-line">
+          ${spotlight.profile_url ? `<a class="nav-link" href="${esc(spotlight.profile_url)}">Open profile</a>` : ""}
+          ${spotlight.api_url ? `<a class="nav-link" href="${esc(spotlight.api_url)}">API</a>` : ""}
+        </div>
+      </article>
+    `);
+  }
+
+  signalSummaryNote.textContent = `${summary.publishable || 0} ready now · ${summary.review_required || 0} in review`;
+  signalCards.push(
+    ...items
     .map(
       (item) => `
         <article class="stack-card tone-${tone(String(item.status || "").toLowerCase())}">
@@ -1262,15 +1331,42 @@ function renderSignalPanel() {
           }
         </article>
       `,
-    )
-    .join("");
+    ),
+  );
+
+  if (recentActions.length) {
+    signalCards.push(`
+      <article class="stack-card tone-${tone(String(recentActions[0].status || recentActions[0].action || "").toLowerCase())}">
+        <div class="readiness-head">
+          <strong>Recent review activity</strong>
+          <span class="panel-note">${esc(relDate(recentActions[0].timestamp))}</span>
+        </div>
+        <div class="mini-list">
+          ${recentActions
+            .map(
+              (item) => `
+                <article class="mini-item">
+                  <span class="list-mark">▸</span>
+                  <p><strong>${esc(displayReviewAction(item.action))}</strong> · ${esc(item.title)}</p>
+                </article>
+              `,
+            )
+            .join("")}
+        </div>
+      </article>
+    `);
+  }
+
+  signalList.innerHTML = signalCards.join("");
 }
 
 function renderBriefingPanel() {
   const briefings = state.dashboard?.alerts_briefings || {};
+  const liveTerminal = state.dashboard?.live_terminal || {};
   const items = briefings.items || [];
   const reports = briefings.reports || [];
-  briefingList.innerHTML = items
+  const publishQueue = liveTerminal.publish_queue || [];
+  const cards = items
     .map(
       (item) => `
         <article class="stack-card tone-${tone(String(item.status || "").toLowerCase())}">
@@ -1284,8 +1380,30 @@ function renderBriefingPanel() {
           </div>
         </article>
       `,
-    )
-    .join("");
+    );
+  if (publishQueue.length) {
+    cards.unshift(`
+      <article class="stack-card tone-ok">
+        <div class="readiness-head">
+          <strong>Ready for client use</strong>
+          <span class="panel-note">${publishQueue.length} items</span>
+        </div>
+        <div class="mini-list">
+          ${publishQueue
+            .map(
+              (item) => `
+                <article class="mini-item">
+                  <span class="list-mark">✓</span>
+                  <p><strong>${esc(item.title)}</strong> · ${esc(item.confidence || "")}</p>
+                </article>
+              `,
+            )
+            .join("")}
+        </div>
+      </article>
+    `);
+  }
+  briefingList.innerHTML = cards.join("");
   reportLinkList.innerHTML = reports
     .map((item) => `<a class="nav-cta mini-cta" href="${esc(item.url)}">${esc(item.label)}</a>`)
     .join("");
@@ -1563,13 +1681,14 @@ function renderAll() {
   seedChat();
 }
 
-async function loadDashboard() {
+async function loadDashboard(options = {}) {
+  const preserveViewport = Boolean(options.preserveViewport);
   const response = await fetch("/api/dashboard/v1");
   if (response.status === 401) {
     if (isPublicDiscoveryHost()) {
       state.dashboard = buildPublicDiscoveryDashboard();
       renderAll();
-      resetInitialViewport();
+      if (!preserveViewport) resetInitialViewport();
       return;
     }
     window.location.href = `/login?next=${encodeURIComponent(window.location.pathname || "/")}`;
@@ -1578,7 +1697,7 @@ async function loadDashboard() {
   if (!response.ok) throw new Error(`dashboard ${response.status}`);
   state.dashboard = await response.json();
   renderAll();
-  resetInitialViewport();
+  if (!preserveViewport) resetInitialViewport();
 }
 
 concernSearch?.addEventListener("input", (event) => {
@@ -1624,4 +1743,14 @@ loadDashboard().catch((error) => {
       <span>Failed to load the SWFI packet</span>
     </article>
   `;
+});
+
+window.setInterval(() => {
+  if (document.visibilityState !== "visible") return;
+  loadDashboard({ preserveViewport: true }).catch((error) => console.error("refresh", error));
+}, 90000);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  loadDashboard({ preserveViewport: true }).catch((error) => console.error("refresh", error));
 });

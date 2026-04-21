@@ -37,9 +37,9 @@
       <main class="main-stack msci-stack">
         <header class="panel msci-hero">
           <div class="msci-hero-copy">
-            <p class="sys-label">Operational control</p>
-            <h1>Admin Console</h1>
-            <p class="msci-copy">Feed status, export history, audit trail, analytics, and controlled rebuild actions for the SWFI Beta wedge.</p>
+            <p class="sys-label">Delivery operations</p>
+            <h1>SWFI Operations</h1>
+            <p class="msci-copy">Feed status, export history, audit trail, analytics, and controlled rebuild actions for the live SWFI preview.</p>
             <div class="status-strip msci-status-strip" id="admin-status-strip"></div>
           </div>
           <div class="msci-download-panel">
@@ -81,8 +81,22 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Governed nuggets</p>
-                  <h3>Useful facts from the live packet</h3>
+                  <p class="sys-label">Coverage queue</p>
+                  <h3>Profiles and Briefings Queue</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="admin-repair-queue"></div>
+              <div class="section-block">
+                <p class="sys-label">Briefings ready now</p>
+                <div class="panel-stack" id="admin-publish-queue"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Reviewed updates</p>
+                  <h3>Useful facts from the current packet</h3>
                 </div>
               </div>
               <div class="panel-stack" id="admin-nugget-list"></div>
@@ -103,8 +117,8 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Current blockers</p>
-                  <h3>Error queue</h3>
+                  <p class="sys-label">Delivery issues</p>
+                  <h3>Current blockers</h3>
                 </div>
               </div>
               <div class="panel-stack" id="admin-error-list"></div>
@@ -113,8 +127,8 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">External rails</p>
-                  <h3>Free and paid APIs</h3>
+                  <p class="sys-label">Data sources</p>
+                  <h3>API Access</h3>
                 </div>
               </div>
               <div class="panel-stack" id="admin-api-matrix"></div>
@@ -123,8 +137,8 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Analyst review</p>
-                  <h3>Nugget queue and regressions</h3>
+                  <p class="sys-label">Review queue</p>
+                  <h3>Reviewed updates and quality checks</h3>
                 </div>
               </div>
               <div class="panel-stack" id="admin-review-queue"></div>
@@ -133,7 +147,7 @@
                 <div class="panel-stack" id="admin-review-history"></div>
               </div>
               <div class="section-block">
-                <p class="sys-label">Research eval pack</p>
+                <p class="sys-label">Quality checks</p>
                 <div class="panel-stack" id="admin-research-eval"></div>
               </div>
             </article>

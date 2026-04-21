@@ -11,6 +11,7 @@ from http import cookies
 import http.server
 import io
 import json
+import math
 import os
 import re
 import secrets
@@ -3068,6 +3069,7 @@ def build_dashboard_payload() -> dict[str, object]:
     swf_bundle = load_swf_seeds()
     roadmap_bundle = load_platform_improvements()
     sandbox_bundle = get_sandbox_api_map()
+    profiles_payload = get_profiles_payload()
     people_summary = get_msci_people_summary(target_bundle)
 
     concerns = concern_bundle["rows"]
@@ -3133,6 +3135,7 @@ def build_dashboard_payload() -> dict[str, object]:
     nuggets = apply_nugget_review_state(build_governed_nuggets(payload))
     payload["profile_signals"] = build_profile_signal_stream(payload, nuggets)
     payload["alerts_briefings"] = build_alert_briefings(payload, nuggets, payload["profile_signals"])
+    payload["live_terminal"] = build_live_terminal_payload(profiles_payload, payload, nuggets)
     payload["notes"] = [PRIVATE_IA_NOTE]
     return payload
 
@@ -3786,8 +3789,8 @@ def build_alert_briefings(
             "title": "Daily subscriber alerts",
             "status": "ok",
             "cadence": "Daily",
-            "summary": "Profiles, Transactions, RFPs, and Key People updates assembled from the same governed packet.",
-            "detail": "Mandrill-backed stream for paid subscribers. Best next step is to attach governed profile signals directly into the alert body.",
+            "summary": "Profiles, Transactions, RFPs, and Key People updates assembled from the same reviewed packet.",
+            "detail": "Mandrill-backed stream for paid subscribers. Best next step is to attach reviewed profile updates directly into the alert body.",
         },
         {
             "title": "Public Fund Monitor",
@@ -3818,6 +3821,49 @@ def build_alert_briefings(
             {"label": "Client brief Markdown", "url": "/api/reports/client-brief.md"},
         ],
         "stream_names": [stream.get("name") for stream in streams if isinstance(stream, dict)],
+    }
+
+
+def build_live_terminal_payload(
+    profiles_payload: dict[str, object],
+    dashboard_payload: dict[str, object],
+    nuggets: list[dict[str, object]],
+) -> dict[str, object]:
+    quality_loop = build_profile_repair_queue(profiles_payload, dashboard_payload)
+    repair_queue = quality_loop.get("repair_queue", []) if isinstance(quality_loop, dict) else []
+    spotlight = repair_queue[0] if repair_queue else {}
+    review_events = list(reversed(read_nugget_review_events(5)))
+    nugget_map = {str(item.get("entity_id") or ""): item for item in nuggets if isinstance(item, dict)}
+    recent_actions: list[dict[str, object]] = []
+    for event in review_events:
+        if not isinstance(event, dict):
+            continue
+        nugget = nugget_map.get(str(event.get("nugget_id") or ""), {})
+        recent_actions.append(
+            {
+                "nugget_id": str(event.get("nugget_id") or ""),
+                "title": str(nugget.get("claim") or event.get("nugget_id") or "Reviewed update"),
+                "action": str(event.get("action") or ""),
+                "reviewer": str(event.get("reviewer") or "SWFI analyst"),
+                "timestamp": str(event.get("timestamp") or ""),
+                "note": str(event.get("note") or ""),
+                "status": str((nugget.get("review") or {}).get("state") or event.get("action") or "watch"),
+            }
+        )
+    profile_signals = (dashboard_payload.get("profile_signals") or {}) if isinstance(dashboard_payload, dict) else {}
+    publishable = int((profile_signals.get("summary") or {}).get("publishable", 0))
+    review_required = int((profile_signals.get("summary") or {}).get("review_required", 0))
+    return {
+        "generated_at": iso_now(),
+        "summary": {
+            "high_priority_profiles": int((quality_loop.get("summary") or {}).get("high_priority", 0)) if isinstance(quality_loop, dict) else 0,
+            "publishable_updates": publishable,
+            "review_required": review_required,
+            "recent_actions": len(recent_actions),
+        },
+        "spotlight": spotlight,
+        "recent_actions": recent_actions,
+        "publish_queue": (quality_loop.get("publish_queue") or [])[:3] if isinstance(quality_loop, dict) else [],
     }
 
 
@@ -3854,6 +3900,15 @@ PROFILE_RELEVANT_TYPES = {
     "central bank",
     "endowment",
     "family office",
+}
+
+
+PROFILE_TYPE_REPAIR_WEIGHT = {
+    "Sovereign Wealth Fund": 22,
+    "Central Bank": 18,
+    "Public Pension": 16,
+    "Endowment": 8,
+    "Family Office": 6,
 }
 
 
@@ -4181,6 +4236,177 @@ def get_profile_detail(slug: str) -> dict[str, object] | None:
         if str(item.get("slug") or "") == target:
             return item
     return None
+
+
+def profile_repair_score(profile: dict[str, object]) -> tuple[int, list[str]]:
+    score = 0
+    reasons: list[str] = []
+    profile_type = str(profile.get("type") or "")
+    score += PROFILE_TYPE_REPAIR_WEIGHT.get(profile_type, 4)
+
+    assets = float(profile.get("assets") or 0.0)
+    if assets > 0:
+        try:
+            score += min(36, max(8, int(math.log10(max(assets, 1)) * 3.5)))
+        except Exception:
+            score += 8
+
+    trust_status = str(((profile.get("trust") or {}).get("status")) or "")
+    if trust_status == "NeedsReview":
+        score += 26
+        reasons.append("Profile still needs review")
+    elif trust_status == "Conflicted":
+        score += 22
+        reasons.append("Source conflict needs clearance")
+    elif trust_status != "Verified":
+        score += 14
+        reasons.append("Profile is not yet verified")
+
+    coverage = profile.get("coverage") or {}
+    key_people = int(coverage.get("key_people", 0) or 0)
+    with_email = int(coverage.get("with_email", 0) or 0)
+    with_phone = int(coverage.get("with_phone", 0) or 0)
+    if key_people == 0:
+        score += 24
+        reasons.append("No Key People attached")
+    else:
+        email_ratio = with_email / max(key_people, 1)
+        phone_ratio = with_phone / max(key_people, 1)
+        if with_email == 0:
+            score += 20
+            reasons.append("No current email coverage")
+        elif email_ratio < 0.45:
+            score += 12
+            reasons.append("Email coverage is thin")
+        if with_phone == 0:
+            score += 10
+            reasons.append("No phone coverage")
+        elif phone_ratio < 0.15:
+            score += 6
+            reasons.append("Phone coverage is thin")
+
+    if not str(profile.get("website") or "").strip():
+        score += 8
+        reasons.append("Public website is missing")
+
+    provenance_status = str(((profile.get("provenance") or {}).get("status")) or "")
+    if provenance_status == "pending_ratification":
+        score += 8
+        reasons.append("Authenticated packet still pending ratification")
+
+    return score, reasons[:3]
+
+
+def build_profile_repair_queue(profiles_payload: dict[str, object], dashboard_payload: dict[str, object]) -> dict[str, object]:
+    profiles = profiles_payload.get("profiles", []) if isinstance(profiles_payload, dict) else []
+    queue: list[dict[str, object]] = []
+    for profile in profiles:
+        if not isinstance(profile, dict):
+            continue
+        score, reasons = profile_repair_score(profile)
+        queue.append(
+            {
+                "slug": str(profile.get("slug") or ""),
+                "name": str(profile.get("name") or "Unnamed profile"),
+                "type": str(profile.get("type") or ""),
+                "country": str(profile.get("country") or ""),
+                "aum_display": str(profile.get("aum_display") or "Not disclosed"),
+                "trust_status": str(((profile.get("trust") or {}).get("status")) or "NeedsReview"),
+                "score": score,
+                "reasons": reasons,
+                "key_people": int(((profile.get("coverage") or {}).get("key_people")) or 0),
+                "with_email": int(((profile.get("coverage") or {}).get("with_email")) or 0),
+                "with_phone": int(((profile.get("coverage") or {}).get("with_phone")) or 0),
+                "profile_url": f"/profiles/{profile.get('slug')}",
+                "api_url": str(profile.get("download_url") or ""),
+            }
+        )
+
+    queue.sort(key=lambda item: (-int(item.get("score") or 0), item.get("name", "")))
+    signals = ((dashboard_payload.get("profile_signals") or {}).get("items")) or []
+    top_publishable = [
+        {
+            "title": str(item.get("title") or ""),
+            "status": str(item.get("status") or ""),
+            "confidence": str(item.get("confidence") or ""),
+            "why_it_matters": str(item.get("why_it_matters") or item.get("summary") or ""),
+            "review_label": str(item.get("review_label") or ""),
+        }
+        for item in signals[:5]
+    ]
+    summary = {
+        "total_candidates": len(queue),
+        "high_priority": sum(1 for item in queue if int(item.get("score") or 0) >= 100),
+        "publishable_signals": len(signals),
+        "top_target": queue[0]["name"] if queue else "",
+        "top_score": queue[0]["score"] if queue else 0,
+    }
+    return {
+        "generated_at": iso_now(),
+        "summary": summary,
+        "repair_queue": queue[:12],
+        "publish_queue": top_publishable,
+        "loop_steps": [
+            "Repair top Profiles with the highest trust and coverage gaps.",
+            "Review governed nuggets for approval, rejection, or promotion.",
+            "Publish approved signals into client reads and alerts.",
+            "Repeat the cycle after packet rebuilds and new source checks.",
+        ],
+    }
+
+
+def build_profile_repair_queue_csv() -> str:
+    queue = build_profile_repair_queue(get_profiles_payload(), get_dashboard_payload())
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Name", "Type", "Country", "Assets", "Trust status", "Repair score", "Key People", "With email", "With phone", "Reasons", "Profile URL", "API URL"])
+    for item in queue.get("repair_queue", []):
+        writer.writerow(
+            [
+                item.get("name", ""),
+                item.get("type", ""),
+                item.get("country", ""),
+                item.get("aum_display", ""),
+                item.get("trust_status", ""),
+                item.get("score", 0),
+                item.get("key_people", 0),
+                item.get("with_email", 0),
+                item.get("with_phone", 0),
+                "; ".join(item.get("reasons", [])),
+                item.get("profile_url", ""),
+                item.get("api_url", ""),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_operator_loop_md() -> str:
+    loop = build_profile_repair_queue(get_profiles_payload(), get_dashboard_payload())
+    lines = [
+        "# SWFI Operator Loop",
+        "",
+        f"Generated: {loop.get('generated_at', iso_now())}",
+        "",
+        "## Current loop summary",
+        f"- Repair candidates: {loop.get('summary', {}).get('total_candidates', 0)}",
+        f"- High-priority profiles: {loop.get('summary', {}).get('high_priority', 0)}",
+        f"- Publishable signals: {loop.get('summary', {}).get('publishable_signals', 0)}",
+        f"- Top repair target: {loop.get('summary', {}).get('top_target', 'None')}",
+        "",
+        "## Loop steps",
+    ]
+    for step in loop.get("loop_steps", []):
+        lines.append(f"- {step}")
+    lines.extend(["", "## Top repair queue"])
+    for item in loop.get("repair_queue", [])[:8]:
+        lines.append(f"- **{item['name']}** · {item['type']} · {item['trust_status']} · score {item['score']}")
+        if item.get("reasons"):
+            lines.append(f"  - {'; '.join(item['reasons'])}")
+    lines.extend(["", "## Publishable now"])
+    for item in loop.get("publish_queue", [])[:5]:
+        lines.append(f"- **{item['title']}** ({item['status']} / {item['confidence']})")
+        lines.append(f"  - {item['why_it_matters']}")
+    return "\n".join(lines) + "\n"
 
 
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
@@ -4994,6 +5220,7 @@ def get_cached_msci_people_export_payload(*, include_stale: bool = True) -> dict
 
 def build_admin_payload() -> dict[str, object]:
     dashboard = get_cached_dashboard_payload(include_stale=True) or get_dashboard_payload()
+    profiles_payload = get_profiles_payload()
     target_bundle = load_target_accounts()
     people_summary = get_msci_people_summary(target_bundle)
     live_external_matrix = get_live_external_api_matrix()
@@ -5001,6 +5228,7 @@ def build_admin_payload() -> dict[str, object]:
     review_queue = build_nugget_review_queue(nuggets)
     review_events = list(reversed(read_nugget_review_events(20)))
     research_eval = build_research_eval_summary()
+    quality_loop = build_profile_repair_queue(profiles_payload, dashboard if isinstance(dashboard, dict) else {})
     export_payload = get_cached_msci_people_export_payload(include_stale=True) or {
         "tone": "ok" if people_summary.get("status") == "ok" else "watch",
         "summary": {
@@ -5054,6 +5282,7 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Live public probes", "value": str(sum(1 for item in live_external_matrix if item.get("live_status") == "ok")), "note": "Public/free connector probes responding on the latest check"},
             {"label": "Governed nuggets", "value": str(len(nuggets)), "note": f"{len(review_queue)} currently require analyst review"},
             {"label": "Approved / promoted", "value": str(approved_count + promoted_count), "note": f"{rejected_count} currently rejected"},
+            {"label": "Top repair score", "value": str(quality_loop.get("summary", {}).get("top_score", 0)), "note": str(quality_loop.get("summary", {}).get("top_target", "No target"))},
         ],
         "statuses": statuses,
         "errors": errors,
@@ -5072,12 +5301,15 @@ def build_admin_payload() -> dict[str, object]:
             },
         },
         "research_eval": research_eval,
+        "quality_loop": quality_loop,
         "reports": [
             {"label": "MSCI analytics CSV", "url": "/api/reports/msci-analytics.csv"},
             {"label": "External API matrix CSV", "url": "/api/reports/external-api-matrix.csv"},
             {"label": "Connector status JSON", "url": "/api/connectors/v1"},
             {"label": "Export history CSV", "url": "/api/reports/export-history.csv"},
             {"label": "Phase 1 summary", "url": "/api/reports/phase1-summary.md"},
+            {"label": "Profile repair queue CSV", "url": "/api/reports/profile-repair-queue.csv"},
+            {"label": "Operator loop brief", "url": "/api/reports/operator-loop.md"},
             {"label": "AI governance spec", "url": "/api/reports/ai-governance.md"},
             {"label": "Nugget schema JSON", "url": "/api/reports/nugget-schema.json"},
             {"label": "Prompt registry YAML", "url": "/api/reports/prompt-registry.yaml"},
@@ -6673,6 +6905,52 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-phase1-summary.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/profile-repair-queue.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_profile_repair_queue_csv(), "swfi-profile-repair-queue.csv", head_only=head_only)
+            return True
+
+        if parsed.path == "/api/reports/operator-loop.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_operator_loop_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-operator-loop.md"'},
             )
             return True
 
