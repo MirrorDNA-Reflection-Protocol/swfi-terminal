@@ -6649,13 +6649,13 @@ def render_dashboard_html(host: str, proto: str, csp_nonce: str) -> str:
         host,
         proto,
         path="/dashboard",
-        title="SWFI | Dashboard",
+        title="SWFI | Asset Owner Terminal",
         description=(
-            "Subscriber dashboard for Profiles, Transactions, Mandates, RFPs, Key People, "
+            "SWFI Asset Owner Terminal for Profiles, Transactions, Mandates, RFPs, Key People, "
             "Asset Allocation, VIP briefings, Datafeeds/API, and MSCI delivery."
         ),
         about=[
-            "Dashboard",
+            "Asset Owner Terminal",
             "Profiles",
             "Transactions",
             "Mandates",
