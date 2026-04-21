@@ -242,6 +242,7 @@ SOURCE_TAXONOMY = [
             "News sites and email newsletters such as Axios",
             "Company websites",
             "Exchange disclosures",
+            "Official performance and quarterly report pages",
         ],
     },
     {
@@ -252,6 +253,7 @@ SOURCE_TAXONOMY = [
             "Guessed email formats tested externally and Apollo enrichment",
             "Interviews and surveys (lower recent usage)",
             "Conference and association websites",
+            "Board appointment notices and leadership announcements",
         ],
     },
     {
@@ -262,6 +264,34 @@ SOURCE_TAXONOMY = [
             "Structured and unstructured filings, including PDF/PPT assets",
             "Interviews and surveys (lower recent usage)",
             "News sites with credibility screening",
+            "Annual reports, budget statements, and strategy documents",
+        ],
+    },
+    {
+        "family": "Board materials",
+        "sources": [
+            "Official board agendas and meeting packets",
+            "Investment committee minutes",
+            "Meeting videos, livestream archives, and transcripts",
+            "Resolution logs and work plans",
+        ],
+    },
+    {
+        "family": "Mandates and RFPs",
+        "sources": [
+            "Official retirement board RFP pages",
+            "Find a Tender and other national procurement portals",
+            "Bonfire, Atamis, and similar e-procurement portals",
+            "Consultant and manager search notices in public board materials",
+        ],
+    },
+    {
+        "family": "Public records and oversight",
+        "sources": [
+            "Public records and FOIA request channels",
+            "Legislative oversight committee materials",
+            "Auditor, actuary, and compliance committee packets",
+            "Government budget and fiscal policy statements",
         ],
     },
     {
@@ -271,6 +301,7 @@ SOURCE_TAXONOMY = [
             "RSS feeds",
             "Internal long-running standardization process",
             "PDF/image extraction for scattered asset-allocation disclosures",
+            "Video transcript extraction and packet diffing",
         ],
     },
 ]
@@ -535,6 +566,30 @@ REQUIRED_API_STACK = [
         "sources": [],
     },
     {
+        "name": "Board materials and meeting feeds",
+        "status": "blocked",
+        "why": "Investment committee packets, minutes, videos, and transcripts often surface allocation shifts, manager reviews, and early policy signals before they appear anywhere else.",
+        "gap": "Need repeatable collectors for agendas, packets, video/transcript extraction, and evidence-linked change detection across public pension and sovereign-adjacent boards.",
+        "sources": [
+            {"label": "CalPERS Investment Committee", "url": "https://www.calpers.ca.gov/about/board/board-meetings/invest-202603"},
+            {"label": "NYC Comptroller Investment Meetings", "url": "https://comptroller.nyc.gov/services/financial-matters/pension/investment-meetings/"},
+            {"label": "Kentucky Public Pensions Authority meetings", "url": "https://www.kyret.ky.gov/About/Pages/Meeting-Schedule.aspx"},
+            {"label": "Texas Pension Review Board meetings", "url": "https://www.prb.texas.gov/board-and-agency-info/board-meetings/"},
+        ],
+    },
+    {
+        "name": "Procurement and mandate notice rails",
+        "status": "blocked",
+        "why": "Official RFP and tender notices are a direct source of mandates, consultant searches, software buys, and investment-service demand.",
+        "gap": "Need source-specific crawlers for official retirement board RFP pages, national tender portals, and public e-procurement systems with strategy and deadline extraction.",
+        "sources": [
+            {"label": "Massachusetts Retirement Board RFP Notices", "url": "https://www.mass.gov/info-details/request-for-proposal-rfp-notices"},
+            {"label": "Maryland State Retirement RFIs/RFPs", "url": "https://sra.maryland.gov/current-rfisrfps"},
+            {"label": "Find a Tender", "url": "https://www.find-tender.service.gov.uk/"},
+            {"label": "FPIF investment procurement", "url": "https://ifpif.org/investments/investment-procurement/"},
+        ],
+    },
+    {
         "name": "Identity and registry resolution",
         "status": "blocked",
         "why": "Canonical institution / fund / people mapping needs legal-entity and registry joins.",
@@ -552,6 +607,18 @@ REQUIRED_API_STACK = [
         "sources": [
             {"label": "SEC APIs", "url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"},
             {"label": "OFAC Sanctions List Service", "url": "https://ofac.treasury.gov/sanctions-list-service"},
+        ],
+    },
+    {
+        "name": "Strategy, budget, and oversight documents",
+        "status": "blocked",
+        "why": "Sovereign funds and public institutions often telegraph capital priorities through annual reports, strategy releases, finance ministry budgets, and oversight board resolutions.",
+        "gap": "Need a governed document lane for annual reports, strategy statements, fiscal documents, and parliamentary or oversight materials with extractable capital-allocation evidence.",
+        "sources": [
+            {"label": "PIF 2026-2030 strategy approval", "url": "https://www.spa.gov.sa/en/N2560354"},
+            {"label": "Saudi Ministry of Finance FY2026 budget", "url": "https://www.mof.gov.sa/en/MediaCenter/news/Pages/News_02122025.aspx"},
+            {"label": "NASRA investment survey", "url": "https://www.nasra.org/investment"},
+            {"label": "PBGC FOIA", "url": "https://www.pbgc.gov/about/foia"},
         ],
     },
     {
