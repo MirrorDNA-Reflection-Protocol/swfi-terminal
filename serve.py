@@ -2902,7 +2902,7 @@ def build_maturity_groups() -> list[dict[str, object]]:
             "items": [
                 {"name": "MSCI target account list", "status": "partial", "note": "Parsed into the MSCI delivery surface from the supplied XLSX file."},
                 {"name": "Board minutes / agendas / PDF filings", "status": "blocked", "note": "Critical for scattered asset-allocation facts and unstructured disclosures."},
-                {"name": "Platform improvement notes and briefing docs", "status": "partial", "note": "Research notes are surfaced, but not yet tied to execution telemetry."},
+                {"name": "Platform improvement notes and briefing docs", "status": "partial", "note": "Briefing notes are surfaced, but not yet tied to execution telemetry."},
             ],
         },
         {
@@ -3070,7 +3070,7 @@ def build_security_controls() -> list[dict[str, str]]:
             "url": "https://www.rfc-editor.org/rfc/rfc9116",
         },
         {
-            "title": "Read-only research lane",
+            "title": "Read-only briefings lane",
             "status": "ok",
             "note": "The chat surface remains read-only, bounded to the current packet, and rate limited to reduce leakage and model-spend abuse.",
             "source": "SWFI runtime",
@@ -4937,7 +4937,7 @@ def research_family_for_nugget(nugget: dict[str, object]) -> str:
         return "Datafeeds and API"
     if {"ops", "auth", "performance", "atlas", "storage", "history"} & tags:
         return "Platform access"
-    return "Profiles and Research"
+    return "Profiles and Briefings"
 
 
 def build_research_profile_focus(profiles_payload: dict[str, object]) -> list[dict[str, object]]:
@@ -5079,17 +5079,17 @@ def build_research_workspace_payload() -> dict[str, object]:
             {
                 "label": "Pending publication",
                 "status": "watch" if review_queue else "ok",
-                "note": f"{len(review_queue)} research notes remain pending publication.",
+                "note": f"{len(review_queue)} briefing notes remain pending publication.",
             },
         ],
         "metric_cards": [
-            {"label": "VIP briefings", "value": str(len(current_reads)), "note": "Evidence-linked research notes available now."},
+            {"label": "VIP briefings", "value": str(len(current_reads)), "note": "Evidence-linked briefing notes available now."},
             {"label": "Official sources", "value": str(int(source_watchlist.get("summary", {}).get("total_sources", 0))), "note": "Official pages, tenders, meetings, budgets, and oversight rails in scope."},
             {"label": "Mandate sources", "value": str(len(mandate_sources)), "note": "Official mandate and RFP rails prioritized for current monitoring."},
             {"label": "Profiles in focus", "value": str(len(profiles_in_focus)), "note": "Largest sovereign and public profiles surfaced with current coverage context."},
         ],
         "downloads": [
-            {"label": "Research JSON", "url": "/api/research-workspace/v1"},
+            {"label": "Briefings JSON", "url": "/api/research-workspace/v1"},
             {"label": "Client brief", "url": "/api/reports/client-brief.md"},
             {"label": "Profile signals JSON", "url": "/api/reports/profile-signals.json"},
             {"label": "Official source watchlist", "url": "/api/reports/source-watchlist.csv"},
@@ -6729,9 +6729,9 @@ def render_research_html(host: str, proto: str, csp_nonce: str) -> str:
         host,
         proto,
         path="/research",
-        title="SWFI | Research",
-        description="Subscriber access to SWFI research, VIP briefings, Mandates, RFPs, Key People changes, and official source coverage.",
-        about=["Research", "Mandates", "RFPs", "Key People", "Profiles", "Transactions", "Datafeeds", "API Access"],
+        title="SWFI | Briefings & News",
+        description="Subscriber access to SWFI VIP briefings, news, Mandates, RFPs, Key People changes, and official source coverage.",
+        about=["Briefings", "News", "Mandates", "RFPs", "Key People", "Profiles", "Transactions", "Datafeeds", "API Access"],
         force_private=True,
     )
     return render_template_html("research.html", meta, csp_nonce)
@@ -6756,7 +6756,7 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
         proto,
         path="/login",
         title="SWFI | Subscriber Login",
-        description="Subscriber login for SWFI Dashboard, Profiles, Research, and Datafeeds/API access.",
+        description="Subscriber login for SWFI Dashboard, Profiles, Briefings, and Datafeeds/API access.",
         about=["Subscriber access", "Profiles", "Datafeeds", "API Access"],
         force_private=True,
     )
@@ -6768,7 +6768,7 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SWFI | Subscriber Login</title>
-    <meta name="description" content="Subscriber login for SWFI Dashboard, Profiles, Research, and Datafeeds/API access." />
+    <meta name="description" content="Subscriber login for SWFI Dashboard, Profiles, Briefings, and Datafeeds/API access." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />

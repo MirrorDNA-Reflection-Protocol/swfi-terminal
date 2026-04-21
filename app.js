@@ -156,13 +156,18 @@ const OFFERING_CARDS = [
     value: "JSON and CSV delivery",
     note: "Profiles, AUM, asset allocation, transactions, RFPs, and contacts for direct integration.",
   },
+  {
+    label: "Briefings",
+    value: "VIP Briefings · Custom Alerts",
+    note: "VIP briefings, news, user-customized daily email alerts, and Sovereign Wealth Quarterly access.",
+  },
 ];
 
 function buildPublicDiscoveryDashboard() {
   return {
     generated_at: new Date().toISOString(),
     statuses: [
-      { source: "Subscriber access", note: "Sign in for dashboard, profiles, research, and delivery files.", status: "partial" },
+      { source: "Subscriber access", note: "Sign in for dashboard, profiles, briefings, and delivery files.", status: "partial" },
       { source: "Profiles", note: "Sovereign wealth funds, public pensions, central banks, endowments, and family offices.", status: "ok" },
       { source: "Transactions", note: "Deals, mandates, RFPs, and institutional allocation activity.", status: "ok" },
       { source: "Datafeeds/API", note: "JSON and CSV delivery through SWFI REST API and custom feed workflows.", status: "ok" },
@@ -181,7 +186,7 @@ function buildPublicDiscoveryDashboard() {
         title: "Subscriber access",
         state: "partial",
         priority: "P1",
-        requirement: "Sign in is required for SWFI Dashboard, MSCI delivery, protected exports, and research views.",
+        requirement: "Sign in is required for SWFI Dashboard, MSCI delivery, protected exports, and briefings views.",
         challenge: "Public discovery focuses on Profiles, Transactions, RFPs, Key People, Asset Allocation, and Datafeeds/API.",
         recommendation: "Use the public site for discovery and sign in for subscriber dashboard views.",
         tags: ["exports", "profile", "people"],
@@ -1398,7 +1403,7 @@ function renderCanonicalPanel() {
     { label: "High confidence", value: String(confidence.high || 0), note: "Public APIs, authenticated sources, and vetted documents" },
     { label: "Medium confidence", value: String(confidence.medium || 0), note: "Useful inputs with narrower support" },
     { label: "Restricted sources", value: String(confidence.blocked_sources || 0), note: "Fallback or private-source dependencies" },
-    { label: "Record types", value: String(models.length), note: "Institution through research item" },
+    { label: "Record types", value: String(models.length), note: "Institution through briefing/news item" },
   ];
   confidenceSummaryGrid.innerHTML = cards
     .map(
@@ -1560,7 +1565,7 @@ function appendChat(role, text, evidence = [], meta = "") {
   el.className = `chat-message ${role}`;
   el.innerHTML = `
     <div class="chat-message-head">
-      <strong>${role === "user" ? "You" : "SWFI Research"}</strong>
+      <strong>${role === "user" ? "You" : "SWFI Briefings"}</strong>
       ${meta ? `<span>${esc(meta)}</span>` : ""}
     </div>
     <p>${esc(text)}</p>
@@ -1615,7 +1620,7 @@ async function runCopilot(query) {
   } catch (error) {
     const placeholder = chatLog.lastElementChild;
     if (placeholder?.classList.contains("assistant")) placeholder.remove();
-    appendChat("assistant", error.message || "Research lookup failed. Core SWFI sources are still loaded.", [], "Fallback");
+    appendChat("assistant", error.message || "Briefing lookup failed. Core SWFI sources are still loaded.", [], "Fallback");
     console.error(error);
   }
 }

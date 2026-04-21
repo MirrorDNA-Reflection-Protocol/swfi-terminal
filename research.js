@@ -205,10 +205,10 @@ function renderReadList() {
       (item) => `
         <button class="lane-card profile-list-item ${item.id === state.selectedId ? "active" : ""}" type="button" data-id="${esc(item.id)}">
           <div class="lane-head">
-            <strong>${esc(item.title || "Research note")}</strong>
+            <strong>${esc(item.title || "Briefing note")}</strong>
             <span class="status-chip tone-${tone(item.status)}">${esc(statusLabel(item.status))}</span>
           </div>
-          <p>${esc(item.family || "Research")} · ${esc(item.entity_type || "Read")}</p>
+          <p>${esc(item.family || "VIP Briefing")} · ${esc(item.entity_type || "Read")}</p>
           <div class="lane-footer">
             <span>${esc(item.why_it_matters || item.summary || "")}</span>
           </div>
@@ -246,8 +246,8 @@ function renderDetail() {
     return;
   }
 
-  detailEyebrowEl.textContent = read.family || "Research";
-  detailTitleEl.textContent = read.title || "Research note";
+  detailEyebrowEl.textContent = read.family || "VIP Briefing";
+  detailTitleEl.textContent = read.title || "Briefing note";
   detailStatusEl.textContent = statusLabel(read.status || "Review");
   detailStatusEl.className = `status-chip tone-${tone(read.status)}`;
   detailConfidenceEl.textContent = read.confidence || "Low";
@@ -260,7 +260,7 @@ function renderDetail() {
   detailImplicationEl.textContent = read.implication || read.why_it_matters || "";
 
   const facts = [
-    { label: "Family", value: read.family || "Research", note: "Read family" },
+    { label: "Family", value: read.family || "VIP Briefing", note: "Read family" },
     { label: "Status", value: statusLabel(read.status || "Review"), note: "Trust state" },
     { label: "Confidence", value: read.confidence || "Low", note: "Current confidence" },
     { label: "Sources", value: String((read.source_refs || []).length), note: "Evidence references attached" },
@@ -395,7 +395,7 @@ function renderReviewQueue() {
           </div>
           <p>${esc(item.why_it_matters || item.summary || "")}</p>
           <div class="detail-line">
-            <span>${esc(item.family || "Research")}</span>
+            <span>${esc(item.family || "VIP Briefing")}</span>
             <span>${esc(item.confidence || "Low")}</span>
           </div>
         </article>
@@ -435,6 +435,6 @@ searchInput?.addEventListener("input", (event) => {
 
 loadWorkspace().catch((error) => {
   console.error(error);
-  detailTitleEl.textContent = "Research unavailable";
-  detailSummaryEl.textContent = "The research workspace could not load the current data.";
+  detailTitleEl.textContent = "Briefings unavailable";
+  detailSummaryEl.textContent = "The briefings workspace could not load the current data.";
 });
