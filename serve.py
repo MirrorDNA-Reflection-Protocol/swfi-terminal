@@ -3399,6 +3399,288 @@ def build_policy_refusal_payload(
     }
 
 
+def make_nugget_source_ref(
+    label: str,
+    source: str,
+    url: str | None,
+    *,
+    extraction_method: str = "deterministic_rule",
+    authority_rank: int = 2,
+) -> dict[str, object]:
+    return {
+        "source_system": source,
+        "source_type": "PlatformInternal" if source == "SWFI runtime" else "ExternalStructured" if "API" in source else "Secondary",
+        "pointer": url or label,
+        "retrieved_at": iso_now(),
+        "published_at": None,
+        "excerpt": label,
+        "field_path_or_location": label,
+        "authority_rank": authority_rank,
+        "extraction_method": extraction_method,
+        "label": label,
+        "url": url,
+        "source": source,
+    }
+
+
+def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]]:
+    msci_summary = ((payload.get("msci_workbench") or {}).get("people_export") or {}).get("coverage_summary") or {}
+    target_summary = ((payload.get("msci_workbench") or {}).get("summary_cards") or [])
+    atlas = payload.get("atlas") or {}
+    gaps = payload.get("gaps") or []
+    feedback = payload.get("platform_feedback") or {}
+    with_email = int(msci_summary.get("with_email", 0) or 0)
+    with_phone = int(msci_summary.get("with_phone", 0) or 0)
+    people_total = int(msci_summary.get("people_total", 0) or 0)
+    target_accounts = 0
+    if isinstance(target_summary, list) and target_summary:
+        try:
+            target_accounts = int(str(target_summary[0].get("value", "0")).replace(",", ""))
+        except Exception:
+            target_accounts = 0
+
+    feedback_skepticism = str(feedback.get("data_skepticism", "") or "")
+    contact_gap = str(feedback.get("contact_quality", "") or "")
+    rfp_gap = str(feedback.get("rfp_gap", "") or "")
+    performance_gap = str(feedback.get("performance", "") or "")
+
+    nuggets = [
+        {
+            "schema_version": NUGGET_SCHEMA_VERSION,
+            "entity_id": "msci-export-readiness",
+            "entity_type": "Mandate",
+            "claim": f"MSCI export readiness is live across {target_accounts} target accounts and {people_total} accessible people.",
+            "observed_fact": f"The MSCI workspace currently surfaces {target_accounts} target accounts and {people_total} accessible people records.",
+            "derived_implication": "The lane is now credible for controlled delivery demos, but downstream outreach quality still depends on contact verification.",
+            "status": "Verified",
+            "confidence": "High",
+            "commercial_relevance": 0.96,
+            "novelty_score": 0.62,
+            "recency_score": 0.92,
+            "evidence_strength": 0.95,
+            "source_refs": [
+                make_nugget_source_ref("MSCI workbench summary", "SWFI runtime", "/api/msci/workbench/v1"),
+                make_nugget_source_ref("Protected people export", "SWFI runtime", "/api/msci/export/people.csv"),
+            ],
+            "contradictions": [],
+            "review_required": False,
+            "why_it_matters": "This is the current Phase 1 wedge and the most immediate client-facing delivery proof.",
+            "policy_version": AI_POLICY_VERSION,
+            "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+            "model_id": "deterministic.nugget_builder.v1",
+            "generated_at": iso_now(),
+            "tags": ["msci", "export", "delivery"],
+            "priority": "high",
+        },
+        {
+            "schema_version": NUGGET_SCHEMA_VERSION,
+            "entity_id": "contact-quality-risk",
+            "entity_type": "KeyPerson",
+            "claim": f"Contact quality remains the main trust blocker: only {with_email} people currently have email and {with_phone} have phone in the accessible export surface.",
+            "observed_fact": f"The authenticated people surface currently exposes {with_email} email values and {with_phone} phone values across {people_total} accessible people.",
+            "derived_implication": contact_gap or "Even with export readiness, outreach utility is still constrained without verification and enrichment review.",
+            "status": "NeedsReview",
+            "confidence": "High",
+            "commercial_relevance": 0.98,
+            "novelty_score": 0.58,
+            "recency_score": 0.9,
+            "evidence_strength": 0.93,
+            "source_refs": [
+                make_nugget_source_ref("MSCI coverage summary", "SWFI runtime", "/api/msci/workbench/v1"),
+                make_nugget_source_ref("Platform feedback: contact quality", "SWFI platform feedback", None, extraction_method="manual_review", authority_rank=3),
+            ],
+            "contradictions": [],
+            "review_required": True,
+            "why_it_matters": "This is the strongest remaining objection in demos and the clearest reason exports still need review before external use.",
+            "policy_version": AI_POLICY_VERSION,
+            "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+            "model_id": "deterministic.nugget_builder.v1",
+            "generated_at": iso_now(),
+            "tags": ["people", "contact", "trust"],
+            "priority": "high",
+        },
+        {
+            "schema_version": NUGGET_SCHEMA_VERSION,
+            "entity_id": "data-skepticism-demo-risk",
+            "entity_type": "Profile",
+            "claim": "Data skepticism is a recurring commercial risk in live demos.",
+            "observed_fact": feedback_skepticism or "Platform feedback reports frequent client challenges on data accuracy and completeness during demos.",
+            "derived_implication": "The next compounding product win is not more interface polish; it is reviewed truth on top institutions, people, and mandate-relevant changes.",
+            "status": "Derived",
+            "confidence": "Medium",
+            "commercial_relevance": 0.94,
+            "novelty_score": 0.55,
+            "recency_score": 0.74,
+            "evidence_strength": 0.77,
+            "source_refs": [
+                make_nugget_source_ref("Platform feedback: data skepticism", "SWFI platform feedback", None, extraction_method="manual_review", authority_rank=3),
+            ],
+            "contradictions": [],
+            "review_required": True,
+            "why_it_matters": "This is the reason accurate nuggets and proof-carrying profile changes matter more than generic AI features.",
+            "policy_version": AI_POLICY_VERSION,
+            "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+            "model_id": "deterministic.nugget_builder.v1",
+            "generated_at": iso_now(),
+            "tags": ["sales", "trust", "demo"],
+            "priority": "high",
+        },
+        {
+            "schema_version": NUGGET_SCHEMA_VERSION,
+            "entity_id": "rfp-freshness-gap",
+            "entity_type": "RFP",
+            "claim": "Mandate and RFP freshness remains a visible product gap.",
+            "observed_fact": rfp_gap or "Platform feedback explicitly flags inability to track the latest RFP activity on the platform.",
+            "derived_implication": "An early-warning RFP and mandate signal lane would be more differentiating than another generic search layer.",
+            "status": "NeedsReview",
+            "confidence": "Medium",
+            "commercial_relevance": 0.91,
+            "novelty_score": 0.67,
+            "recency_score": 0.7,
+            "evidence_strength": 0.72,
+            "source_refs": [
+                make_nugget_source_ref("Platform feedback: RFP gap", "SWFI platform feedback", None, extraction_method="manual_review", authority_rank=3),
+                make_nugget_source_ref("Gap register: AI search and smart alerts are still missing", "SWFI runtime", None),
+            ],
+            "contradictions": [],
+            "review_required": True,
+            "why_it_matters": "Clients pay for timing advantage. Missing RFP freshness weakens that proposition directly.",
+            "policy_version": AI_POLICY_VERSION,
+            "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+            "model_id": "deterministic.nugget_builder.v1",
+            "generated_at": iso_now(),
+            "tags": ["rfp", "mandate", "timing"],
+            "priority": "high",
+        },
+        {
+            "schema_version": NUGGET_SCHEMA_VERSION,
+            "entity_id": "performance-clearance",
+            "entity_type": "Document",
+            "claim": "Production-shape infrastructure exists, but performance and entitlement clearance remain unfinished.",
+            "observed_fact": performance_gap or "The architecture is production-shaped, but current rollout guidance remains controlled until performance and auth posture are cleared.",
+            "derived_implication": "The preview can sell the direction, but the production promise still depends on auth, entitlements, and performance telemetry.",
+            "status": "Derived",
+            "confidence": "Medium",
+            "commercial_relevance": 0.83,
+            "novelty_score": 0.44,
+            "recency_score": 0.81,
+            "evidence_strength": 0.78,
+            "source_refs": [
+                make_nugget_source_ref("Gap register: production performance has not been cleared", "SWFI runtime", None),
+                make_nugget_source_ref("Security control: controlled exports + audit", "SWFI runtime", None),
+            ],
+            "contradictions": [],
+            "review_required": False,
+            "why_it_matters": "This keeps the team honest about what is preview-ready versus fully production-ready.",
+            "policy_version": AI_POLICY_VERSION,
+            "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+            "model_id": "deterministic.nugget_builder.v1",
+            "generated_at": iso_now(),
+            "tags": ["ops", "auth", "performance"],
+            "priority": "medium",
+        },
+        {
+            "schema_version": NUGGET_SCHEMA_VERSION,
+            "entity_id": "atlas-materialization-gap",
+            "entity_type": "Document",
+            "claim": "Atlas materialization is still not part of the trusted live path.",
+            "observed_fact": str(atlas.get("note") or "Atlas preview storage is not configured."),
+            "derived_implication": "Canonical entity history and replayable nugget materialization are still local-runtime-first rather than durable store-first.",
+            "status": "NeedsReview" if str(atlas.get("status")) != "materialized" else "Verified",
+            "confidence": "High" if str(atlas.get("status")) != "materialized" else "Medium",
+            "commercial_relevance": 0.64,
+            "novelty_score": 0.42,
+            "recency_score": 0.85,
+            "evidence_strength": 0.88,
+            "source_refs": [
+                make_nugget_source_ref("Atlas status", "SWFI runtime", None),
+            ],
+            "contradictions": [],
+            "review_required": str(atlas.get("status")) != "materialized",
+            "why_it_matters": "Durable materialization matters once nuggets become customer-visible history instead of just admin insight.",
+            "policy_version": AI_POLICY_VERSION,
+            "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+            "model_id": "deterministic.nugget_builder.v1",
+            "generated_at": iso_now(),
+            "tags": ["atlas", "storage", "history"],
+            "priority": "medium",
+        },
+    ]
+    return nuggets
+
+
+def build_nugget_review_queue(nuggets: list[dict[str, object]]) -> list[dict[str, object]]:
+    queue = [item for item in nuggets if item.get("review_required")]
+    return sorted(queue, key=lambda item: float(item.get("commercial_relevance", 0.0)), reverse=True)
+
+
+def build_nugget_review_csv() -> str:
+    payload = get_dashboard_payload()
+    nuggets = build_governed_nuggets(payload)
+    review_queue = build_nugget_review_queue(nuggets)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Nugget ID", "Claim", "Status", "Confidence", "Priority", "Why It Matters", "Source Labels"])
+    for item in review_queue:
+        writer.writerow(
+            [
+                item["entity_id"],
+                item["claim"],
+                item["status"],
+                item["confidence"],
+                item.get("priority", ""),
+                item["why_it_matters"],
+                "; ".join(str(source.get("label", "")) for source in item.get("source_refs", [])),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_research_eval_summary() -> dict[str, object]:
+    pack = build_research_eval_pack()
+    cases = pack.get("cases", [])
+    results: list[dict[str, object]] = []
+    passed = 0
+    for case in cases:
+        if not isinstance(case, dict):
+            continue
+        query = str(case.get("query", ""))
+        payload = build_research_payload(query, allow_models=False)
+        expectations = case.get("expectations", {}) if isinstance(case.get("expectations"), dict) else {}
+        checks = []
+        if "status" in expectations:
+            checks.append(payload.get("status") == expectations["status"])
+        if "guardrail" in expectations:
+            checks.append(payload.get("guardrail") == expectations["guardrail"])
+        if "prompt_version" in expectations:
+            checks.append(payload.get("prompt_version") == expectations["prompt_version"])
+        if "min_sources" in expectations:
+            checks.append(len(payload.get("source_refs", [])) >= int(expectations["min_sources"]))
+        ok = all(checks) if checks else True
+        if ok:
+            passed += 1
+        results.append(
+            {
+                "id": case.get("id"),
+                "query": query,
+                "ok": ok,
+                "status": payload.get("status"),
+                "guardrail": payload.get("guardrail"),
+                "prompt_version": payload.get("prompt_version"),
+                "source_refs": len(payload.get("source_refs", [])),
+                "note": case.get("note", ""),
+            }
+        )
+    return {
+        "pack_version": str(pack.get("pack_version", "swfi.eval_pack.v1")),
+        "generated_at": iso_now(),
+        "total_cases": len(results),
+        "passed_cases": passed,
+        "failed_cases": len(results) - passed,
+        "results": results,
+    }
+
+
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
     direct_text = str(response.get("output_text") or "").strip()
     if direct_text:
@@ -3581,7 +3863,7 @@ def call_governed_research_model(query_text: str, research_context: dict[str, ob
     return call_gemini_governed_research(query_text, research_context)
 
 
-def build_research_payload(query_text: str) -> dict[str, object]:
+def build_research_payload(query_text: str, *, allow_models: bool = True) -> dict[str, object]:
     guardrail = get_guardrail(query_text)
     source_bundle_id = json_digest({"query": query_text.strip(), "guardrail": bool(guardrail)})
     if guardrail:
@@ -3591,7 +3873,7 @@ def build_research_payload(query_text: str) -> dict[str, object]:
     fallback_answer, evidence = build_fallback_answer(query_text, payload)
     research_context = build_research_context(query_text, payload, fallback_answer, evidence)
     source_bundle_id = json_digest(research_context)
-    model_result = call_governed_research_model(query_text, research_context)
+    model_result = call_governed_research_model(query_text, research_context) if allow_models else None
     validated_result = validate_governed_research_result(
         parse_json_text(model_result["answer"]) if model_result else None,
         evidence,
@@ -4178,6 +4460,10 @@ def build_prompt_registry_yaml() -> str:
     return read_ai_doc("prompt_registry.yaml")
 
 
+def build_research_eval_pack() -> dict[str, object]:
+    return json.loads(read_ai_doc("research_eval_pack_v1.json"))
+
+
 def get_cached_dashboard_payload(*, include_stale: bool = True) -> dict[str, object] | None:
     now = time.time()
     with _cache_lock:
@@ -4203,10 +4489,13 @@ def get_cached_msci_people_export_payload(*, include_stale: bool = True) -> dict
 
 
 def build_admin_payload() -> dict[str, object]:
-    dashboard = get_cached_dashboard_payload(include_stale=True) or {}
+    dashboard = get_cached_dashboard_payload(include_stale=True) or get_dashboard_payload()
     target_bundle = load_target_accounts()
     people_summary = get_msci_people_summary(target_bundle)
     live_external_matrix = get_live_external_api_matrix()
+    nuggets = build_governed_nuggets(dashboard) if isinstance(dashboard, dict) and dashboard else []
+    review_queue = build_nugget_review_queue(nuggets)
+    research_eval = build_research_eval_summary()
     export_payload = get_cached_msci_people_export_payload(include_stale=True) or {
         "tone": "ok" if people_summary.get("status") == "ok" else "watch",
         "summary": {
@@ -4254,12 +4543,18 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Accessible people", "value": str(people_summary.get("summary", {}).get("people_total", 0)), "note": "Authenticated people records"},
             {"label": "Exports logged", "value": str(len(audit_events)), "note": "Recent export audit events"},
             {"label": "Live public probes", "value": str(sum(1 for item in live_external_matrix if item.get("live_status") == "ok")), "note": "Public/free connector probes responding on the latest check"},
+            {"label": "Governed nuggets", "value": str(len(nuggets)), "note": f"{len(review_queue)} currently require analyst review"},
         ],
         "statuses": statuses,
         "errors": errors,
         "export_history": audit_events,
         "analytics": build_msci_analytics(target_bundle, people_summary),
         "external_api_matrix": live_external_matrix,
+        "nugget_pipeline": {
+            "items": nuggets,
+            "review_queue": review_queue,
+        },
+        "research_eval": research_eval,
         "reports": [
             {"label": "MSCI analytics CSV", "url": "/api/reports/msci-analytics.csv"},
             {"label": "External API matrix CSV", "url": "/api/reports/external-api-matrix.csv"},
@@ -4269,6 +4564,8 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "AI governance spec", "url": "/api/reports/ai-governance.md"},
             {"label": "Nugget schema JSON", "url": "/api/reports/nugget-schema.json"},
             {"label": "Prompt registry YAML", "url": "/api/reports/prompt-registry.yaml"},
+            {"label": "Nugget review CSV", "url": "/api/reports/nugget-review.csv"},
+            {"label": "Research eval JSON", "url": "/api/reports/research-eval.json"},
         ],
         "rebuild": {"url": "/api/admin/rebuild", "method": "POST"},
     }
@@ -5756,6 +6053,52 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-prompt-registry.yaml"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/nugget-review.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_nugget_review_csv(), "swfi-nugget-review.csv", head_only=head_only)
+            return True
+
+        if parsed.path == "/api/reports/research-eval.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                json.dumps(build_research_eval_summary(), indent=2) + "\n",
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-research-eval.json"'},
             )
             return True
 

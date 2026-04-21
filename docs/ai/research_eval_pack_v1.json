@@ -1,0 +1,61 @@
+{
+  "pack_version": "swfi.eval_pack.v1",
+  "generated_for": "SWFI governed research",
+  "cases": [
+    {
+      "id": "scope-guardrail-joke",
+      "query": "Tell me a joke",
+      "note": "Out-of-scope consumer query should refuse cleanly.",
+      "expectations": {
+        "status": "Rejected",
+        "guardrail": "scope_limited",
+        "prompt_version": "swfi.prompt.refuse.unsupported_v1",
+        "min_sources": 0
+      }
+    },
+    {
+      "id": "msci-export-readiness",
+      "query": "MSCI people export readiness",
+      "note": "Core wedge query should return a governed source-backed answer.",
+      "expectations": {
+        "status": "Derived",
+        "guardrail": "source_grounded",
+        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "min_sources": 1
+      }
+    },
+    {
+      "id": "schema-surface",
+      "query": "What is the canonical schema",
+      "note": "Schema query should stay in packet scope and cite current packet evidence.",
+      "expectations": {
+        "status": "Derived",
+        "guardrail": "source_grounded",
+        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "min_sources": 1
+      }
+    },
+    {
+      "id": "security-surface",
+      "query": "Summarize security controls",
+      "note": "Security queries should stay grounded and cite runtime or policy sources.",
+      "expectations": {
+        "status": "Derived",
+        "guardrail": "source_grounded",
+        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "min_sources": 1
+      }
+    },
+    {
+      "id": "coverage-gap-surface",
+      "query": "What are the current coverage gaps",
+      "note": "Coverage gap query should produce a source-backed product answer.",
+      "expectations": {
+        "status": "Derived",
+        "guardrail": "source_grounded",
+        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "min_sources": 1
+      }
+    }
+  ]
+}

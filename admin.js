@@ -6,9 +6,12 @@ const reportDownloadsEl = $("admin-report-downloads");
 const rebuildButton = $("admin-rebuild-button");
 const statusList = $("admin-status-list");
 const analyticsGrid = $("admin-analytics-grid");
+const nuggetList = $("admin-nugget-list");
 const exportHistoryEl = $("admin-export-history");
 const errorList = $("admin-error-list");
 const apiMatrixEl = $("admin-api-matrix");
+const reviewQueueEl = $("admin-review-queue");
+const researchEvalEl = $("admin-research-eval");
 
 function esc(value) {
   return String(value ?? "")
@@ -20,12 +23,17 @@ function esc(value) {
 }
 
 function tone(status) {
+  const key = String(status || "").toLowerCase().replaceAll(" ", "_");
   return ({
     ok: "ok",
     active: "ok",
     verified: "ok",
     partial: "partial",
     derived: "partial",
+    needsreview: "watch",
+    needs_review: "watch",
+    rejected: "blocked",
+    conflicted: "watch",
     watch: "watch",
     blocked: "blocked",
     missing: "blocked",
@@ -33,7 +41,7 @@ function tone(status) {
     free_public_with_key: "ok",
     hybrid_open_or_paid: "partial",
     paid_for_production: "watch",
-  })[status] || "watch";
+  })[key] || "watch";
 }
 
 function renderTicker(payload) {
@@ -129,6 +137,32 @@ function renderAnalytics(payload) {
     .join("");
 }
 
+function renderNuggets(payload) {
+  const items = payload.nugget_pipeline?.items || [];
+  if (!items.length) {
+    nuggetList.innerHTML = '<article class="stack-card tone-watch"><strong>No governed nuggets yet.</strong><p>The pipeline is defined but no packet-derived items were produced.</p></article>';
+    return;
+  }
+  nuggetList.innerHTML = items
+    .map(
+      (item) => `
+        <article class="stack-card tone-${tone(item.status)}">
+          <div class="readiness-head">
+            <strong>${esc(item.claim)}</strong>
+            <span class="status-chip tone-${tone(item.status)}">${esc(item.status)}</span>
+          </div>
+          <p>${esc(item.why_it_matters || item.observed_fact || "")}</p>
+          <div class="detail-line">
+            <span>${esc(item.confidence || "")}</span>
+            <span>${esc(item.priority || "")}</span>
+            <span>${esc((item.tags || []).join(" · "))}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
 function renderExportHistory(payload) {
   const rows = payload.export_history || [];
   if (!rows.length) {
@@ -204,6 +238,65 @@ function renderApiMatrix(payload) {
     .join("");
 }
 
+function renderReviewQueue(payload) {
+  const items = payload.nugget_pipeline?.review_queue || [];
+  if (!items.length) {
+    reviewQueueEl.innerHTML = '<article class="stack-card tone-ok"><strong>No nuggets require review.</strong><p>The current packet can publish all derived items without analyst gating.</p></article>';
+    return;
+  }
+  reviewQueueEl.innerHTML = items
+    .map(
+      (item) => `
+        <article class="stack-card tone-${tone(item.status)}">
+          <div class="readiness-head">
+            <strong>${esc(item.claim)}</strong>
+            <span class="status-chip tone-${tone(item.status)}">${esc(item.status)}</span>
+          </div>
+          <p>${esc(item.derived_implication || item.observed_fact || "")}</p>
+          <div class="detail-line">
+            <span>${esc(item.confidence || "")}</span>
+            <span>${esc(item.priority || "")}</span>
+            <span>${esc((item.source_refs || []).map((ref) => ref.label || "").filter(Boolean).join(" · "))}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderResearchEval(payload) {
+  const summary = payload.research_eval || {};
+  const rows = summary.results || [];
+  const head = `
+    <article class="stack-card tone-${summary.failed_cases ? "watch" : "ok"}">
+      <div class="readiness-head">
+        <strong>${esc(summary.pack_version || "swfi.eval_pack.v1")}</strong>
+        <span class="status-chip tone-${summary.failed_cases ? "watch" : "ok"}">${esc(`${summary.passed_cases || 0}/${summary.total_cases || 0} passed`)}</span>
+      </div>
+      <p>${esc(summary.failed_cases ? "One or more regression cases need attention." : "Current deterministic regression cases are passing.")}</p>
+    </article>
+  `;
+  const body = rows
+    .map(
+      (row) => `
+        <article class="stack-card tone-${row.ok ? "ok" : "blocked"}">
+          <div class="readiness-head">
+            <strong>${esc(row.id || row.query || "case")}</strong>
+            <span class="status-chip tone-${row.ok ? "ok" : "blocked"}">${esc(row.ok ? "pass" : "fail")}</span>
+          </div>
+          <p>${esc(row.note || row.query || "")}</p>
+          <div class="detail-line">
+            <span>${esc(row.status || "")}</span>
+            <span>${esc(row.prompt_version || "")}</span>
+            <span>${esc(`${row.source_refs || 0} refs`)}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+  researchEvalEl.innerHTML = head + body;
+}
+
 function renderPayload(payload) {
   renderTicker(payload);
   renderSummaryCards(payload);
@@ -211,9 +304,12 @@ function renderPayload(payload) {
   renderReports(payload);
   renderStatusList(payload);
   renderAnalytics(payload);
+  renderNuggets(payload);
   renderExportHistory(payload);
   renderErrors(payload);
   renderApiMatrix(payload);
+  renderReviewQueue(payload);
+  renderResearchEval(payload);
 }
 
 async function loadAdmin() {
