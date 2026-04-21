@@ -162,7 +162,7 @@ function buildPublicDiscoveryDashboard() {
   return {
     generated_at: new Date().toISOString(),
     statuses: [
-      { source: "Controlled access", note: "Sign in for client workspaces, protected exports, and research responses.", status: "partial" },
+      { source: "Subscriber access", note: "Sign in for dashboard, profiles, research, and delivery files.", status: "partial" },
       { source: "Profiles", note: "Sovereign wealth funds, public pensions, central banks, endowments, and family offices.", status: "ok" },
       { source: "Transactions", note: "Deals, mandates, RFPs, and institutional allocation activity.", status: "ok" },
       { source: "Datafeeds/API", note: "JSON and CSV delivery through SWFI REST API and custom feed workflows.", status: "ok" },
@@ -178,12 +178,12 @@ function buildPublicDiscoveryDashboard() {
       {
         client: "SWFI",
         use_case: "Datafeeds/API",
-        title: "Controlled access",
+        title: "Subscriber access",
         state: "partial",
         priority: "P1",
-        requirement: "Sign in is required for MSCI workspaces, protected exports, research responses, and client delivery views.",
+        requirement: "Sign in is required for SWFI Dashboard, MSCI delivery, protected exports, and research views.",
         challenge: "Public discovery focuses on Profiles, Transactions, RFPs, Key People, Asset Allocation, and Datafeeds/API.",
-        recommendation: "Use the public site for discovery and sign in for client delivery workspaces.",
+        recommendation: "Use the public site for discovery and sign in for subscriber dashboard views.",
         tags: ["exports", "profile", "people"],
       },
     ],
@@ -215,7 +215,7 @@ function buildPublicDiscoveryDashboard() {
     readiness: [
       { title: "Subscription", status: "ok", note: "Profiles, Transactions, RFPs, Key People, Asset Allocation, briefings, and news." },
       { title: "Datafeeds/API", status: "ok", note: "JSON and CSV delivery for direct integration and custom reporting." },
-      { title: "Controlled client workspaces", status: "partial", note: "Protected views such as MSCI remain available after sign-in." },
+      { title: "Subscriber dashboard", status: "partial", note: "Protected views such as MSCI remain available after sign-in." },
     ],
     proposal: {
       deliverables: [
@@ -246,7 +246,7 @@ function buildPublicDiscoveryDashboard() {
         name: "SWFI Subscription",
         tone: "ok",
         headline: "Profiles, Transactions, RFPs and Opportunities, Key People, Asset Allocation, and briefings.",
-        signals: ["Public fund coverage", "Institutional investor intelligence", "Controlled-access client workspaces"],
+        signals: ["Public fund coverage", "Institutional investor intelligence", "Subscriber dashboard"],
         url: "https://www.swfinstitute.org/services/subscription",
         source: "Official source",
       },
@@ -681,8 +681,8 @@ function renderHeroStats() {
   if (heroSourceCount) {
     const publishableUpdates = liveTerminal.summary?.publishable_updates || 0;
     heroSourceCount.textContent = publishableUpdates
-      ? `${publishableUpdates} source-backed updates ready`
-      : (sourceCount ? "Source-backed coverage" : "Coverage loading");
+      ? `${publishableUpdates} current updates`
+      : (sourceCount ? "Profiles loaded" : "Coverage loading");
   }
 
   if (statCountries) statCountries.textContent = first.value;
@@ -1304,7 +1304,7 @@ function renderSignalPanel() {
     `);
   }
 
-  signalSummaryNote.textContent = `${items.length} source-backed update${items.length === 1 ? "" : "s"}`;
+  signalSummaryNote.textContent = `${items.length} recent change${items.length === 1 ? "" : "s"}`;
   signalCards.push(
     ...items
     .map(
@@ -1587,9 +1587,9 @@ function seedChat() {
   if (chatLog.childElementCount) return;
   appendChat(
     "assistant",
-    "Ask about Profiles, Transactions, RFPs, Key People, Asset Allocation, or Datafeeds. Answers stay tied to current SWFI sources and linked evidence.",
+    "Ask about Profiles, Transactions, RFPs, Key People, Asset Allocation, or Datafeeds. Answers stay tied to current SWFI records and cited sources.",
     [],
-    "Source-backed",
+    "Cited sources",
   );
 }
 
@@ -1597,7 +1597,7 @@ async function runCopilot(query) {
   const trimmed = (query || "").trim();
   if (!trimmed) return;
   appendChat("user", trimmed);
-  appendChat("assistant", "Checking SWFI sources and linked evidence...", [], "Sourcing");
+  appendChat("assistant", "Checking SWFI records and cited sources...", [], "Sourcing");
   try {
     const response = await fetch(`/api/research/v1?q=${encodeURIComponent(trimmed)}`);
     if (response.status === 401) {
@@ -1610,11 +1610,7 @@ async function runCopilot(query) {
     }
     const placeholder = chatLog.lastElementChild;
     if (placeholder?.classList.contains("assistant")) placeholder.remove();
-    const metaParts = [
-      payload.provider_label || "Governed fallback",
-      payload.status || "",
-      payload.confidence || "",
-    ].filter(Boolean);
+    const metaParts = [payload.status || "", payload.confidence || ""].filter(Boolean);
     appendChat("assistant", payload.answer, payload.evidence || [], metaParts.join(" · "));
   } catch (error) {
     const placeholder = chatLog.lastElementChild;

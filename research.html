@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SWFI | Research</title>
-    <meta name="description" content="Controlled-access SWFI research workspace for current reads, Mandates, RFPs, Key People, official source coverage, and source-backed briefings." />
+    <meta name="description" content="Subscriber access to SWFI research, VIP briefings, Mandates, RFPs, Key People changes, and official source coverage." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -25,11 +25,11 @@
           <a href="/profiles" class="nav-link">Profiles</a>
           <a href="/research" class="nav-link">Research</a>
           <a href="/msci" class="nav-link">MSCI</a>
-          <a href="/admin" class="nav-link">Admin</a>
+          <a href="https://www.swfinstitute.org/services/datafeed-api" class="nav-link" target="_blank" rel="noreferrer">Datafeeds/API</a>
         </div>
         <div class="nav-right">
           <span class="nav-status-dot nav-status-dot--controlled"></span>
-          <span class="nav-status-label">Controlled access</span>
+          <span class="nav-status-label">Subscriber access</span>
           <a href="/auth/logout" class="nav-link">Sign out</a>
         </div>
       </nav>
@@ -37,9 +37,9 @@
       <main class="main-stack research-stack">
         <header class="panel msci-hero research-hero">
           <div class="msci-hero-copy">
-            <p class="sys-label">Research workspace</p>
-            <h1>Current Reads</h1>
-            <p class="msci-copy">Controlled-access research workspace for source-backed reads, official source coverage, Mandates, RFPs, Key People changes, and profile-linked briefings.</p>
+            <p class="sys-label">Research</p>
+            <h1>VIP Briefings</h1>
+            <p class="msci-copy">Subscriber access to SWFI research, official source coverage, Mandates, RFPs, Key People changes, and profile-linked briefings.</p>
             <div class="status-strip msci-status-strip" id="research-status-strip"></div>
           </div>
           <div class="msci-download-panel">
@@ -59,14 +59,14 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Current reads</p>
-                  <h3>Source-backed updates</h3>
+                  <p class="sys-label">VIP briefings</p>
+                  <h3>Research notes</h3>
                 </div>
-                <span class="panel-note" id="research-read-count">0 reads</span>
+                <span class="panel-note" id="research-read-count">0 briefings</span>
               </div>
               <label class="terminal-search" for="research-search">
                 <span class="search-prompt">⌕</span>
-                <input id="research-search" type="search" autocomplete="off" placeholder="Search current reads, Mandates, RFPs, or Key People..." />
+                <input id="research-search" type="search" autocomplete="off" placeholder="Search briefings, Mandates, RFPs, or Key People..." />
               </label>
               <div class="section-block">
                 <p class="sys-label">Family</p>
@@ -139,8 +139,8 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Under analyst review</p>
-                  <h3>Pending reads</h3>
+                  <p class="sys-label">Pending publication</p>
+                  <h3>Research queue</h3>
                 </div>
               </div>
               <div class="panel-stack" id="research-review-queue"></div>

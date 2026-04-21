@@ -73,7 +73,7 @@ function renderStatusStrip(workbench) {
   const exportInfo = workbench.people_export || {};
   const summary = exportInfo.coverage_summary || {};
   const items = [
-    { label: "Controlled access", note: "Session-backed access", status: "ok" },
+    { label: "Subscriber access", note: "Session-backed access", status: "ok" },
     { label: "People export", note: `${summary.people_total || 0} accessible records`, status: "ok" },
     { label: "Email coverage", note: `${summary.with_email || 0} records`, status: summary.with_email ? "partial" : "blocked" },
     { label: "Phone coverage", note: `${summary.with_phone || 0} records`, status: summary.with_phone ? "partial" : "blocked" },

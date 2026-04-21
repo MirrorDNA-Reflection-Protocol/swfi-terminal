@@ -81,7 +81,7 @@ function renderTicker(payload) {
   if (!track) return;
   const summary = payload.summary || {};
   const items = [
-    { label: "Current reads", value: summary.current_reads || 0, delta: "live" },
+    { label: "VIP briefings", value: summary.current_reads || 0, delta: "ready" },
     { label: "Official sources", value: summary.official_sources || 0, delta: "watched" },
     { label: "Mandates", value: summary.mandate_sources || 0, delta: "official" },
     { label: "Profiles in focus", value: summary.profiles_in_focus || 0, delta: "loaded" },
@@ -195,7 +195,7 @@ function renderFilters() {
 
 function renderReadList() {
   const reads = filteredReads();
-  readCountEl.textContent = `${reads.length} reads`;
+  readCountEl.textContent = `${reads.length} briefings`;
   if (!reads.length) {
     readListEl.innerHTML = '<article class="empty-state"><p>No reads match the current filters.</p></article>';
     return;
@@ -205,7 +205,7 @@ function renderReadList() {
       (item) => `
         <button class="lane-card profile-list-item ${item.id === state.selectedId ? "active" : ""}" type="button" data-id="${esc(item.id)}">
           <div class="lane-head">
-            <strong>${esc(item.title || "Current read")}</strong>
+            <strong>${esc(item.title || "Research note")}</strong>
             <span class="status-chip tone-${tone(item.status)}">${esc(statusLabel(item.status))}</span>
           </div>
           <p>${esc(item.family || "Research")} · ${esc(item.entity_type || "Read")}</p>
@@ -232,14 +232,14 @@ function selectedRead() {
 function renderDetail() {
   const read = selectedRead();
   if (!read) {
-    detailEyebrowEl.textContent = "Research";
-    detailTitleEl.textContent = "No read selected";
+    detailEyebrowEl.textContent = "Briefing";
+    detailTitleEl.textContent = "No briefing selected";
     detailStatusEl.textContent = "Missing";
     detailStatusEl.className = "status-chip tone-blocked";
     detailConfidenceEl.textContent = "None";
     detailConfidenceEl.className = "status-chip tone-blocked";
     detailMetaEl.textContent = "";
-    detailSummaryEl.textContent = "No current read is available for the current filter set.";
+    detailSummaryEl.textContent = "No briefing is available for the current filter set.";
     detailImplicationEl.textContent = "";
     factGridEl.innerHTML = "";
     evidenceListEl.innerHTML = '<article class="empty-state"><p>No evidence is attached.</p></article>';
@@ -247,7 +247,7 @@ function renderDetail() {
   }
 
   detailEyebrowEl.textContent = read.family || "Research";
-  detailTitleEl.textContent = read.title || "Current read";
+  detailTitleEl.textContent = read.title || "Research note";
   detailStatusEl.textContent = statusLabel(read.status || "Review");
   detailStatusEl.className = `status-chip tone-${tone(read.status)}`;
   detailConfidenceEl.textContent = read.confidence || "Low";

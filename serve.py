@@ -2427,7 +2427,7 @@ def load_target_accounts() -> dict[str, object]:
     retrieved_at = iso_now()
     source = make_source_entry(
         "msci_target_accounts",
-        "MSCI target account workbook",
+        "MSCI target account list",
         "document_extraction_required",
         "local_xlsx",
         retrieved_at,
@@ -2592,7 +2592,7 @@ def load_platform_improvements() -> dict[str, object]:
     retrieved_at = iso_now()
     source = make_source_entry(
         "platform_improvements",
-        "Platform improvements roadmap",
+        "Platform improvement notes",
         "document_extraction_required",
         "local_csv",
         retrieved_at,
@@ -2900,9 +2900,9 @@ def build_maturity_groups() -> list[dict[str, object]]:
             "bucket": "document_extraction_required",
             "title": "Document extraction required",
             "items": [
-                {"name": "Target account workbook", "status": "partial", "note": "Now parsed into the MSCI workbench via XLSX XML extraction."},
+                {"name": "MSCI target account list", "status": "partial", "note": "Parsed into the MSCI delivery surface from the supplied XLSX file."},
                 {"name": "Board minutes / agendas / PDF filings", "status": "blocked", "note": "Critical for scattered asset-allocation facts and unstructured disclosures."},
-                {"name": "Platform improvements roadmap and local briefing docs", "status": "partial", "note": "Roadmap items are now surfaced, but not yet tied to execution telemetry."},
+                {"name": "Platform improvement notes and briefing docs", "status": "partial", "note": "Research notes are surfaced, but not yet tied to execution telemetry."},
             ],
         },
         {
@@ -2935,14 +2935,14 @@ def build_data_coverage(people_summary: dict[str, object]) -> list[dict[str, obj
             "lane": "MSCI",
             "available_today_api": [
                 "Public AUM docs and masked collections map",
-                "Account-target workbook ingestion and normalized account export",
+                "Account target ingestion and normalized account export",
                 "Sandbox-backed people export with entity joins",
                 f"Accessible people list summary: {people_counts.get('people_total', 0)} records",
             ],
             "public_docs_extraction": [
-                "Target account workbook",
-                "Proposal-defined MSCI mapping scope",
-                "Platform improvements roadmap and feedback packet",
+                "MSCI target account list",
+                "MSCI field mapping scope",
+                "Platform improvement notes and feedback packet",
             ],
             "third_party_connectors": [
                 "GLEIF / Companies House for identity resolution",
@@ -3178,8 +3178,8 @@ def build_msci_workbench(
         "schema_version": MSCI_SCHEMA_VERSION,
         "generated_at": iso_now(),
         "summary_cards": [
-            {"label": "Target accounts", "value": str(summary.get("total_targets", 0)), "note": "Rows in the normalized account workbook"},
-            {"label": "API potential", "value": human_number(float(summary.get("total_api_potential", 0.0))), "note": "Modeled account-level potential from the workbook"},
+            {"label": "Target accounts", "value": str(summary.get("total_targets", 0)), "note": "Rows in the normalized account list"},
+            {"label": "API potential", "value": human_number(float(summary.get("total_api_potential", 0.0))), "note": "Modeled account-level potential from the account list"},
             {"label": "Managed assets", "value": human_number(float(summary.get("total_assets_managed", 0.0))), "note": "Aggregate managed-assets figure across target accounts"},
             {"label": "Accessible people", "value": str(people_summary.get("summary", {}).get("people_total", 0)), "note": "Authenticated people records available for export"},
         ],
@@ -3411,7 +3411,7 @@ def build_sources(
             ),
             make_source_entry(
                 "msci_email_thread",
-                "MSCI API requirement thread",
+                "MSCI delivery requirements",
                 "document_extraction_required",
                 "user_supplied_email_thread",
                 retrieved_at,
@@ -3419,11 +3419,11 @@ def build_sources(
                 "high",
                 "ok",
                 document_pointer="/Users/mirror-admin/Downloads/swfi/Fwd_ MSCI API.eml",
-                note="Confirms the People Search versus internal extract mismatch and the required MSCI export fields.",
+                note="Defines the required MSCI export fields and the People Search coverage checks.",
             ),
             make_source_entry(
                 "production_handover_thread",
-                "Production support dependency and handover thread",
+                "Production readiness note",
                 "document_extraction_required",
                 "user_supplied_email_thread",
                 retrieved_at,
@@ -3431,7 +3431,7 @@ def build_sources(
                 "high",
                 "ok",
                 document_pointer="/Users/mirror-admin/Downloads/swfi/Fwd_ SWFI- Production support dependency & handover.eml",
-                note="Confirms live production sensitivity, handover dependencies, and the need for controlled deployment.",
+                note="Confirms production sensitivity, deployment dependencies, and access controls for live delivery.",
             ),
             make_source_entry(
                 "security_txt_standard",
@@ -5062,9 +5062,9 @@ def build_research_workspace_payload() -> dict[str, object]:
         },
         "status_strip": [
             {
-                "label": "Current reads",
+                "label": "VIP briefings",
                 "status": "ok" if current_reads else "watch",
-                "note": f"{len(current_reads)} source-backed reads are available now.",
+                "note": f"{len(current_reads)} research notes are available now.",
             },
             {
                 "label": "Mandates and RFPs",
@@ -5077,19 +5077,19 @@ def build_research_workspace_payload() -> dict[str, object]:
                 "note": f"{int(source_watchlist.get('summary', {}).get('high_priority', 0))} high-priority official rails are currently in scope.",
             },
             {
-                "label": "Under analyst review",
+                "label": "Pending publication",
                 "status": "watch" if review_queue else "ok",
-                "note": f"{len(review_queue)} reads remain under analyst review before wider publication.",
+                "note": f"{len(review_queue)} research notes remain pending publication.",
             },
         ],
         "metric_cards": [
-            {"label": "Current reads", "value": str(len(current_reads)), "note": "Evidence-backed reads available in the current workspace."},
+            {"label": "VIP briefings", "value": str(len(current_reads)), "note": "Evidence-linked research notes available now."},
             {"label": "Official sources", "value": str(int(source_watchlist.get("summary", {}).get("total_sources", 0))), "note": "Official pages, tenders, meetings, budgets, and oversight rails in scope."},
             {"label": "Mandate sources", "value": str(len(mandate_sources)), "note": "Official mandate and RFP rails prioritized for current monitoring."},
             {"label": "Profiles in focus", "value": str(len(profiles_in_focus)), "note": "Largest sovereign and public profiles surfaced with current coverage context."},
         ],
         "downloads": [
-            {"label": "Research workspace JSON", "url": "/api/research-workspace/v1"},
+            {"label": "Research JSON", "url": "/api/research-workspace/v1"},
             {"label": "Client brief", "url": "/api/reports/client-brief.md"},
             {"label": "Profile signals JSON", "url": "/api/reports/profile-signals.json"},
             {"label": "Official source watchlist", "url": "/api/reports/source-watchlist.csv"},
@@ -5753,7 +5753,7 @@ def build_msci_analytics(target_bundle: dict[str, object], people_summary: dict[
         {
             "label": "Target accounts",
             "value": str(summary.get("total_targets", 0)),
-            "note": "High-confidence target rows loaded from the workbook",
+            "note": "High-confidence target rows loaded from the current account list",
         },
         {
             "label": "People with email",
@@ -6013,7 +6013,7 @@ def build_admin_payload() -> dict[str, object]:
         errors.append({"title": "Phone coverage remains thin", "detail": "MSCI export is populated, but phone coverage is still low for high-confidence outreach use.", "status": "partial"})
     statuses = [
         {"label": "Dashboard packet", "status": "ok" if dashboard else "watch", "note": f"Last built {dashboard.get('generated_at', 'not warmed yet') if isinstance(dashboard, dict) else 'not warmed yet'}"},
-        {"label": "MSCI target workbook", "status": "ok" if target_bundle.get('summary', {}).get('total_targets', 0) else "blocked", "note": f"{target_bundle.get('summary', {}).get('total_targets', 0)} target accounts parsed"},
+        {"label": "MSCI target list", "status": "ok" if target_bundle.get('summary', {}).get('total_targets', 0) else "blocked", "note": f"{target_bundle.get('summary', {}).get('total_targets', 0)} target accounts parsed"},
         {"label": "People export", "status": str(export_payload.get("tone", "watch")), "note": f"{export_payload.get('summary', {}).get('rows_exported', 0)} rows exported"},
         {"label": "Export audit log", "status": "ok" if SWFI_EXPORT_AUDIT_LOG.exists() else "watch", "note": f"{len(audit_events)} recent events loaded"},
         {"label": "Sandbox API", "status": str(sandbox_status.get('tone', 'watch')), "note": str(sandbox_status.get('source', {}).get('note', ''))},
@@ -6492,11 +6492,10 @@ def redact_requestline_tokens(requestline: str) -> str:
 
 def build_site_meta(host: str, proto: str) -> dict[str, object]:
     public = is_public_host(host)
-    title = "SWFI | Institutional Investor Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, API Access"
+    title = "SWFI | Institutional Investor Data and Global Capital Intelligence"
     description = (
-        "Institutional investor data across sovereign wealth funds, public pensions, central banks, "
-        "endowments, family offices, Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, "
-        "Datafeeds, and API Access."
+        "Providing must-have intelligence and content on global institutional investors across Profiles, "
+        "Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds/API, VIP briefings, and Public Fund Monitor."
     )
     keywords = [
         "sovereign wealth fund data",
@@ -6654,10 +6653,10 @@ def render_landing_html(host: str, proto: str, csp_nonce: str) -> str:
         host,
         proto,
         path="/",
-        title="SWFI | Institutional Investor Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, API Access",
+        title="SWFI | Institutional Investor Data and Global Capital Intelligence",
         description=(
-            "Institutional investor data across sovereign wealth funds, public pensions, central banks, "
-            "endowments, family offices, Profiles, Transactions, RFPs, Key People, Asset Allocation, Datafeeds, and API Access."
+            "Providing must-have intelligence and content on global institutional investors across Profiles, "
+            "Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds/API, VIP briefings, and Public Fund Monitor."
         ),
         about=[
             "Sovereign Wealth Funds",
@@ -6682,8 +6681,8 @@ def render_msci_html(host: str, proto: str, csp_nonce: str) -> str:
         host,
         proto,
         path="/msci",
-        title="SWFI | MSCI Key People Export Workspace",
-        description="Controlled-access SWFI workspace for MSCI Key People exports, account mapping, and delivery.",
+        title="SWFI | MSCI Delivery",
+        description="Subscriber access to SWFI MSCI Key People delivery, account mapping, and export files.",
         about=["MSCI", "Key People", "Profiles", "Datafeeds", "API Access", "Asset Allocation"],
     )
     return render_template_html("msci.html", meta, csp_nonce)
@@ -6695,7 +6694,7 @@ def render_profiles_html(host: str, proto: str, csp_nonce: str) -> str:
         proto,
         path="/profiles",
         title="SWFI | Profiles",
-        description="Controlled-access SWFI profile workspace for sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, and source-backed profile detail.",
+        description="Subscriber access to SWFI Profiles across sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, Datafeeds, and API Access.",
         about=["Profiles", "Key People", "Asset Allocation", "Transactions", "RFPs", "Datafeeds", "API Access"],
         force_private=True,
     )
@@ -6708,7 +6707,7 @@ def render_research_html(host: str, proto: str, csp_nonce: str) -> str:
         proto,
         path="/research",
         title="SWFI | Research",
-        description="Controlled-access SWFI research workspace for current reads, Mandates, RFPs, Key People, official source coverage, and source-backed briefings.",
+        description="Subscriber access to SWFI research, VIP briefings, Mandates, RFPs, Key People changes, and official source coverage.",
         about=["Research", "Mandates", "RFPs", "Key People", "Profiles", "Transactions", "Datafeeds", "API Access"],
         force_private=True,
     )
@@ -6733,9 +6732,9 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
         host,
         proto,
         path="/login",
-        title="SWFI | Controlled Access",
-        description="Controlled-access login for the SWFI intelligence terminal.",
-        about=["Controlled access", "Profiles", "Datafeeds", "API Access"],
+        title="SWFI | Subscriber Login",
+        description="Subscriber login for SWFI Dashboard, Profiles, Research, and Datafeeds/API access.",
+        about=["Subscriber access", "Profiles", "Datafeeds", "API Access"],
         force_private=True,
     )
     error_block = f'<p class="auth-error">{html.escape(error)}</p>' if error else ""
@@ -6745,8 +6744,8 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SWFI | Controlled Access</title>
-    <meta name="description" content="Controlled-access login for the SWFI intelligence terminal." />
+    <title>SWFI | Subscriber Login</title>
+    <meta name="description" content="Subscriber login for SWFI Dashboard, Profiles, Research, and Datafeeds/API access." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -6755,9 +6754,9 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
   <body>
     <div class="page-shell auth-shell">
       <div class="auth-panel panel">
-        <p class="sys-label">Controlled access</p>
-        <h1>SWFI Intelligence Terminal</h1>
-        <p class="auth-copy">Sign in to open Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, API Access, and the MSCI workspace.</p>
+        <p class="sys-label">Subscriber access</p>
+        <h1>SWFI Dashboard</h1>
+        <p class="auth-copy">Sign in to open Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, API Access, and MSCI delivery.</p>
         {error_block}
         <form class="auth-form" method="post" action="/auth/login">
           <input type="hidden" name="next" value="{next_value}" />
@@ -6771,7 +6770,7 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
           </label>
           <button type="submit" class="nav-cta auth-submit">Sign in</button>
         </form>
-        <p class="auth-note">Controlled access. Sensitive exports remain separately protected.</p>
+        <p class="auth-note">Subscriber access. Sensitive export files remain separately protected.</p>
       </div>
     </div>
   </body>

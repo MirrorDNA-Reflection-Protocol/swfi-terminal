@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SWFI | Profiles</title>
-    <meta name="description" content="Controlled-access SWFI profile workspace for sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, Datafeeds, and API Access." />
+    <meta name="description" content="Subscriber access to SWFI Profiles across sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, Datafeeds, and API Access." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -25,12 +25,12 @@
           <a href="/profiles" class="nav-link">Profiles</a>
           <a href="/research" class="nav-link">Research</a>
           <a href="/msci" class="nav-link">MSCI</a>
-          <a href="/admin" class="nav-link">Admin</a>
+          <a href="https://www.swfinstitute.org/services/datafeed-api" class="nav-link" target="_blank" rel="noreferrer">Datafeeds/API</a>
           <a href="/api/profiles/v1" class="nav-link">API Access</a>
         </div>
         <div class="nav-right">
           <span class="nav-status-dot nav-status-dot--controlled"></span>
-          <span class="nav-status-label">Controlled access</span>
+          <span class="nav-status-label">Subscriber access</span>
           <a href="/auth/logout" class="nav-link">Sign out</a>
         </div>
       </nav>
@@ -38,9 +38,9 @@
       <main class="main-stack profiles-stack">
         <header class="panel msci-hero profiles-hero">
           <div class="msci-hero-copy">
-            <p class="sys-label">Profiles workspace</p>
+            <p class="sys-label">Profiles</p>
             <h1>Institution Profiles</h1>
-            <p class="msci-copy">Controlled-access workspace for sovereign wealth funds, public pensions, central banks, Key People coverage, profile status, and recent profile updates.</p>
+            <p class="msci-copy">Subscriber access to sovereign wealth fund, public pension, central bank, and institutional investor profiles, Key People coverage, asset allocation, and recent profile updates.</p>
             <div class="status-strip msci-status-strip" id="profile-status-strip"></div>
           </div>
           <div class="msci-download-panel">
@@ -105,8 +105,8 @@
               <article class="panel">
                 <div class="panel-head">
                   <div>
-                    <p class="sys-label">Profile signals</p>
-                    <h3>What Changed</h3>
+                  <p class="sys-label">Profile signals</p>
+                  <h3>Recent changes</h3>
                   </div>
                 </div>
                 <div class="panel-stack" id="profile-signal-list"></div>
@@ -115,8 +115,8 @@
               <article class="panel">
                 <div class="panel-head">
                   <div>
-                    <p class="sys-label">Trust layer</p>
-                    <h3>Sources and evidence</h3>
+                  <p class="sys-label">Source detail</p>
+                  <h3>Sources and evidence</h3>
                   </div>
                 </div>
                 <div class="panel-stack" id="profile-source-list"></div>
