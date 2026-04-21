@@ -1441,7 +1441,12 @@ async function runCopilot(query) {
     }
     const placeholder = chatLog.lastElementChild;
     if (placeholder?.classList.contains("assistant")) placeholder.remove();
-    appendChat("assistant", payload.answer, payload.evidence || [], payload.provider_label || "Deterministic fallback");
+    const metaParts = [
+      payload.provider_label || "Governed fallback",
+      payload.status || "",
+      payload.confidence || "",
+    ].filter(Boolean);
+    appendChat("assistant", payload.answer, payload.evidence || [], metaParts.join(" · "));
   } catch (error) {
     const placeholder = chatLog.lastElementChild;
     if (placeholder?.classList.contains("assistant")) placeholder.remove();

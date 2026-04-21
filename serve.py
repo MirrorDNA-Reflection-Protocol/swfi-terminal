@@ -65,6 +65,7 @@ CACHE_TTL_SECONDS = int(os.environ.get("DASHBOARD_TTL_SECONDS", "900"))
 HTTP_USER_AGENT = os.environ.get("SWFI_TERMINAL_USER_AGENT", "SWFI Terminal/0.4")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini").strip() or "gpt-5-mini"
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514").strip() or "claude-sonnet-4-20250514"
 MSCI_EXPORT_TTL_SECONDS = int(os.environ.get("MSCI_EXPORT_TTL_SECONDS", "3600"))
 SWFI_SANDBOX_API_ROOT = os.environ.get("SWFI_SANDBOX_API_ROOT", "https://sandbox-api.swfi.com/v1").rstrip("/")
 SWFI_PUBLIC_SITE_ORIGIN = os.environ.get("SWFI_PUBLIC_SITE_ORIGIN", "https://swfi.com").rstrip("/")
@@ -95,6 +96,12 @@ RESEARCH_SCHEMA_VERSION = "swfi.research.v1"
 MSCI_SCHEMA_VERSION = "swfi.msci_workbench.v1"
 ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PREVIEW_ROUTE = "/preview"
+AI_POLICY_VERSION = "swfi.policy.ai_governance.v0_1"
+PROMPT_REGISTRY_VERSION = "swfi.prompt_registry.v1"
+GROUNDED_RESEARCH_PROMPT_ID = "swfi.prompt.answer.grounded_v1"
+REFUSAL_PROMPT_ID = "swfi.prompt.refuse.unsupported_v1"
+NUGGET_SCHEMA_VERSION = "swfi.nugget.v1"
+ANTHROPIC_API_VERSION = "2023-06-01"
 
 XLSX_NS = {
     "a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -758,6 +765,22 @@ Rules:
 - Stay concise, operational, and product-focused.
 """.strip()
 
+RESEARCH_GOVERNED_SYSTEM_PROMPT = """
+You are SWFI governed research inside a controlled-access intelligence terminal.
+You are not allowed to invent or expand beyond the approved answer seed and evidence catalog.
+
+Rules:
+- Use only the supplied approved_context.
+- Rewrite or tighten the answer_seed; do not introduce new facts, numbers, dates, institutions, or claims.
+- Distinguish direct support from interpretation.
+- If the support is weak or partial, reduce confidence and use status NeedsReview.
+- If the evidence does not support a reliable answer, refuse using the approved refusal language.
+- Return JSON only with keys: answer, status, confidence, source_labels, inference_note.
+- status must be one of Verified, Derived, Conflicted, Missing, NeedsReview, Rejected.
+- confidence must be one of High, Medium, Low, None.
+- source_labels must refer only to labels present in the evidence catalog.
+""".strip()
+
 NON_PRODUCT_HINTS = (
     "joke",
     "poem",
@@ -821,6 +844,7 @@ def load_secret_from_env_or_keychain(*secret_names: str) -> str:
 
 OPENAI_API_KEY = load_secret_from_env_or_keychain("OPENAI_API_KEY")
 GEMINI_API_KEY = load_secret_from_env_or_keychain("GEMINI_API_KEY", "GOOGLE_API_KEY")
+ANTHROPIC_API_KEY = load_secret_from_env_or_keychain("ANTHROPIC_API_KEY", "CLAUDE_API_KEY")
 SWFI_SANDBOX_API_KEY = load_secret_from_env_or_keychain("SWFI_SANDBOX_API_KEY")
 SWFI_PRIVATE_EXPORT_TOKEN = load_secret_from_env_or_keychain("SWFI_PRIVATE_EXPORT_TOKEN")
 COMPANIES_HOUSE_API_KEY = load_secret_from_env_or_keychain("COMPANIES_HOUSE_API_KEY")
@@ -3210,6 +3234,171 @@ def build_fallback_answer(query_text: str, payload: dict[str, object]) -> tuple[
     return " ".join(parts), evidence[:6]
 
 
+def json_digest(value: object) -> str:
+    packed = json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(packed).hexdigest()[:16]
+
+
+def build_research_context(
+    query_text: str,
+    payload: dict[str, object],
+    fallback_answer: str,
+    evidence: list[dict[str, str | None]],
+) -> dict[str, object]:
+    return {
+        "user_query": query_text,
+        "answer_seed": fallback_answer,
+        "evidence_catalog": evidence,
+        "approved_context": {
+            "preview_posture": payload.get("preview_posture", {}),
+            "canonical_schema_summary": {
+                "model_count": len((payload.get("canonical_schema") or {}).get("models", [])),
+                "model_names": [item.get("id") for item in (payload.get("canonical_schema") or {}).get("models", [])[:8]],
+            },
+            "coverage_highlights": (payload.get("data_coverage") or [])[:4],
+            "msci_summary": {
+                "target_accounts": ((payload.get("msci_workbench") or {}).get("summary") or {}).get("target_accounts", 0),
+                "accessible_people": ((payload.get("msci_workbench") or {}).get("summary") or {}).get("people_total", 0),
+                "people_with_email": ((payload.get("msci_workbench") or {}).get("summary") or {}).get("with_email", 0),
+                "people_with_phone": ((payload.get("msci_workbench") or {}).get("summary") or {}).get("with_phone", 0),
+            },
+            "gaps": (payload.get("gaps") or [])[:5],
+            "security_controls": (payload.get("security_controls") or [])[:4],
+            "legal_risks": (payload.get("legal_risk_register") or [])[:4],
+        },
+    }
+
+
+def build_research_governance(answer_mode: str, source_bundle_id: str, *, provider: str | None = None) -> dict[str, object]:
+    return {
+        "policy_version": AI_POLICY_VERSION,
+        "prompt_version": REFUSAL_PROMPT_ID if answer_mode in {"guardrail", "policy_refusal"} else GROUNDED_RESEARCH_PROMPT_ID,
+        "registry_version": PROMPT_REGISTRY_VERSION,
+        "nugget_contract": NUGGET_SCHEMA_VERSION,
+        "source_bundle_id": source_bundle_id,
+        "answer_mode": answer_mode,
+        "provider": provider,
+    }
+
+
+def normalize_research_status(value: object) -> str:
+    text = str(value or "").strip()
+    normalized = {
+        "verified": "Verified",
+        "derived": "Derived",
+        "conflicted": "Conflicted",
+        "missing": "Missing",
+        "needsreview": "NeedsReview",
+        "needs_review": "NeedsReview",
+        "rejected": "Rejected",
+    }.get(re.sub(r"[^a-z]", "", text.lower()), "")
+    return normalized or "NeedsReview"
+
+
+def normalize_research_confidence(value: object) -> str:
+    text = str(value or "").strip().lower()
+    normalized = {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "none": "None",
+    }.get(text, "")
+    return normalized or "Low"
+
+
+def parse_json_text(text: str) -> dict[str, object] | None:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return None
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        parsed = json.loads(cleaned)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        pass
+    match = re.search(r"\{.*\}", cleaned, flags=re.S)
+    if not match:
+        return None
+    try:
+        parsed = json.loads(match.group(0))
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
+def validate_governed_research_result(
+    candidate: dict[str, object] | None,
+    evidence_catalog: list[dict[str, str | None]],
+) -> dict[str, object] | None:
+    if not isinstance(candidate, dict):
+        return None
+    answer = normalize_text(str(candidate.get("answer") or ""))
+    if not answer:
+        return None
+    status = normalize_research_status(candidate.get("status"))
+    confidence = normalize_research_confidence(candidate.get("confidence"))
+    allowed_by_label = {str(item.get("label")): item for item in evidence_catalog if str(item.get("label") or "").strip()}
+    selected_labels: list[str] = []
+    raw_labels = candidate.get("source_labels") or []
+    if isinstance(raw_labels, list):
+        for label in raw_labels:
+            key = str(label or "").strip()
+            if key and key in allowed_by_label and key not in selected_labels:
+                selected_labels.append(key)
+    selected_refs = [allowed_by_label[label] for label in selected_labels]
+    inference_note = normalize_text(str(candidate.get("inference_note") or ""))
+
+    if status == "Verified" and not selected_refs:
+        return None
+    if not selected_refs and status in {"Derived", "Conflicted"}:
+        return None
+    if not selected_refs:
+        status = "NeedsReview"
+        confidence = "None"
+
+    return {
+        "answer": answer,
+        "status": status,
+        "confidence": confidence,
+        "evidence": selected_refs,
+        "inference_note": inference_note,
+    }
+
+
+def build_policy_refusal_payload(
+    answer: str,
+    source_bundle_id: str,
+    *,
+    guardrail: str,
+    evidence: list[dict[str, str | None]] | None = None,
+) -> dict[str, object]:
+    evidence = evidence or []
+    return {
+        "schema_version": RESEARCH_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "answer": answer,
+        "evidence": evidence,
+        "source_refs": evidence,
+        "guardrail": guardrail,
+        "model": None,
+        "provider": None,
+        "provider_label": "Policy refusal",
+        "status": "Rejected" if guardrail == "scope_limited" else "NeedsReview",
+        "confidence": "None",
+        "inference_note": "No supported answer was published beyond the approved refusal language.",
+        "sources": [],
+        "confidence_summary": {},
+        "gaps": [],
+        "governance": build_research_governance("policy_refusal" if guardrail != "scope_limited" else "guardrail", source_bundle_id),
+        "policy_version": AI_POLICY_VERSION,
+        "prompt_version": REFUSAL_PROMPT_ID,
+        "registry_version": PROMPT_REGISTRY_VERSION,
+        "source_bundle_id": source_bundle_id,
+    }
+
+
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
     direct_text = str(response.get("output_text") or "").strip()
     if direct_text:
@@ -3232,31 +3421,25 @@ def extract_openai_output_text(response: dict[str, object]) -> str | None:
     return "\n".join(chunks).strip() or None
 
 
-def call_openai_copilot(query_text: str, source_packet: dict[str, object]) -> dict[str, str] | None:
+def call_openai_governed_research(query_text: str, research_context: dict[str, object]) -> dict[str, str] | None:
     if not OPENAI_API_KEY:
         return None
 
     payload = {
         "model": OPENAI_MODEL,
-        "instructions": RESEARCH_SYSTEM_PROMPT,
+        "instructions": RESEARCH_GOVERNED_SYSTEM_PROMPT,
         "input": [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "input_text",
-                        "text": json.dumps(
-                            {
-                                "user_query": query_text,
-                                "source_packet": source_packet,
-                                "task": "Answer with sourced operational analysis. Call out inference explicitly.",
-                            }
-                        ),
+                        "text": json.dumps(research_context),
                     }
                 ],
             }
         ],
-        "temperature": 0.2,
+        "temperature": 0,
         "max_output_tokens": 420,
         "store": False,
     }
@@ -3293,28 +3476,74 @@ def call_openai_copilot(query_text: str, source_packet: dict[str, object]) -> di
     return None
 
 
-def call_gemini_copilot(query_text: str, source_packet: dict[str, object]) -> dict[str, str] | None:
+def extract_anthropic_output_text(response: dict[str, object]) -> str | None:
+    chunks: list[str] = []
+    for item in response.get("content", []):
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") == "text":
+            text = str(item.get("text") or "").strip()
+            if text:
+                chunks.append(text)
+    return "\n".join(chunks).strip() or None
+
+
+def call_anthropic_governed_research(query_text: str, research_context: dict[str, object]) -> dict[str, str] | None:
+    if not ANTHROPIC_API_KEY:
+        return None
+
+    payload = {
+        "model": ANTHROPIC_MODEL,
+        "max_tokens": 420,
+        "temperature": 0,
+        "system": RESEARCH_GOVERNED_SYSTEM_PROMPT,
+        "messages": [
+            {
+                "role": "user",
+                "content": json.dumps(research_context),
+            }
+        ],
+    }
+    try:
+        response = fetch_json(
+            "https://api.anthropic.com/v1/messages",
+            payload=payload,
+            headers={
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": ANTHROPIC_API_VERSION,
+            },
+            timeout=25,
+        )
+    except Exception:
+        return None
+
+    text = extract_anthropic_output_text(response)
+    if not text:
+        return None
+    return {
+        "answer": text,
+        "model": str(response.get("model") or ANTHROPIC_MODEL),
+        "provider": "Anthropic Messages",
+        "provider_label": f"Anthropic · {response.get('model') or ANTHROPIC_MODEL}",
+    }
+
+
+def call_gemini_governed_research(query_text: str, research_context: dict[str, object]) -> dict[str, str] | None:
     if not GEMINI_API_KEY:
         return None
 
     payload = {
-        "system_instruction": {"parts": [{"text": RESEARCH_SYSTEM_PROMPT}]},
+        "system_instruction": {"parts": [{"text": RESEARCH_GOVERNED_SYSTEM_PROMPT}]},
         "contents": [
             {
                 "parts": [
                     {
-                        "text": json.dumps(
-                            {
-                                "user_query": query_text,
-                                "source_packet": source_packet,
-                                "task": "Answer with sourced operational analysis. Call out inference explicitly.",
-                            }
-                        )
+                        "text": json.dumps(research_context)
                     }
                 ]
             }
         ],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 420},
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 420},
     }
 
     try:
@@ -3342,57 +3571,73 @@ def call_gemini_copilot(query_text: str, source_packet: dict[str, object]) -> di
     }
 
 
-def call_keychain_copilot(query_text: str, source_packet: dict[str, object]) -> dict[str, str] | None:
-    openai_result = call_openai_copilot(query_text, source_packet)
+def call_governed_research_model(query_text: str, research_context: dict[str, object]) -> dict[str, str] | None:
+    openai_result = call_openai_governed_research(query_text, research_context)
     if openai_result:
         return openai_result
-    return call_gemini_copilot(query_text, source_packet)
+    anthropic_result = call_anthropic_governed_research(query_text, research_context)
+    if anthropic_result:
+        return anthropic_result
+    return call_gemini_governed_research(query_text, research_context)
 
 
 def build_research_payload(query_text: str) -> dict[str, object]:
     guardrail = get_guardrail(query_text)
+    source_bundle_id = json_digest({"query": query_text.strip(), "guardrail": bool(guardrail)})
     if guardrail:
-        return {
-            "schema_version": RESEARCH_SCHEMA_VERSION,
-            "generated_at": iso_now(),
-            "answer": guardrail,
-            "evidence": [],
-            "guardrail": "scope_limited",
-            "model": None,
-            "sources": [],
-            "confidence_summary": {},
-            "gaps": [],
-        }
+        return build_policy_refusal_payload(guardrail, source_bundle_id, guardrail="scope_limited")
 
     payload = get_dashboard_payload()
     fallback_answer, evidence = build_fallback_answer(query_text, payload)
-    source_packet = {
-        "preview_posture": payload["preview_posture"],
-        "canonical_schema": payload["canonical_schema"],
-        "data_coverage": payload["data_coverage"],
-        "msci_workbench": payload["msci_workbench"],
-        "sandbox_api": payload["sandbox_api"],
-        "external_api_matrix": payload["external_api_matrix"],
-        "benchmark_matrix": payload["benchmark_matrix"],
-        "gaps": payload["gaps"],
-        "security_controls": payload["security_controls"],
-        "legal_risk_register": payload["legal_risk_register"],
-        "atlas": payload["atlas"],
-        "platform_feedback": payload["platform_feedback"],
-    }
-    model_result = call_keychain_copilot(query_text, source_packet)
+    research_context = build_research_context(query_text, payload, fallback_answer, evidence)
+    source_bundle_id = json_digest(research_context)
+    model_result = call_governed_research_model(query_text, research_context)
+    validated_result = validate_governed_research_result(
+        parse_json_text(model_result["answer"]) if model_result else None,
+        evidence,
+    )
+    answer_mode = "deterministic_fallback"
+    answer = fallback_answer
+    selected_evidence = evidence
+    status = "Derived" if evidence else "NeedsReview"
+    confidence = "Medium" if len(evidence) >= 2 else "Low" if evidence else "None"
+    inference_note = "Rendered from the deterministic source-backed answer seed."
+    provider = None
+    provider_label = "Governed deterministic fallback"
+    model_name = None
+
+    if validated_result:
+        answer_mode = "governed_model"
+        answer = str(validated_result["answer"])
+        selected_evidence = list(validated_result["evidence"])
+        status = str(validated_result["status"])
+        confidence = str(validated_result["confidence"])
+        inference_note = str(validated_result.get("inference_note") or "") or inference_note
+        provider = model_result["provider"] if model_result else None
+        provider_label = model_result["provider_label"] if model_result else provider_label
+        model_name = model_result["model"] if model_result else None
+
     return {
         "schema_version": RESEARCH_SCHEMA_VERSION,
         "generated_at": iso_now(),
-        "answer": model_result["answer"] if model_result else fallback_answer,
-        "evidence": evidence,
+        "answer": answer,
+        "evidence": selected_evidence,
+        "source_refs": selected_evidence,
         "guardrail": "source_grounded",
-        "model": model_result["model"] if model_result else None,
-        "provider": model_result["provider"] if model_result else None,
-        "provider_label": model_result["provider_label"] if model_result else "Deterministic fallback",
+        "model": model_name,
+        "provider": provider,
+        "provider_label": provider_label,
+        "status": status,
+        "confidence": confidence,
+        "inference_note": inference_note,
         "sources": payload["sources"],
         "confidence_summary": payload["confidence_summary"],
         "gaps": payload["gaps"],
+        "governance": build_research_governance(answer_mode, source_bundle_id, provider=provider),
+        "policy_version": AI_POLICY_VERSION,
+        "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
+        "registry_version": PROMPT_REGISTRY_VERSION,
+        "source_bundle_id": source_bundle_id,
     }
 
 
