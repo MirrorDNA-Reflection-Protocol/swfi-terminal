@@ -339,6 +339,10 @@ const fundCountryHeader = $("fund-country-header");
 const fundAumHeader = $("fund-aum-header");
 
 const coverageSummaryGrid = $("coverage-summary-grid");
+const signalSummaryNote = $("signal-summary-note");
+const signalList = $("signal-list");
+const briefingList = $("briefing-list");
+const reportLinkList = $("report-link-list");
 const coverageList = $("coverage-list");
 const sourceFamilyList = $("source-family-list");
 const sandboxMapList = $("sandbox-map-list");
@@ -376,13 +380,19 @@ function tone(status) {
     sourced: "ok",
     active: "ok",
     materialized: "ok",
+    verified: "ok",
     partial: "partial",
+    derived: "partial",
     watch: "watch",
+    needsreview: "watch",
+    needs_review: "watch",
+    conflicted: "watch",
     scaffolded: "watch",
     missing_env: "watch",
     missing_driver: "watch",
     preview_branch_only: "watch",
     blocked: "blocked",
+    rejected: "blocked",
     fallback: "blocked",
     connection_failed: "blocked",
     private_source_required: "blocked",
@@ -1220,6 +1230,67 @@ function renderMaturityPanel() {
     .join("");
 }
 
+function renderSignalPanel() {
+  const signalStream = state.dashboard?.profile_signals || {};
+  const items = signalStream.items || [];
+  const summary = signalStream.summary || {};
+  signalSummaryNote.textContent = `${summary.publishable || 0} publishable · ${summary.review_required || 0} review`;
+  signalList.innerHTML = items
+    .map(
+      (item) => `
+        <article class="stack-card tone-${tone(String(item.status || "").toLowerCase())}">
+          <div class="readiness-head">
+            <strong>${esc(item.title)}</strong>
+            <span class="status-chip tone-${tone(String(item.status || "").toLowerCase())}">${esc(item.status)}</span>
+          </div>
+          <p>${esc(item.why_it_matters || item.summary || "")}</p>
+          <div class="detail-line">
+            <span>${esc(item.confidence || "")}</span>
+            <span>${esc(item.priority || "")}</span>
+            <span>${esc(relDate(item.generated_at))}</span>
+          </div>
+          ${
+            (item.source_refs || []).length
+              ? `<div class="tag-row">${(item.source_refs || [])
+                  .map((ref) =>
+                    ref.url
+                      ? `<a class="data-pill pill-link" href="${esc(ref.url)}" target="_blank" rel="noreferrer">${esc(ref.label)}</a>`
+                      : `<span class="data-pill">${esc(ref.label)}</span>`,
+                  )
+                  .join("")}</div>`
+              : ""
+          }
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderBriefingPanel() {
+  const briefings = state.dashboard?.alerts_briefings || {};
+  const items = briefings.items || [];
+  const reports = briefings.reports || [];
+  briefingList.innerHTML = items
+    .map(
+      (item) => `
+        <article class="stack-card tone-${tone(String(item.status || "").toLowerCase())}">
+          <div class="readiness-head">
+            <strong>${esc(item.title)}</strong>
+            <span class="panel-note">${esc(item.cadence || "")}</span>
+          </div>
+          <p>${esc(item.summary || "")}</p>
+          <div class="detail-line">
+            <span>${esc(item.detail || "")}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+  reportLinkList.innerHTML = reports
+    .map((item) => `<a class="nav-cta mini-cta" href="${esc(item.url)}">${esc(item.label)}</a>`)
+    .join("");
+}
+
 function renderCanonicalPanel() {
   const canonical = state.dashboard?.canonical_schema || {};
   const models = canonical.models || [];
@@ -1482,6 +1553,8 @@ function renderAll() {
   try { renderBenchmarkPanel(); } catch (error) { console.error("benchmark", error); }
   try { renderTelemetryChart(); } catch (error) { console.error("telemetry", error); }
   try { renderCoveragePanel(); } catch (error) { console.error("coverage", error); }
+  try { renderSignalPanel(); } catch (error) { console.error("signals", error); }
+  try { renderBriefingPanel(); } catch (error) { console.error("briefings", error); }
   try { renderSandboxMap(); } catch (error) { console.error("sandbox", error); }
   try { renderMaturityPanel(); } catch (error) { console.error("maturity", error); }
   try { renderCanonicalPanel(); } catch (error) { console.error("canonical", error); }

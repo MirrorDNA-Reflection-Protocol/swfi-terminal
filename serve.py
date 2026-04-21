@@ -3120,6 +3120,9 @@ def build_dashboard_payload() -> dict[str, object]:
     payload["readiness"] = build_readiness(concerns, aum_docs, atlas_status, people_summary)
     payload["gaps"] = build_gap_list(atlas_status, people_summary)
     payload["production_launch_checklist"] = build_launch_checklist(atlas_status)
+    nuggets = build_governed_nuggets(payload)
+    payload["profile_signals"] = build_profile_signal_stream(payload, nuggets)
+    payload["alerts_briefings"] = build_alert_briefings(payload, nuggets, payload["profile_signals"])
     payload["notes"] = [PRIVATE_IA_NOTE]
     return payload
 
@@ -3679,6 +3682,129 @@ def build_research_eval_summary() -> dict[str, object]:
         "failed_cases": len(results) - passed,
         "results": results,
     }
+
+
+def nugget_priority_rank(value: object) -> int:
+    return {"high": 0, "medium": 1, "low": 2}.get(str(value or "").lower(), 3)
+
+
+def build_profile_signal_stream(payload: dict[str, object], nuggets: list[dict[str, object]]) -> dict[str, object]:
+    ranked = sorted(
+        nuggets,
+        key=lambda item: (
+            nugget_priority_rank(item.get("priority")),
+            -float(item.get("commercial_relevance", 0.0)),
+            -float(item.get("evidence_strength", 0.0)),
+        ),
+    )
+    items = []
+    for item in ranked[:6]:
+        items.append(
+            {
+                "id": item["entity_id"],
+                "title": item["claim"],
+                "status": item["status"],
+                "confidence": item["confidence"],
+                "summary": item["observed_fact"],
+                "why_it_matters": item["why_it_matters"],
+                "priority": item.get("priority", "medium"),
+                "tags": item.get("tags", []),
+                "review_required": bool(item.get("review_required")),
+                "source_refs": [
+                    {
+                        "label": ref.get("label") or ref.get("excerpt") or "Source",
+                        "url": ref.get("url"),
+                        "source": ref.get("source") or ref.get("source_system") or "SWFI",
+                    }
+                    for ref in item.get("source_refs", [])[:3]
+                ],
+                "generated_at": item["generated_at"],
+            }
+        )
+    return {
+        "generated_at": iso_now(),
+        "items": items,
+        "summary": {
+            "total": len(nuggets),
+            "review_required": sum(1 for item in nuggets if item.get("review_required")),
+            "publishable": sum(1 for item in nuggets if not item.get("review_required")),
+        },
+    }
+
+
+def build_alert_briefings(
+    payload: dict[str, object],
+    nuggets: list[dict[str, object]],
+    profile_signals: dict[str, object],
+) -> dict[str, object]:
+    streams = ((payload.get("email_streams") or {}).get("streams") or [])
+    top_signal = ((profile_signals.get("items") or [])[:1] or [{}])[0]
+    review_required = int((profile_signals.get("summary") or {}).get("review_required", 0))
+    publishable = int((profile_signals.get("summary") or {}).get("publishable", 0))
+    items = [
+        {
+            "title": "Daily subscriber alerts",
+            "status": "ok",
+            "cadence": "Daily",
+            "summary": "Profiles, Transactions, RFPs, and Key People updates assembled from the same governed packet.",
+            "detail": "Mandrill-backed stream for paid subscribers. Best next step is to attach governed profile signals directly into the alert body.",
+        },
+        {
+            "title": "Public Fund Monitor",
+            "status": "ok",
+            "cadence": "Every 3 days",
+            "summary": "Public-facing institutional investor news distribution built from the same underlying data platform.",
+            "detail": "SendGrid-backed stream. Should carry a tighter mix of publishable signals and research links.",
+        },
+        {
+            "title": "What changed now",
+            "status": top_signal.get("status", "watch"),
+            "cadence": "Live packet",
+            "summary": str(top_signal.get("title") or "No profile signal has been published yet."),
+            "detail": str(top_signal.get("why_it_matters") or "Governed profile signals should summarize what changed and why it matters."),
+        },
+        {
+            "title": "Review queue",
+            "status": "watch" if review_required else "ok",
+            "cadence": "Analyst",
+            "summary": f"{review_required} items currently need analyst review; {publishable} are publishable from the current packet.",
+            "detail": "Use the review queue before lifting higher-risk signals into client reports or alert automation.",
+        },
+    ]
+    return {
+        "items": items,
+        "reports": [
+            {"label": "Profile signals JSON", "url": "/api/reports/profile-signals.json"},
+            {"label": "Client brief Markdown", "url": "/api/reports/client-brief.md"},
+        ],
+        "stream_names": [stream.get("name") for stream in streams if isinstance(stream, dict)],
+    }
+
+
+def build_profile_signals_json() -> str:
+    payload = get_dashboard_payload()
+    return json.dumps(payload.get("profile_signals", {}), indent=2) + "\n"
+
+
+def build_client_brief_md() -> str:
+    payload = get_dashboard_payload()
+    profile_signals = payload.get("profile_signals", {})
+    alerts = payload.get("alerts_briefings", {})
+    lines = [
+        "# SWFI Profile Signals Brief",
+        "",
+        f"Generated: {iso_now()}",
+        "",
+        "## What changed",
+    ]
+    for item in (profile_signals.get("items") or [])[:5]:
+        lines.append(f"- **{item['title']}** ({item['status']} / {item['confidence']})")
+        lines.append(f"  - {item['why_it_matters']}")
+    lines.extend(["", "## Alerts and briefings"])
+    for item in (alerts.get("items") or [])[:4]:
+        lines.append(f"- **{item['title']}** · {item['cadence']}")
+        lines.append(f"  - {item['summary']}")
+    return "\n".join(lines) + "\n"
 
 
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
@@ -6099,6 +6225,58 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-research-eval.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/profile-signals.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_profile_signals_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-profile-signals.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/client-brief.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_client_brief_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-client-brief.md"'},
             )
             return True
 
