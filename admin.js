@@ -11,7 +11,9 @@ const exportHistoryEl = $("admin-export-history");
 const errorList = $("admin-error-list");
 const apiMatrixEl = $("admin-api-matrix");
 const reviewQueueEl = $("admin-review-queue");
+const reviewHistoryEl = $("admin-review-history");
 const researchEvalEl = $("admin-research-eval");
+let adminPayload = null;
 
 function esc(value) {
   return String(value ?? "")
@@ -105,6 +107,22 @@ function renderReports(payload) {
     .join("");
 }
 
+function statusLabel(value) {
+  const key = String(value || "").toLowerCase().replaceAll(" ", "_");
+  return ({
+    needsreview: "Needs review",
+    needs_review: "Needs review",
+    verified: "Verified",
+    derived: "Derived",
+    rejected: "Rejected",
+    conflicted: "Conflicted",
+    approved: "Approved",
+    promoted: "Promoted",
+    pending: "Pending review",
+    publishable: "Publishable",
+  })[key] || String(value || "watch");
+}
+
 function renderStatusList(payload) {
   const statuses = payload.statuses || [];
   statusList.innerHTML = statuses
@@ -149,13 +167,14 @@ function renderNuggets(payload) {
         <article class="stack-card tone-${tone(item.status)}">
           <div class="readiness-head">
             <strong>${esc(item.claim)}</strong>
-            <span class="status-chip tone-${tone(item.status)}">${esc(item.status)}</span>
+            <span class="status-chip tone-${tone(item.status)}">${esc(statusLabel(item.status))}</span>
           </div>
           <p>${esc(item.why_it_matters || item.observed_fact || "")}</p>
           <div class="detail-line">
             <span>${esc(item.confidence || "")}</span>
             <span>${esc(item.priority || "")}</span>
             <span>${esc((item.tags || []).join(" · "))}</span>
+            <span>${esc(statusLabel(item.review?.label || item.review?.state || ""))}</span>
           </div>
         </article>
       `,
@@ -250,13 +269,56 @@ function renderReviewQueue(payload) {
         <article class="stack-card tone-${tone(item.status)}">
           <div class="readiness-head">
             <strong>${esc(item.claim)}</strong>
-            <span class="status-chip tone-${tone(item.status)}">${esc(item.status)}</span>
+            <span class="status-chip tone-${tone(item.status)}">${esc(statusLabel(item.status))}</span>
           </div>
           <p>${esc(item.derived_implication || item.observed_fact || "")}</p>
           <div class="detail-line">
             <span>${esc(item.confidence || "")}</span>
             <span>${esc(item.priority || "")}</span>
             <span>${esc((item.source_refs || []).map((ref) => ref.label || "").filter(Boolean).join(" · "))}</span>
+          </div>
+          <div class="detail-line">
+            <span>${esc(statusLabel(item.review?.label || item.review?.state || "Pending review"))}</span>
+          </div>
+          <div class="download-row review-action-row">
+            <button type="button" class="nav-cta mini-cta" data-review-action="approve" data-review-id="${esc(item.entity_id)}">Approve</button>
+            <button type="button" class="nav-cta mini-cta" data-review-action="promote" data-review-id="${esc(item.entity_id)}">Promote</button>
+            <button type="button" class="nav-cta mini-cta" data-review-action="reject" data-review-id="${esc(item.entity_id)}">Reject</button>
+            <button type="button" class="lane-tab" data-review-action="reset" data-review-id="${esc(item.entity_id)}">Reset</button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+  reviewQueueEl.querySelectorAll("[data-review-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-review-id");
+      const action = button.getAttribute("data-review-action");
+      if (!id || !action) return;
+      submitReviewAction(id, action, button).catch((error) => console.error(error));
+    });
+  });
+}
+
+function renderReviewHistory(payload) {
+  const items = payload.nugget_pipeline?.review_history || [];
+  if (!items.length) {
+    reviewHistoryEl.innerHTML = '<article class="stack-card tone-watch"><strong>No review actions recorded yet.</strong><p>Approve, reject, or promote governed nuggets here to create the first analyst history.</p></article>';
+    return;
+  }
+  reviewHistoryEl.innerHTML = items
+    .map(
+      (item) => `
+        <article class="stack-card tone-${tone(item.action === "reject" ? "rejected" : item.action === "promote" ? "verified" : "derived")}">
+          <div class="readiness-head">
+            <strong>${esc(item.nugget_id || "nugget")}</strong>
+            <span class="status-chip tone-${tone(item.action === "reject" ? "rejected" : item.action === "promote" ? "verified" : "derived")}">${esc(statusLabel(item.action))}</span>
+          </div>
+          <p>${esc(item.note || "No analyst note attached.")}</p>
+          <div class="detail-line">
+            <span>${esc(item.reviewer || "reviewer")}</span>
+            <span>${esc(item.auth_mode || "")}</span>
+            <span>${esc(item.timestamp || "")}</span>
           </div>
         </article>
       `,
@@ -298,6 +360,7 @@ function renderResearchEval(payload) {
 }
 
 function renderPayload(payload) {
+  adminPayload = payload;
   renderTicker(payload);
   renderSummaryCards(payload);
   renderStatusStrip(payload);
@@ -309,6 +372,7 @@ function renderPayload(payload) {
   renderErrors(payload);
   renderApiMatrix(payload);
   renderReviewQueue(payload);
+  renderReviewHistory(payload);
   renderResearchEval(payload);
 }
 
@@ -355,6 +419,37 @@ async function rebuildRuntime() {
     }, 1800);
   } finally {
     rebuildButton.disabled = false;
+  }
+}
+
+async function submitReviewAction(id, action, button) {
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Saving...";
+  try {
+    const note = action === "reject" || action === "promote" ? window.prompt("Optional analyst note", "") || "" : "";
+    const response = await fetch("/api/admin/nuggets/review", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action, note }),
+    });
+    if (response.status === 401) {
+      window.location.href = `/login?next=${encodeURIComponent("/admin")}`;
+      return;
+    }
+    if (!response.ok) {
+      throw new Error(`review action ${response.status}`);
+    }
+    const payload = await response.json();
+    if (payload.admin) {
+      renderPayload(payload.admin);
+      return;
+    }
+    await loadAdmin();
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
   }
 }
 

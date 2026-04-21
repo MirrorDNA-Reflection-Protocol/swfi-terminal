@@ -79,11 +79,18 @@ SWFI_EXPORT_AUDIT_LOG = Path(
         str(Path.home() / "Library/Logs/swfi-terminal/export_audit.jsonl"),
     )
 )
+SWFI_NUGGET_REVIEW_LOG = Path(
+    os.environ.get(
+        "SWFI_NUGGET_REVIEW_LOG",
+        str(Path.home() / "Library/Logs/swfi-terminal/nugget_review.jsonl"),
+    )
+)
 RESEARCH_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SWFI_RESEARCH_RATE_LIMIT_PER_MINUTE", "24"))
 EXPORT_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SWFI_EXPORT_RATE_LIMIT_PER_MINUTE", "10"))
 LOGIN_RATE_LIMIT_PER_15_MIN = int(os.environ.get("SWFI_LOGIN_RATE_LIMIT_PER_15_MIN", "12"))
 PREVIEW_SESSION_TTL_SECONDS = int(os.environ.get("SWFI_PREVIEW_SESSION_TTL_SECONDS", "43200"))
 CONNECTOR_PROBE_TTL_SECONDS = int(os.environ.get("SWFI_CONNECTOR_PROBE_TTL_SECONDS", "21600"))
+ADMIN_REVIEW_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SWFI_ADMIN_REVIEW_RATE_LIMIT_PER_MINUTE", "30"))
 
 ATLAS_URI = os.environ.get("SWFI_ATLAS_URI", "").strip()
 ATLAS_DB = os.environ.get("SWFI_ATLAS_DB", "swfi_terminal_preview").strip() or "swfi_terminal_preview"
@@ -810,6 +817,7 @@ _sandbox_request_lock = threading.Lock()
 _dashboard_build_lock = threading.Lock()
 _request_rate_lock = threading.Lock()
 _audit_log_lock = threading.Lock()
+_review_log_lock = threading.Lock()
 _session_lock = threading.Lock()
 _dashboard_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _profiles_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
@@ -3122,7 +3130,7 @@ def build_dashboard_payload() -> dict[str, object]:
     payload["readiness"] = build_readiness(concerns, aum_docs, atlas_status, people_summary)
     payload["gaps"] = build_gap_list(atlas_status, people_summary)
     payload["production_launch_checklist"] = build_launch_checklist(atlas_status)
-    nuggets = build_governed_nuggets(payload)
+    nuggets = apply_nugget_review_state(build_governed_nuggets(payload))
     payload["profile_signals"] = build_profile_signal_stream(payload, nuggets)
     payload["alerts_briefings"] = build_alert_briefings(payload, nuggets, payload["profile_signals"])
     payload["notes"] = [PRIVATE_IA_NOTE]
@@ -3615,27 +3623,53 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
 
 
 def build_nugget_review_queue(nuggets: list[dict[str, object]]) -> list[dict[str, object]]:
-    queue = [item for item in nuggets if item.get("review_required")]
+    queue = [
+        item
+        for item in nuggets
+        if bool((item.get("review") or {}).get("review_required")) or (item.get("review") or {}).get("state") == "pending"
+    ]
     return sorted(queue, key=lambda item: float(item.get("commercial_relevance", 0.0)), reverse=True)
 
 
 def build_nugget_review_csv() -> str:
     payload = get_dashboard_payload()
-    nuggets = build_governed_nuggets(payload)
+    nuggets = apply_nugget_review_state(build_governed_nuggets(payload))
     review_queue = build_nugget_review_queue(nuggets)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Nugget ID", "Claim", "Status", "Confidence", "Priority", "Why It Matters", "Source Labels"])
+    writer.writerow(["Nugget ID", "Claim", "Evidence Status", "Review State", "Confidence", "Priority", "Why It Matters", "Source Labels"])
     for item in review_queue:
         writer.writerow(
             [
                 item["entity_id"],
                 item["claim"],
                 item["status"],
+                (item.get("review") or {}).get("label", ""),
                 item["confidence"],
                 item.get("priority", ""),
                 item["why_it_matters"],
                 "; ".join(str(source.get("label", "")) for source in item.get("source_refs", [])),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_nugget_review_history_csv() -> str:
+    events = list(reversed(read_nugget_review_events(200)))
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Timestamp", "Nugget ID", "Action", "Reviewer", "Auth mode", "Host", "Client IP", "Note"])
+    for event in events:
+        writer.writerow(
+            [
+                event.get("timestamp", ""),
+                event.get("nugget_id", ""),
+                event.get("action", ""),
+                event.get("reviewer", ""),
+                event.get("auth_mode", ""),
+                event.get("host", ""),
+                event.get("client_ip", ""),
+                event.get("note", ""),
             ]
         )
     return output.getvalue()
@@ -3691,8 +3725,9 @@ def nugget_priority_rank(value: object) -> int:
 
 
 def build_profile_signal_stream(payload: dict[str, object], nuggets: list[dict[str, object]]) -> dict[str, object]:
+    publishable_items = [item for item in nuggets if bool((item.get("review") or {}).get("publishable"))]
     ranked = sorted(
-        nuggets,
+        publishable_items,
         key=lambda item: (
             nugget_priority_rank(item.get("priority")),
             -float(item.get("commercial_relevance", 0.0)),
@@ -3711,7 +3746,8 @@ def build_profile_signal_stream(payload: dict[str, object], nuggets: list[dict[s
                 "why_it_matters": item["why_it_matters"],
                 "priority": item.get("priority", "medium"),
                 "tags": item.get("tags", []),
-                "review_required": bool(item.get("review_required")),
+                "review_required": bool((item.get("review") or {}).get("review_required")),
+                "review_label": str((item.get("review") or {}).get("label") or ""),
                 "source_refs": [
                     {
                         "label": ref.get("label") or ref.get("excerpt") or "Source",
@@ -3728,8 +3764,9 @@ def build_profile_signal_stream(payload: dict[str, object], nuggets: list[dict[s
         "items": items,
         "summary": {
             "total": len(nuggets),
-            "review_required": sum(1 for item in nuggets if item.get("review_required")),
-            "publishable": sum(1 for item in nuggets if not item.get("review_required")),
+            "review_required": sum(1 for item in nuggets if (item.get("review") or {}).get("state") == "pending"),
+            "publishable": len(publishable_items),
+            "rejected": sum(1 for item in nuggets if (item.get("review") or {}).get("state") == "rejected"),
         },
     }
 
@@ -3743,6 +3780,7 @@ def build_alert_briefings(
     top_signal = ((profile_signals.get("items") or [])[:1] or [{}])[0]
     review_required = int((profile_signals.get("summary") or {}).get("review_required", 0))
     publishable = int((profile_signals.get("summary") or {}).get("publishable", 0))
+    rejected = int((profile_signals.get("summary") or {}).get("rejected", 0))
     items = [
         {
             "title": "Daily subscriber alerts",
@@ -3769,8 +3807,8 @@ def build_alert_briefings(
             "title": "Review queue",
             "status": "watch" if review_required else "ok",
             "cadence": "Analyst",
-            "summary": f"{review_required} items currently need analyst review; {publishable} are publishable from the current packet.",
-            "detail": "Use the review queue before lifting higher-risk signals into client reports or alert automation.",
+            "summary": f"{review_required} items currently need analyst review; {publishable} are publishable and {rejected} are held back.",
+            "detail": "Use the review queue to approve, reject, or promote governed signals before they move into client reports or alert automation.",
         },
     ]
     return {
@@ -4959,8 +4997,9 @@ def build_admin_payload() -> dict[str, object]:
     target_bundle = load_target_accounts()
     people_summary = get_msci_people_summary(target_bundle)
     live_external_matrix = get_live_external_api_matrix()
-    nuggets = build_governed_nuggets(dashboard) if isinstance(dashboard, dict) and dashboard else []
+    nuggets = apply_nugget_review_state(build_governed_nuggets(dashboard)) if isinstance(dashboard, dict) and dashboard else []
     review_queue = build_nugget_review_queue(nuggets)
+    review_events = list(reversed(read_nugget_review_events(20)))
     research_eval = build_research_eval_summary()
     export_payload = get_cached_msci_people_export_payload(include_stale=True) or {
         "tone": "ok" if people_summary.get("status") == "ok" else "watch",
@@ -5000,7 +5039,11 @@ def build_admin_payload() -> dict[str, object]:
         {"label": "Export audit log", "status": "ok" if SWFI_EXPORT_AUDIT_LOG.exists() else "watch", "note": f"{len(audit_events)} recent events loaded"},
         {"label": "Sandbox API", "status": str(sandbox_status.get('tone', 'watch')), "note": str(sandbox_status.get('source', {}).get('note', ''))},
         {"label": "Public connector probes", "status": "ok" if sum(1 for item in live_external_matrix if item.get("live_status") == "ok") >= 4 else "partial", "note": f"{sum(1 for item in live_external_matrix if item.get('live_status') == 'ok')} connectors responded on the latest probe"},
+        {"label": "Review ledger", "status": "ok" if review_events else "watch", "note": f"{len(review_events)} recent analyst actions loaded"},
     ]
+    approved_count = sum(1 for item in nuggets if (item.get("review") or {}).get("state") == "approved")
+    promoted_count = sum(1 for item in nuggets if (item.get("review") or {}).get("state") == "promoted")
+    rejected_count = sum(1 for item in nuggets if (item.get("review") or {}).get("state") == "rejected")
     return {
         "schema_version": ADMIN_SCHEMA_VERSION,
         "generated_at": iso_now(),
@@ -5010,6 +5053,7 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Exports logged", "value": str(len(audit_events)), "note": "Recent export audit events"},
             {"label": "Live public probes", "value": str(sum(1 for item in live_external_matrix if item.get("live_status") == "ok")), "note": "Public/free connector probes responding on the latest check"},
             {"label": "Governed nuggets", "value": str(len(nuggets)), "note": f"{len(review_queue)} currently require analyst review"},
+            {"label": "Approved / promoted", "value": str(approved_count + promoted_count), "note": f"{rejected_count} currently rejected"},
         ],
         "statuses": statuses,
         "errors": errors,
@@ -5019,6 +5063,13 @@ def build_admin_payload() -> dict[str, object]:
         "nugget_pipeline": {
             "items": nuggets,
             "review_queue": review_queue,
+            "review_history": review_events,
+            "summary": {
+                "pending": len(review_queue),
+                "approved": approved_count,
+                "promoted": promoted_count,
+                "rejected": rejected_count,
+            },
         },
         "research_eval": research_eval,
         "reports": [
@@ -5031,8 +5082,14 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Nugget schema JSON", "url": "/api/reports/nugget-schema.json"},
             {"label": "Prompt registry YAML", "url": "/api/reports/prompt-registry.yaml"},
             {"label": "Nugget review CSV", "url": "/api/reports/nugget-review.csv"},
+            {"label": "Nugget review history CSV", "url": "/api/reports/nugget-review-history.csv"},
             {"label": "Research eval JSON", "url": "/api/reports/research-eval.json"},
         ],
+        "review_actions": {
+            "url": "/api/admin/nuggets/review",
+            "method": "POST",
+            "actions": ["approve", "reject", "promote", "reset"],
+        },
         "rebuild": {"url": "/api/admin/rebuild", "method": "POST"},
     }
 
@@ -5903,6 +5960,133 @@ def append_export_audit_event(handler: "SiteHandler", route: str, outcome: str, 
         return
 
 
+NUGGET_REVIEW_ACTIONS = {"approve", "reject", "promote", "reset"}
+
+
+def read_nugget_review_events(limit: int | None = None) -> list[dict[str, object]]:
+    if not SWFI_NUGGET_REVIEW_LOG.exists():
+        return []
+    rows: list[dict[str, object]] = []
+    try:
+        with SWFI_NUGGET_REVIEW_LOG.open("r", encoding="utf-8") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(record, dict):
+                    rows.append(record)
+    except Exception:
+        return []
+    if limit is None or limit >= len(rows):
+        return rows
+    return rows[-limit:]
+
+
+def latest_nugget_review_state() -> dict[str, dict[str, object]]:
+    state: dict[str, dict[str, object]] = {}
+    for event in read_nugget_review_events():
+        nugget_id = str(event.get("nugget_id") or "").strip()
+        if nugget_id:
+            state[nugget_id] = event
+    return state
+
+
+def append_nugget_review_event(
+    *,
+    nugget_id: str,
+    action: str,
+    reviewer: str,
+    auth_mode: str,
+    note: str = "",
+    host: str = "",
+    client_ip: str = "",
+) -> dict[str, object]:
+    event = {
+        "timestamp": iso_now(),
+        "nugget_id": nugget_id,
+        "action": action,
+        "reviewer": reviewer,
+        "auth_mode": auth_mode,
+        "note": note[:500],
+        "host": host,
+        "client_ip": client_ip,
+    }
+    SWFI_NUGGET_REVIEW_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with _review_log_lock:
+        with SWFI_NUGGET_REVIEW_LOG.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event) + "\n")
+    return event
+
+
+def review_state_for_nugget(nugget: dict[str, object], event: dict[str, object] | None) -> dict[str, object]:
+    review_required = bool(nugget.get("review_required"))
+    if not review_required:
+        return {
+            "state": "publishable",
+            "label": "Publishable",
+            "publishable": True,
+            "review_required": False,
+            "reviewed_at": "",
+            "reviewer": "",
+            "note": "",
+        }
+    action = str((event or {}).get("action") or "").strip().lower()
+    if action == "approve":
+        return {
+            "state": "approved",
+            "label": "Approved",
+            "publishable": True,
+            "review_required": False,
+            "reviewed_at": str((event or {}).get("timestamp") or ""),
+            "reviewer": str((event or {}).get("reviewer") or ""),
+            "note": str((event or {}).get("note") or ""),
+        }
+    if action == "promote":
+        return {
+            "state": "promoted",
+            "label": "Promoted",
+            "publishable": True,
+            "review_required": False,
+            "reviewed_at": str((event or {}).get("timestamp") or ""),
+            "reviewer": str((event or {}).get("reviewer") or ""),
+            "note": str((event or {}).get("note") or ""),
+        }
+    if action == "reject":
+        return {
+            "state": "rejected",
+            "label": "Rejected",
+            "publishable": False,
+            "review_required": False,
+            "reviewed_at": str((event or {}).get("timestamp") or ""),
+            "reviewer": str((event or {}).get("reviewer") or ""),
+            "note": str((event or {}).get("note") or ""),
+        }
+    return {
+        "state": "pending",
+        "label": "Pending review",
+        "publishable": False,
+        "review_required": True,
+        "reviewed_at": "",
+        "reviewer": "",
+        "note": "",
+    }
+
+
+def apply_nugget_review_state(nuggets: list[dict[str, object]]) -> list[dict[str, object]]:
+    state_map = latest_nugget_review_state()
+    reviewed: list[dict[str, object]] = []
+    for nugget in nuggets:
+        event = state_map.get(str(nugget.get("entity_id") or ""))
+        item = dict(nugget)
+        item["review"] = review_state_for_nugget(nugget, event)
+        reviewed.append(item)
+    return reviewed
+
+
 class SiteHandler(http.server.SimpleHTTPRequestHandler):
     server_version = "SWFI/1.0"
     sys_version = ""
@@ -6590,6 +6774,26 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_csv(build_nugget_review_csv(), "swfi-nugget-review.csv", head_only=head_only)
             return True
 
+        if parsed.path == "/api/reports/nugget-review-history.csv":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_csv(build_nugget_review_history_csv(), "swfi-nugget-review-history.csv", head_only=head_only)
+            return True
+
         if parsed.path == "/api/reports/research-eval.json":
             auth_mode = authenticated_request_mode(self)
             if not auth_mode:
@@ -6743,7 +6947,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         parsed = parse.urlparse(self.path)
         allow = "GET, HEAD, OPTIONS"
-        if parsed.path in {"/auth/login", "/api/admin/rebuild"}:
+        if parsed.path in {"/auth/login", "/api/admin/rebuild", "/api/admin/nuggets/review"}:
             allow = "POST, OPTIONS"
         self._write_empty(status=204, extra_headers={"Allow": allow})
 
@@ -6831,6 +7035,68 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                     "message": "Runtime caches cleared. Packet warm-up has started in the background.",
                     "dashboard_generated_at": iso_now(),
                     "admin_generated_at": iso_now(),
+                },
+                status=200,
+            )
+            return
+
+        if parsed.path == "/api/admin/nuggets/review":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401)
+                return
+            allowed, retry_after = check_rate_limit("admin_review", client_ip, ADMIN_REVIEW_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                self._write_json(
+                    {"error": "review rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0") or "0")
+                raw_body = self.rfile.read(length) if length else b"{}"
+                body_data = json.loads(raw_body.decode("utf-8", errors="replace"))
+            except Exception:
+                self._write_json({"error": "invalid request body"}, status=400)
+                return
+
+            nugget_id = str(body_data.get("id", "")).strip()
+            action = str(body_data.get("action", "")).strip().lower()
+            note = normalize_text(str(body_data.get("note", "") or ""))
+            if not nugget_id:
+                self._write_json({"error": "missing nugget id"}, status=400)
+                return
+            if action not in NUGGET_REVIEW_ACTIONS:
+                self._write_json({"error": "invalid review action"}, status=400)
+                return
+
+            dashboard = get_cached_dashboard_payload(include_stale=True) or get_dashboard_payload()
+            nuggets = build_governed_nuggets(dashboard) if isinstance(dashboard, dict) else []
+            nugget = next((item for item in nuggets if str(item.get("entity_id") or "") == nugget_id), None)
+            if not nugget:
+                self._write_json({"error": "nugget not found"}, status=404)
+                return
+
+            reviewer = "localhost" if auth_mode == "localhost" else str((get_session(self) or {}).get("username") or auth_mode)
+            event = append_nugget_review_event(
+                nugget_id=nugget_id,
+                action=action,
+                reviewer=reviewer,
+                auth_mode=auth_mode,
+                note=note,
+                host=host,
+                client_ip=client_ip,
+            )
+            clear_runtime_caches()
+            payload = build_admin_payload()
+            self._write_json(
+                {
+                    "status": "ok",
+                    "message": f"Review action {action} recorded for {nugget_id}.",
+                    "event": event,
+                    "admin": payload,
                 },
                 status=200,
             )
