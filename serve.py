@@ -104,6 +104,7 @@ RESEARCH_SCHEMA_VERSION = "swfi.research.v1"
 MSCI_SCHEMA_VERSION = "swfi.msci_workbench.v1"
 ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PROFILES_SCHEMA_VERSION = "swfi.profiles.v1"
+RESEARCH_WORKSPACE_SCHEMA_VERSION = "swfi.research_workspace.v1"
 PREVIEW_ROUTE = "/preview"
 AI_POLICY_VERSION = "swfi.policy.ai_governance.v0_1"
 PROMPT_REGISTRY_VERSION = "swfi.prompt_registry.v1"
@@ -2843,24 +2844,32 @@ def build_readiness(
 
 
 def build_metric_cards(
-    concerns: list[dict[str, object]],
     target_summary: dict[str, object],
-    confidence_summary: dict[str, object],
     people_summary: dict[str, object],
+    profiles_payload: dict[str, object],
 ) -> list[dict[str, str]]:
     people_counts = people_summary.get("summary", {})
+    profile_summary = profiles_payload.get("summary", {}) if isinstance(profiles_payload, dict) else {}
     return [
-        {"label": "Coverage models", "value": str(len(CANONICAL_SCHEMA)), "note": "Institution, fund, AUM, people, document, RFP, filing, news"},
-        {"label": "Coverage items", "value": str(len(concerns)), "note": "Current items surfaced from the live delivery sheet"},
+        {
+            "label": "Profiles in coverage",
+            "value": str(profile_summary.get("total_profiles", 0)),
+            "note": "Sovereign wealth funds, public pensions, central banks, endowments, and related institutions",
+        },
+        {
+            "label": "Verified profiles",
+            "value": str(profile_summary.get("verified_profiles", 0)),
+            "note": "Profiles already carrying stronger trust status in the current workspace",
+        },
         {
             "label": "Target accounts",
             "value": str(target_summary.get("total_targets", 0)),
-            "note": "MSCI account workbook rows normalized into the workbench",
+            "note": "MSCI account coverage mapped into the delivery workspace",
         },
         {
-            "label": "Accessible key people",
+            "label": "Accessible Key People",
             "value": str(people_counts.get("people_total", 0) or "0"),
-            "note": "Authenticated Key People list available for MSCI export",
+            "note": "Current authenticated people available for delivery",
         },
     ]
 
@@ -3304,13 +3313,23 @@ def build_launch_checklist(atlas_status: dict[str, object]) -> list[dict[str, st
 def build_statuses(
     concern_source: dict[str, str | None],
     aum_source: dict[str, str | None],
-    atlas_status: dict[str, object],
     sandbox_status: dict[str, object],
     people_summary: dict[str, object],
+    profiles_payload: dict[str, object],
 ) -> list[dict[str, str]]:
+    profile_summary = profiles_payload.get("summary", {}) if isinstance(profiles_payload, dict) else {}
     return [
         {
-            "source": "Profiles + Key People",
+            "source": "Profiles",
+            "status": "ok" if int(profile_summary.get("total_profiles", 0) or 0) else "watch",
+            "note": (
+                f"{profile_summary.get('total_profiles', 0)} institution profiles are live in the protected workspace, including {profile_summary.get('verified_profiles', 0)} with stronger trust status."
+                if int(profile_summary.get("total_profiles", 0) or 0)
+                else "Profile coverage is still loading."
+            ),
+        },
+        {
+            "source": "Key People",
             "status": str(people_summary.get("tone", "watch")),
             "note": (
                 f"Authenticated people access summary is live with {people_summary.get('summary', {}).get('people_total', 0)} accessible records."
@@ -3319,9 +3338,9 @@ def build_statuses(
             ),
         },
         {
-            "source": "Datafeeds",
+            "source": "Datafeeds/API",
             "status": "ok" if concern_source.get("status") == "ok" else "blocked",
-            "note": "Client blocker rows loaded from the live sheet." if concern_source.get("status") == "ok" else str(concern_source.get("note", "")),
+            "note": "MSCI, Bloomberg, and IFC delivery lanes are loaded from the current sheet." if concern_source.get("status") == "ok" else str(concern_source.get("note", "")),
         },
         {
             "source": "API Access",
@@ -3331,16 +3350,6 @@ def build_statuses(
                 if SWFI_SANDBOX_API_KEY
                 else "Public collection docs parsed from api.swfi.com."
             ),
-        },
-        {
-            "source": "Security posture",
-            "status": "ok",
-            "note": "Session-backed preview login, hardened headers, controlled export gates, audit logging, and preview-host crawl blocking are now in the runtime surface.",
-        },
-        {
-            "source": "Storage + cache",
-            "status": str(atlas_status.get("tone", "watch")),
-            "note": str(atlas_status.get("note", "")),
         },
     ]
 
@@ -3598,7 +3607,7 @@ def build_dashboard_payload() -> dict[str, object]:
         "source_taxonomy": SOURCE_TAXONOMY,
         "sources": sources,
         "confidence_summary": confidence_summary,
-        "metric_cards": build_metric_cards(concerns, target_bundle.get("summary", {}), confidence_summary, people_summary),
+        "metric_cards": build_metric_cards(target_bundle.get("summary", {}), people_summary, profiles_payload),
         "lanes": lanes,
         "concerns": concerns,
         "action_queue": build_action_queue(concerns),
@@ -3626,7 +3635,7 @@ def build_dashboard_payload() -> dict[str, object]:
 
     atlas_status = atlas_materialize_payload(payload)
     payload["atlas"] = atlas_status
-    payload["statuses"] = build_statuses(concern_bundle["source"], aum_bundle["source"], atlas_status, sandbox_bundle, people_summary)
+    payload["statuses"] = build_statuses(concern_bundle["source"], aum_bundle["source"], sandbox_bundle, people_summary, profiles_payload)
     payload["readiness"] = build_readiness(concerns, aum_docs, atlas_status, people_summary)
     payload["gaps"] = build_gap_list(atlas_status, people_summary)
     payload["production_launch_checklist"] = build_launch_checklist(atlas_status)
@@ -4070,9 +4079,9 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "schema_version": NUGGET_SCHEMA_VERSION,
             "entity_id": "performance-clearance",
             "entity_type": "Document",
-            "claim": "Production-shape infrastructure exists, but performance and entitlement clearance remain unfinished.",
-            "observed_fact": performance_gap or "The architecture is production-shaped, but current rollout guidance remains controlled until performance and auth posture are cleared.",
-            "derived_implication": "The preview can sell the direction, but the production promise still depends on auth, entitlements, and performance telemetry.",
+            "claim": "Core delivery controls are live, but full client entitlements and performance monitoring remain the next release step.",
+            "observed_fact": performance_gap or "The current runtime supports controlled access and delivery, but rollout guidance still depends on clearing live performance and entitlement posture.",
+            "derived_implication": "The client surface can support live demos now, while the next release should complete entitlement binding and performance monitoring.",
             "status": "Derived",
             "confidence": "Medium",
             "commercial_relevance": 0.83,
@@ -4085,7 +4094,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             ],
             "contradictions": [],
             "review_required": False,
-            "why_it_matters": "This keeps the team honest about what is preview-ready versus fully production-ready.",
+            "why_it_matters": "Institutional buyers want controlled access and reliability to move together, not as separate promises.",
             "policy_version": AI_POLICY_VERSION,
             "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
             "model_id": "deterministic.nugget_builder.v1",
@@ -4520,12 +4529,12 @@ def build_profiles_payload() -> dict[str, object]:
 
         trust_status = "NeedsReview"
         trust_confidence = "Medium"
-        trust_note = "Authenticated profile packet exists, but the record still needs field-level review."
+        trust_note = "Authenticated SWFI profile data is available, but the record still needs field-level review."
         verified_lower = seed_verified.lower()
         if verified_lower == "yes":
             trust_status = "Verified"
             trust_confidence = "High"
-            trust_note = "Verified in the SWFs Global seed and present in the authenticated profile packet."
+            trust_note = "Verified in SWFI reference coverage and present in authenticated SWFI profile data."
         elif "no longer exist" in verified_lower:
             trust_status = "Conflicted"
             trust_confidence = "High"
@@ -4537,15 +4546,15 @@ def build_profiles_payload() -> dict[str, object]:
         elif str(provenance.get("status") or "").strip() == "sourced":
             trust_status = "Derived"
             trust_confidence = "Medium"
-            trust_note = "Profile is sourced from the authenticated packet but is not yet marked verified in the curated seed."
+            trust_note = "Profile is sourced from authenticated SWFI data but is not yet marked verified in reference coverage."
 
         source_refs = [
             {
-                "label": "Authenticated profile packet",
+                "label": "Authenticated SWFI profile data",
                 "url": str(provenance.get("evidence_url_or_pointer") or ""),
-                "source": str(provenance.get("source_system") or "SWFI entity packet"),
+                "source": str(provenance.get("source_system") or "SWFI entity data"),
                 "retrieved_at": str(provenance.get("retrieval_time") or ""),
-                "status": str(provenance.get("status") or "sourced"),
+                "status": "authenticated",
             }
         ]
         if str(entity.get("website") or "").strip():
@@ -4584,7 +4593,7 @@ def build_profiles_payload() -> dict[str, object]:
                 "title": "Asset scale",
                 "status": "Verified" if aum_value else "Missing",
                 "confidence": "High" if aum_value else "None",
-                "summary": human_number(aum_value) if aum_value else "AUM is not populated in the current packet.",
+                "summary": human_number(aum_value) if aum_value else "AUM is not populated in current SWFI coverage.",
                 "observed_at": updated_at or str(provenance.get("retrieval_time") or ""),
                 "source_refs": source_refs[:1],
             },
@@ -4594,9 +4603,9 @@ def build_profiles_payload() -> dict[str, object]:
                 "status": "Verified" if current_contacts else "Missing",
                 "confidence": "High" if current_contacts else "None",
                 "summary": (
-                    f"{len(current_contacts)} current Key People in the packet, {email_count} with email, {phone_count} with phone."
+                    f"{len(current_contacts)} current Key People in coverage, {email_count} with email, {phone_count} with phone."
                     if current_contacts
-                    else "No current Key People are attached to this profile in the current packet."
+                    else "No current Key People are attached to this profile."
                 ),
                 "observed_at": updated_at or str(provenance.get("retrieval_time") or ""),
                 "source_refs": source_refs[:1],
@@ -4622,7 +4631,7 @@ def build_profiles_payload() -> dict[str, object]:
                     "title": "Public website",
                     "status": "Missing",
                     "confidence": "None",
-                    "summary": "The current packet does not include a website for this profile.",
+                    "summary": "Current SWFI coverage does not include a website for this profile.",
                     "observed_at": str(provenance.get("retrieval_time") or ""),
                     "source_refs": source_refs[:1],
                 }
@@ -4688,7 +4697,7 @@ def build_profiles_payload() -> dict[str, object]:
         "key_people": sum(int(item["coverage"]["key_people"]) for item in records),
         "regions": [{"name": name, "count": count} for name, count in Counter(item["region"] for item in records if item["region"]).most_common(6)],
         "types": [{"name": name, "count": count} for name, count in Counter(item["type"] for item in records if item["type"]).most_common(8)],
-        "generated_from": "Curated sovereign/public profile packet from authenticated entity data plus SWFs Global seed overlay.",
+        "generated_from": "Curated sovereign and public profile coverage built from authenticated SWFI entity data and SWFI reference sources.",
     }
     return {
         "schema_version": PROFILES_SCHEMA_VERSION,
@@ -4696,10 +4705,20 @@ def build_profiles_payload() -> dict[str, object]:
         "summary": summary,
         "profiles": records,
         "sources": [
-            seed_bundle.get("source"),
+            make_source_entry(
+                "swfs_global_reference",
+                "SWFI reference coverage",
+                "document_extraction_required",
+                "SWFs Global reference file",
+                iso_now(),
+                "csv_parse",
+                "high",
+                "ok",
+                note="Reference sovereign fund directory used for verification and comparison.",
+            ),
             make_source_entry(
                 "demo_entity_packet",
-                "Curated authenticated profile packet",
+                "Authenticated SWFI profile data",
                 "authenticated_private_source",
                 "swfi_sandbox_api/entities",
                 iso_now(),
@@ -4707,7 +4726,7 @@ def build_profiles_payload() -> dict[str, object]:
                 "medium",
                 "ok",
                 evidence_url=f"{SWFI_SANDBOX_API_ROOT}/entities",
-                note="Used for governed profile pages in the protected preview.",
+                note="Authenticated entity data used for current profile coverage.",
             ),
         ],
     }
@@ -4905,6 +4924,187 @@ def build_operator_loop_md() -> str:
         lines.append(f"- **{item['title']}** ({item['status']} / {item['confidence']})")
         lines.append(f"  - {item['why_it_matters']}")
     return "\n".join(lines) + "\n"
+
+
+def research_family_for_nugget(nugget: dict[str, object]) -> str:
+    tags = {str(tag or "").strip().lower() for tag in (nugget.get("tags") or []) if str(tag or "").strip()}
+    entity_type = str(nugget.get("entity_type") or "").strip().lower()
+    if {"rfp", "mandate", "timing"} & tags or entity_type in {"rfp", "mandate"}:
+        return "Mandates and RFPs"
+    if {"people", "contact", "trust"} & tags or entity_type in {"keyperson", "person"}:
+        return "Key People"
+    if {"msci", "export", "delivery"} & tags:
+        return "Datafeeds and API"
+    if {"ops", "auth", "performance", "atlas", "storage", "history"} & tags:
+        return "Platform access"
+    return "Profiles and Research"
+
+
+def build_research_profile_focus(profiles_payload: dict[str, object]) -> list[dict[str, object]]:
+    profiles = profiles_payload.get("profiles", []) if isinstance(profiles_payload, dict) else []
+    scoped = [
+        item
+        for item in profiles
+        if isinstance(item, dict) and str(item.get("type") or "") in {"Sovereign Wealth Fund", "Public Pension", "Central Bank"}
+    ]
+    scoped.sort(
+        key=lambda item: (
+            -float(item.get("assets") or 0.0),
+            -int(((item.get("coverage") or {}).get("key_people")) or 0),
+            str(item.get("name") or ""),
+        )
+    )
+    focus: list[dict[str, object]] = []
+    for item in scoped[:8]:
+        signals = item.get("signals") or []
+        top_signal = signals[0] if isinstance(signals, list) and signals else {}
+        focus.append(
+            {
+                "slug": str(item.get("slug") or ""),
+                "name": str(item.get("name") or "Unnamed profile"),
+                "type": str(item.get("type") or ""),
+                "country": str(item.get("country") or item.get("region") or ""),
+                "aum_display": str(item.get("aum_display") or "Not disclosed"),
+                "trust_status": str(((item.get("trust") or {}).get("status")) or "NeedsReview"),
+                "key_people": int(((item.get("coverage") or {}).get("key_people")) or 0),
+                "with_email": int(((item.get("coverage") or {}).get("with_email")) or 0),
+                "focus_note": str(top_signal.get("summary") or f"{int(((item.get('coverage') or {}).get('key_people')) or 0)} Key People currently attached."),
+                "profile_url": f"/profiles/{item.get('slug')}",
+            }
+        )
+    return focus
+
+
+def build_research_workspace_payload() -> dict[str, object]:
+    dashboard = get_dashboard_payload()
+    profiles_payload = get_profiles_payload()
+    live_external_matrix = get_live_external_api_matrix()
+    source_watchlist = build_source_watchlist_payload()
+    nuggets = apply_nugget_review_state(build_governed_nuggets(dashboard))
+    publishable = [item for item in nuggets if bool((item.get("review") or {}).get("publishable"))]
+    pending = [item for item in nuggets if (item.get("review") or {}).get("state") == "pending"]
+
+    def ranked(items: list[dict[str, object]]) -> list[dict[str, object]]:
+        return sorted(
+            items,
+            key=lambda item: (
+                nugget_priority_rank(item.get("priority")),
+                -float(item.get("commercial_relevance", 0.0)),
+                -float(item.get("evidence_strength", 0.0)),
+            ),
+        )
+
+    def map_read(item: dict[str, object]) -> dict[str, object]:
+        review = item.get("review") or {}
+        return {
+            "id": str(item.get("entity_id") or ""),
+            "title": str(item.get("claim") or ""),
+            "family": research_family_for_nugget(item),
+            "entity_type": str(item.get("entity_type") or ""),
+            "status": str(item.get("status") or "NeedsReview"),
+            "confidence": str(item.get("confidence") or "Low"),
+            "priority": str(item.get("priority") or "medium"),
+            "summary": str(item.get("observed_fact") or ""),
+            "implication": str(item.get("derived_implication") or ""),
+            "why_it_matters": str(item.get("why_it_matters") or ""),
+            "tags": [str(tag) for tag in (item.get("tags") or []) if str(tag or "").strip()],
+            "review_label": str(review.get("label") or ""),
+            "publishable": bool(review.get("publishable")),
+            "source_refs": [
+                {
+                    "label": ref.get("label") or ref.get("excerpt") or "Source",
+                    "url": ref.get("url"),
+                    "source": ref.get("source") or ref.get("source_system") or "SWFI",
+                    "retrieved_at": ref.get("retrieved_at"),
+                }
+                for ref in item.get("source_refs", [])[:4]
+            ],
+            "generated_at": str(item.get("generated_at") or ""),
+        }
+
+    current_reads = [map_read(item) for item in ranked(publishable)]
+    review_queue = [map_read(item) for item in ranked(pending)]
+    if not current_reads:
+        current_reads = review_queue[:4]
+
+    watch_items = list(source_watchlist.get("items") or [])
+    family_groups: list[dict[str, object]] = []
+    for group in source_watchlist.get("groups", []) or []:
+        if not isinstance(group, dict):
+            continue
+        items = group.get("items") or []
+        family_groups.append(
+            {
+                "family": str(group.get("family") or "Official sources"),
+                "count": len(items),
+                "high_priority": sum(1 for item in items if item.get("priority") == "High"),
+                "items": items[:4],
+            }
+        )
+    family_groups.sort(key=lambda item: (-int(item.get("high_priority") or 0), -int(item.get("count") or 0), str(item.get("family") or "")))
+    watch_items.sort(key=lambda item: (0 if item.get("priority") == "High" else 1, str(item.get("family") or ""), str(item.get("source_name") or "")))
+    mandate_sources = [dict(item) for item in watch_items if item.get("family") == "Mandates and RFPs"][:8]
+    profiles_in_focus = build_research_profile_focus(profiles_payload)
+    live_probes = sum(1 for item in live_external_matrix if item.get("live_status") == "ok")
+
+    return {
+        "schema_version": RESEARCH_WORKSPACE_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary": {
+            "current_reads": len(current_reads),
+            "publishable_reads": len([item for item in current_reads if item.get("publishable")]),
+            "review_queue": len(review_queue),
+            "official_sources": int(source_watchlist.get("summary", {}).get("total_sources", 0)),
+            "high_priority_sources": int(source_watchlist.get("summary", {}).get("high_priority", 0)),
+            "mandate_sources": len(mandate_sources),
+            "profiles_in_focus": len(profiles_in_focus),
+            "live_probes": live_probes,
+        },
+        "status_strip": [
+            {
+                "label": "Current reads",
+                "status": "ok" if current_reads else "watch",
+                "note": f"{len(current_reads)} source-backed reads are available now.",
+            },
+            {
+                "label": "Mandates and RFPs",
+                "status": "ok" if mandate_sources else "watch",
+                "note": f"{len(mandate_sources)} official mandate and RFP sources are staged in the current watchlist.",
+            },
+            {
+                "label": "Official source coverage",
+                "status": "ok" if int(source_watchlist.get('summary', {}).get('high_priority', 0)) else "watch",
+                "note": f"{int(source_watchlist.get('summary', {}).get('high_priority', 0))} high-priority official rails are currently in scope.",
+            },
+            {
+                "label": "Under analyst review",
+                "status": "watch" if review_queue else "ok",
+                "note": f"{len(review_queue)} reads remain under analyst review before wider publication.",
+            },
+        ],
+        "metric_cards": [
+            {"label": "Current reads", "value": str(len(current_reads)), "note": "Evidence-backed reads available in the current workspace."},
+            {"label": "Official sources", "value": str(int(source_watchlist.get("summary", {}).get("total_sources", 0))), "note": "Official pages, tenders, meetings, budgets, and oversight rails in scope."},
+            {"label": "Mandate sources", "value": str(len(mandate_sources)), "note": "Official mandate and RFP rails prioritized for current monitoring."},
+            {"label": "Profiles in focus", "value": str(len(profiles_in_focus)), "note": "Largest sovereign and public profiles surfaced with current coverage context."},
+        ],
+        "downloads": [
+            {"label": "Research workspace JSON", "url": "/api/research-workspace/v1"},
+            {"label": "Client brief", "url": "/api/reports/client-brief.md"},
+            {"label": "Profile signals JSON", "url": "/api/reports/profile-signals.json"},
+            {"label": "Official source watchlist", "url": "/api/reports/source-watchlist.csv"},
+        ],
+        "current_reads": current_reads,
+        "review_queue": review_queue,
+        "briefings": list(((dashboard.get("alerts_briefings") or {}).get("items") or []))[:4],
+        "source_groups": family_groups[:5],
+        "mandate_sources": mandate_sources,
+        "profiles_in_focus": profiles_in_focus,
+    }
+
+
+def build_research_workspace_json() -> str:
+    return json.dumps(build_research_workspace_payload(), indent=2) + "\n"
 
 
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
@@ -5318,6 +5518,18 @@ def clear_runtime_caches() -> None:
         _msci_people_summary_cache["payload"] = None
         _msci_people_export_cache["timestamp"] = 0.0
         _msci_people_export_cache["payload"] = None
+
+
+def warm_runtime_caches() -> None:
+    try:
+        get_dashboard_payload()
+        get_profiles_payload()
+        build_research_workspace_payload()
+        build_admin_payload()
+        get_live_external_api_matrix()
+        get_msci_people_export_payload(load_target_accounts())
+    except Exception:
+        return
         _external_probe_cache["timestamp"] = 0.0
         _external_probe_cache["payload"] = None
 
@@ -5952,10 +6164,10 @@ def request_is_authenticated(handler: "SiteHandler") -> bool:
 
 
 def authenticated_request_mode(handler: "SiteHandler") -> str | None:
-    if is_local_request(handler):
-        return "localhost"
     if get_session(handler) is not None:
         return "session"
+    if os.environ.get("SWFI_ALLOW_LOCALHOST_BYPASS", "").strip() == "1" and is_local_request(handler):
+        return "localhost"
     return None
 
 
@@ -6471,7 +6683,7 @@ def render_msci_html(host: str, proto: str, csp_nonce: str) -> str:
         proto,
         path="/msci",
         title="SWFI | MSCI Key People Export Workspace",
-        description="Controlled-access SWFI workspace for MSCI Key People exports, account mapping, and delivery review.",
+        description="Controlled-access SWFI workspace for MSCI Key People exports, account mapping, and delivery.",
         about=["MSCI", "Key People", "Profiles", "Datafeeds", "API Access", "Asset Allocation"],
     )
     return render_template_html("msci.html", meta, csp_nonce)
@@ -6483,11 +6695,24 @@ def render_profiles_html(host: str, proto: str, csp_nonce: str) -> str:
         proto,
         path="/profiles",
         title="SWFI | Profiles",
-        description="Controlled-access SWFI profile workspace for sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, and source-backed profile review.",
+        description="Controlled-access SWFI profile workspace for sovereign wealth funds, public pensions, central banks, Key People, Asset Allocation, and source-backed profile detail.",
         about=["Profiles", "Key People", "Asset Allocation", "Transactions", "RFPs", "Datafeeds", "API Access"],
         force_private=True,
     )
     return render_template_html("profiles.html", meta, csp_nonce)
+
+
+def render_research_html(host: str, proto: str, csp_nonce: str) -> str:
+    meta = build_page_meta(
+        host,
+        proto,
+        path="/research",
+        title="SWFI | Research",
+        description="Controlled-access SWFI research workspace for current reads, Mandates, RFPs, Key People, official source coverage, and source-backed briefings.",
+        about=["Research", "Mandates", "RFPs", "Key People", "Profiles", "Transactions", "Datafeeds", "API Access"],
+        force_private=True,
+    )
+    return render_template_html("research.html", meta, csp_nonce)
 
 
 def render_admin_html(host: str, proto: str, csp_nonce: str) -> str:
@@ -6532,7 +6757,7 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
       <div class="auth-panel panel">
         <p class="sys-label">Controlled access</p>
         <h1>SWFI Intelligence Terminal</h1>
-        <p class="auth-copy">This preview requires sign-in before Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, API Access, and the MSCI workspace are loaded.</p>
+        <p class="auth-copy">Sign in to open Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, API Access, and the MSCI workspace.</p>
         {error_block}
         <form class="auth-form" method="post" action="/auth/login">
           <input type="hidden" name="next" value="{next_value}" />
@@ -6546,7 +6771,7 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
           </label>
           <button type="submit" class="nav-cta auth-submit">Sign in</button>
         </form>
-        <p class="auth-note">Controlled-access preview. Sensitive exports remain separately protected.</p>
+        <p class="auth-note">Controlled access. Sensitive exports remain separately protected.</p>
       </div>
     </div>
   </body>
@@ -7201,6 +7426,15 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
+        if parsed.path == "/research.js":
+            self._write_text(
+                (ROOT / "research.js").read_text(encoding="utf-8"),
+                "application/javascript; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+
         if parsed.path == "/auth/logout":
             clear_session(self)
             self._write_redirect("/login", set_cookie=self._session_cookie_value("", max_age=0))
@@ -7233,6 +7467,13 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
                 return True
             self._write_json(get_profiles_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/research-workspace", "/api/research-workspace/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_research_workspace_payload(), head_only=head_only)
             return True
 
         profile_match = re.fullmatch(r"/api/profiles/([^/]+)/v1", parsed.path)
@@ -7747,6 +7988,14 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_html(render_profiles_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
             return True
 
+        if parsed.path in ("/research", "/research.html"):
+            if not request_is_authenticated(self):
+                self._write_redirect(f"/login?next={parse.quote('/research', safe='/')}")
+                return True
+            csp_nonce = secrets.token_urlsafe(18)
+            self._write_html(render_research_html(host, proto, csp_nonce), csp_nonce=csp_nonce, head_only=head_only)
+            return True
+
         if parsed.path in ("/admin", "/admin.html"):
             if not request_is_authenticated(self):
                 self._write_redirect(f"/login?next={parse.quote('/admin', safe='/')}")
@@ -7874,16 +8123,7 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 return
             clear_runtime_caches()
 
-            def warm_runtime_packets() -> None:
-                try:
-                    get_dashboard_payload()
-                    get_profiles_payload()
-                    build_admin_payload()
-                    get_live_external_api_matrix()
-                except Exception:
-                    return
-
-            threading.Thread(target=warm_runtime_packets, daemon=True).start()
+            threading.Thread(target=warm_runtime_caches, daemon=True).start()
             append_export_audit_event(self, parsed.path, "ok", auth_mode)
             self._write_json(
                 {
@@ -8020,6 +8260,7 @@ def main() -> None:
     args = parser.parse_args()
 
     server = http.server.ThreadingHTTPServer((args.host, args.port), SiteHandler)
+    threading.Thread(target=warm_runtime_caches, daemon=True, name="swfi-warm-runtime").start()
     print(f"SWFI terminal listening on http://{args.host}:{args.port}")
     try:
         server.serve_forever()

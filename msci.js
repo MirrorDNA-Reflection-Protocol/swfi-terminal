@@ -52,7 +52,7 @@ function renderTicker() {
     { label: "Email", value: "640", delta: "present" },
     { label: "Phone", value: "138", delta: "present" },
     { label: "LinkedIn", value: "146", delta: "linked" },
-    { label: "Preview rows", value: "10", delta: "surfaced" },
+    { label: "Sample rows", value: "10", delta: "shown" },
   ];
   const markup = items
     .map(
@@ -73,7 +73,7 @@ function renderStatusStrip(workbench) {
   const exportInfo = workbench.people_export || {};
   const summary = exportInfo.coverage_summary || {};
   const items = [
-    { label: "Controlled access", note: "Session-backed preview login", status: "ok" },
+    { label: "Controlled access", note: "Session-backed access", status: "ok" },
     { label: "People export", note: `${summary.people_total || 0} accessible records`, status: "ok" },
     { label: "Email coverage", note: `${summary.with_email || 0} records`, status: summary.with_email ? "partial" : "blocked" },
     { label: "Phone coverage", note: `${summary.with_phone || 0} records`, status: summary.with_phone ? "partial" : "blocked" },
@@ -147,7 +147,7 @@ function renderFields(workbench) {
 function renderPreviewRows(workbench) {
   const rows = workbench.people_export?.preview_rows || [];
   if (!rows.length) {
-    previewTable.innerHTML = '<p class="panel-note">No preview rows are currently surfaced.</p>';
+    previewTable.innerHTML = '<p class="panel-note">No sample rows are currently available.</p>';
     return;
   }
   const rowStatus = (row) => {
@@ -197,7 +197,7 @@ function renderDownloads(workbench) {
   const items = [
     { label: "Accounts CSV", href: downloads.accounts_csv },
     { label: "People CSV", href: downloads.people_csv },
-    { label: "Review CSV", href: downloads.people_review_csv },
+    { label: "Follow-up CSV", href: downloads.people_review_csv },
     { label: "Template CSV", href: downloads.people_template_csv },
   ].filter((item) => item.href);
   downloadsEl.innerHTML = items

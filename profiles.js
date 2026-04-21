@@ -48,6 +48,8 @@ function tone(status) {
     missing: "blocked",
     needsreview: "watch",
     needs_review: "watch",
+    authenticated: "partial",
+    pending_ratification: "partial",
     ok: "ok",
     partial: "partial",
     blocked: "blocked",
@@ -66,7 +68,9 @@ function statusLabel(status) {
     derived: "Derived",
     conflicted: "Conflicted",
     missing: "Missing",
-  })[key] || String(status || "Review");
+    authenticated: "Authenticated",
+    pending_ratification: "Authenticated",
+  })[key] || String(status || "Under review");
 }
 
 function relDate(value) {
@@ -95,8 +99,8 @@ function renderTicker(payload) {
   if (!track) return;
   const items = [
     { label: "Profiles", value: payload.summary?.total_profiles || 0, delta: "current" },
-    { label: "Verified", value: payload.summary?.verified_profiles || 0, delta: "seed aligned" },
-    { label: "Review", value: payload.summary?.review_profiles || 0, delta: "needs review" },
+    { label: "Verified", value: payload.summary?.verified_profiles || 0, delta: "current" },
+    { label: "Under review", value: payload.summary?.review_profiles || 0, delta: "current" },
     { label: "Key People", value: payload.summary?.key_people || 0, delta: "attached" },
   ];
   const markup = items
@@ -117,10 +121,10 @@ function renderTicker(payload) {
 function renderSummary(payload) {
   const summary = payload.summary || {};
   const cards = [
-    { label: "Profiles", value: summary.total_profiles || 0, note: "Curated sovereign and public profiles in the packet" },
-    { label: "Verified", value: summary.verified_profiles || 0, note: "Profiles aligned to the SWFs Global seed" },
+    { label: "Profiles", value: summary.total_profiles || 0, note: "Curated sovereign and public profiles in current coverage" },
+    { label: "Verified", value: summary.verified_profiles || 0, note: "Profiles aligned to SWFI reference coverage" },
     { label: "Needs review", value: summary.review_profiles || 0, note: "Profiles with review still required" },
-    { label: "Key People", value: summary.key_people || 0, note: "Current Key People attached across the packet" },
+    { label: "Key People", value: summary.key_people || 0, note: "Current Key People attached across coverage" },
   ];
   summaryGrid.innerHTML = cards
     .map(
@@ -135,7 +139,7 @@ function renderSummary(payload) {
     .join("");
 
   statusStrip.innerHTML = [
-    { label: "Profiles", note: summary.generated_from || "Curated packet", status: "ok" },
+    { label: "Profiles", note: summary.generated_from || "Curated profile coverage", status: "ok" },
     { label: "Regions", note: `${(summary.regions || []).length} regions represented`, status: "ok" },
     { label: "Types", note: `${(summary.types || []).length} profile types represented`, status: "ok" },
   ]
@@ -285,7 +289,7 @@ function renderDetail(profile) {
     detailConfidenceEl.textContent = "None";
     detailConfidenceEl.className = "status-chip tone-blocked";
     detailMetaEl.textContent = "";
-    detailSummaryEl.textContent = "The requested profile is not available in the current packet.";
+    detailSummaryEl.textContent = "The requested profile is not available.";
     factGridEl.innerHTML = "";
     signalListEl.innerHTML = '<article class="empty-state"><p>No governed profile signals are available.</p></article>';
     sourceListEl.innerHTML = '<article class="empty-state"><p>No source references are available.</p></article>';
@@ -309,17 +313,17 @@ function renderDetail(profile) {
     .filter(Boolean)
     .map((value) => `<span>${esc(value)}</span>`)
     .join("");
-  detailSummaryEl.textContent = profile.summary || profile.background || profile.trust?.note || "No summary is available in the current packet.";
+  detailSummaryEl.textContent = profile.summary || profile.background || profile.trust?.note || "No summary is available.";
 
   const facts = [
-    { label: "Assets", value: profile.aum_display || "Not disclosed", note: "Current packet value" },
+    { label: "Assets", value: profile.aum_display || "Not disclosed", note: "Current value" },
     { label: "Country", value: profile.country || "Not disclosed", note: "Profile geography" },
     { label: "Region", value: profile.region || "Not disclosed", note: "SWFI region" },
     { label: "Established", value: profile.established_at || "Not disclosed", note: "Institution start date" },
     { label: "Key People", value: String(profile.coverage?.key_people || 0), note: "Current people attached" },
     { label: "With email", value: String(profile.coverage?.with_email || 0), note: "Key People with email" },
     { label: "With phone", value: String(profile.coverage?.with_phone || 0), note: "Key People with phone" },
-    { label: "Website", value: profile.website ? "Available" : "Missing", note: profile.website || "No website in current packet" },
+    { label: "Website", value: profile.website ? "Available" : "Missing", note: profile.website || "No website in current coverage" },
   ];
   factGridEl.innerHTML = facts
     .map(
@@ -387,7 +391,7 @@ function renderDetail(profile) {
   const people = profile.key_people || [];
   keyPeopleCountEl.textContent = `${people.length} people`;
   if (!people.length) {
-    keyPeopleEl.innerHTML = '<article class="empty-state"><p>No Key People are attached to this profile in the current packet.</p></article>';
+    keyPeopleEl.innerHTML = '<article class="empty-state"><p>No Key People are attached to this profile.</p></article>';
   } else {
     keyPeopleEl.innerHTML = `
       <div class="msci-table-row profile-people-row msci-table-head">
@@ -481,5 +485,5 @@ window.addEventListener("popstate", async () => {
 loadProfiles().catch((error) => {
   console.error(error);
   detailNameEl.textContent = "Profiles unavailable";
-  detailSummaryEl.textContent = "The profiles workspace could not load the current packet.";
+  detailSummaryEl.textContent = "The profiles workspace could not load the current data.";
 });

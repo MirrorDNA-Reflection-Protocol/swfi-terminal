@@ -676,6 +676,9 @@ button { cursor: pointer; }
   margin-top: 14px;
   align-items: start;
 }
+.dashboard-grid {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
 .left-rail, .center-column, .right-rail, .lower-grid { display: grid; gap: 14px; }
 .lower-grid { grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr); }
 .telemetry-row { margin-top: 14px; }
@@ -684,6 +687,9 @@ button { cursor: pointer; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 14px;
+}
+.dashboard-registry-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .panel-stack { display: grid; gap: 8px; }
 
@@ -1135,6 +1141,19 @@ button { cursor: pointer; }
 }
 .profiles-lower-grid { grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr); }
 
+/* Research */
+.research-stack { gap: 16px; margin-top: 16px; }
+.research-hero { grid-template-columns: minmax(0, 1fr) 360px; }
+.research-grid { grid-template-columns: 360px minmax(0, 1fr) 340px; }
+.read-detail-head { display: grid; gap: 12px; }
+.read-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 /* ── FOOTER ── */
 .site-footer {
   display: flex;
@@ -1158,6 +1177,7 @@ button { cursor: pointer; }
   .workspace-grid { grid-template-columns: 260px minmax(0, 1fr); }
   .right-rail { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); }
   .profiles-grid { grid-template-columns: 320px minmax(0, 1fr); }
+  .research-grid { grid-template-columns: 320px minmax(0, 1fr); }
 }
 @media (max-width: 1480px) {
   .registry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1170,7 +1190,8 @@ button { cursor: pointer; }
   .brief-grid, .reference-cards { grid-template-columns: 1fr; }
   .landing-hero, .landing-grid,
   .msci-hero, .msci-grid,
-  .profiles-hero, .profiles-grid, .profiles-lower-grid { grid-template-columns: 1fr; }
+  .profiles-hero, .profiles-grid, .profiles-lower-grid,
+  .research-hero, .research-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .page-shell { width: calc(100vw - 12px); }

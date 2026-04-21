@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SWFI Intelligence — Live Terminal</title>
-    <meta name="description" content="Sovereign wealth fund intelligence terminal. Powered by Active Mirror." />
+    <meta name="description" content="SWFI intelligence terminal for Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, and API Access." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -27,7 +27,7 @@
             <span class="brand-text">SWFI</span>
           </a>
           <a href="/profiles" class="nav-link">Profiles</a>
-          <a href="#research" class="nav-link">Research</a>
+          <a href="/research" class="nav-link">Research</a>
           <a href="/msci" class="nav-link">MSCI</a>
           <a href="#feeds" class="nav-link">Datafeeds</a>
         </div>
@@ -130,7 +130,7 @@
 
           <div class="chat-suggestions">
             <button type="button" class="suggestion-chip" data-chat-suggestion="Summarize MSCI export readiness and the next delivery milestones.">MSCI readiness</button>
-            <button type="button" class="suggestion-chip" data-chat-suggestion="What should be automated first across the feed lanes?">Automation plan</button>
+            <button type="button" class="suggestion-chip" data-chat-suggestion="What should be automated first across the feed lanes?">Refresh plan</button>
             <button type="button" class="suggestion-chip" data-chat-suggestion="Which AUM fields matter for subsidiaries and managed assets?">AUM model</button>
             <button type="button" class="suggestion-chip" data-chat-suggestion="Show active RFPs by asset class">Active RFPs</button>
           </div>
@@ -153,7 +153,7 @@
         <section class="metric-grid" id="metric-grid"></section>
 
         <!-- Workspace Grid -->
-        <section class="workspace-grid">
+        <section class="workspace-grid dashboard-grid">
           <aside class="left-rail">
             <article class="panel lane-panel">
               <div class="panel-head">
@@ -170,7 +170,7 @@
               <div class="panel-head">
                 <div>
                   <p class="sys-label">Coverage focus</p>
-                  <h3>Current priorities</h3>
+                  <h3>Coverage priorities</h3>
                 </div>
               </div>
               <div class="action-list" id="action-list"></div>
@@ -232,50 +232,6 @@
             </div>
           </section>
 
-          <aside class="right-rail">
-            <article class="panel benchmark-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="sys-label">Platform access</p>
-                  <h3>Datafeeds/API and sources</h3>
-                </div>
-              </div>
-              <div class="section-block">
-                <p class="sys-label">Platform references</p>
-                <div class="benchmark-list" id="benchmark-list"></div>
-              </div>
-              <div class="section-block">
-                <p class="sys-label">Source stack</p>
-                <div class="api-stack-list" id="api-stack-list"></div>
-              </div>
-            </article>
-
-            <!-- Proposal brief -->
-            <article class="panel proposal-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="sys-label">Subscription</p>
-                  <h3>SWFI offerings</h3>
-                </div>
-              </div>
-              <div id="proposal-brief"></div>
-            </article>
-
-            <!-- Platform reference -->
-            <article class="panel reference-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="sys-label">Platform</p>
-                  <h3>Coverage surface</h3>
-                </div>
-              </div>
-              <div id="reference-grid"></div>
-              <div class="section-block">
-                <p class="sys-label">API collections</p>
-                <div class="collection-list" id="collection-list"></div>
-              </div>
-            </article>
-          </aside>
         </section>
 
         <!-- Telemetry -->
@@ -292,7 +248,7 @@
           </article>
         </section>
 
-        <section class="registry-grid">
+        <section class="registry-grid dashboard-registry-grid">
           <article class="panel signal-panel">
             <div class="panel-head">
               <div>
@@ -337,16 +293,6 @@
             </div>
           </article>
 
-          <article class="panel maturity-panel">
-            <div class="panel-head">
-              <div>
-                <p class="sys-label">API access</p>
-                <h3>Source Connections</h3>
-              </div>
-            </div>
-            <div class="panel-stack" id="maturity-group-list"></div>
-          </article>
-
           <article class="panel schema-panel">
             <div class="panel-head">
               <div>
@@ -361,46 +307,24 @@
               <div class="panel-stack" id="source-trail-list"></div>
             </div>
           </article>
-
-          <article class="panel launch-panel">
-            <div class="panel-head">
-              <div>
-                <p class="sys-label">Operations</p>
-                <h3>Alerts, Controls &amp; Reports</h3>
-              </div>
-            </div>
-            <div class="panel-stack" id="launch-checklist-list"></div>
-            <div class="section-block">
-              <p class="sys-label">Current gaps</p>
-              <div class="panel-stack" id="gap-list"></div>
-            </div>
-            <div class="section-block">
-              <p class="sys-label">Security controls</p>
-              <div class="panel-stack" id="security-controls-list"></div>
-            </div>
-            <div class="section-block">
-              <p class="sys-label">Legal &amp; risk</p>
-              <div class="panel-stack" id="risk-register-list"></div>
-            </div>
-            <div class="section-block">
-              <p class="sys-label">Automated sends</p>
-              <div class="panel-stack" id="email-stream-list"></div>
-            </div>
-          </article>
         </section>
       </main>
 
       <!-- ── FOOTER ── -->
       <footer class="site-footer">
         <div class="footer-left">
-          <span class="footer-brand">◆ Powered by <strong>Active Mirror</strong></span>
+          <span class="footer-brand">◆ <strong>SWFI</strong></span>
           <span class="footer-sep">·</span>
-          <span class="footer-sub">Sovereign delivery stack</span>
+          <span class="footer-sub">Institutional investor intelligence</span>
         </div>
         <div class="footer-right">
-          <span>N1 Intelligence (OPC) Pvt Ltd</span>
+          <span>Profiles</span>
           <span class="footer-sep">·</span>
-          <span>Goa, India</span>
+          <span>Transactions</span>
+          <span class="footer-sep">·</span>
+          <span>RFPs</span>
+          <span class="footer-sep">·</span>
+          <span>Key People</span>
         </div>
       </footer>
     </div>

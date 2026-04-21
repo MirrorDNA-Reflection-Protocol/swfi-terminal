@@ -136,8 +136,8 @@ const HERO_VIEWS = {
 const INTEL_TAB_PROMPTS = {
   "top-swfs": "Show the top 5 sovereign wealth fund profiles by assets and note any coverage cautions.",
   "pif-deals": "Summarize Public Investment Fund transactions and explain any current source limitations.",
-  "gcc-trends": "Summarize GCC asset allocation, mandate, and transaction themes from the current packet.",
-  "active-rfps": "Show active RFPs and mandate activity by strategy from the current packet.",
+  "gcc-trends": "Summarize GCC asset allocation, mandate, and transaction themes from current SWFI sources.",
+  "active-rfps": "Show active RFPs and mandate activity by strategy from current SWFI sources.",
 };
 
 const OFFERING_CARDS = [
@@ -422,7 +422,7 @@ const PRIORITY_LABELS = {
 };
 
 const TAG_LABELS = {
-  automation: "Automation",
+  automation: "Refresh",
   capacity: "Refresh scale",
   classification: "Asset Allocation",
   exports: "Datafeeds/API",
@@ -449,7 +449,7 @@ const CONCERN_CONTENT = {
   },
   "Increase Datafeeds/API refresh": {
     summary: "Increase refresh capacity for the largest institutional datafeeds.",
-    build: "Improve update throughput across ingestion, review, and publishing for high-volume profiles and transactions.",
+    build: "Increase refresh capacity across high-volume profiles and transactions.",
     impact: "This keeps recurring deliveries on schedule and reduces stale records.",
   },
   "Complete Profile fields": {
@@ -459,13 +459,13 @@ const CONCERN_CONTENT = {
   },
   "Complete Datafeeds/API fields": {
     summary: "Complete the fields needed by downstream Datafeeds/API consumers.",
-    build: "Close the remaining gaps between tracked internal fields and the records surfaced directly in exports.",
+    build: "Expose the remaining fields clients expect directly in exports and APIs.",
     impact: "This reduces one-off handling and makes delivery easier to automate.",
   },
   "Align Key People with Profiles": {
     summary: "Align Key People, contacts, and institution profiles with stable account references.",
     build: "Use consistent identifiers and joins so people-to-profile mapping stays stable across exports and APIs.",
-    impact: "This is the foundation for trustworthy MSCI Key People files and review workflows.",
+    impact: "This keeps MSCI Key People files consistent across profiles, exports, and APIs.",
   },
   "Normalize AUM currency fields": {
     summary: "Normalize currency handling across AUM, managed assets, and account-level outputs.",
@@ -555,7 +555,7 @@ function concernNarrative(row) {
     build: focusAreas.length
       ? `Focus areas: ${focusAreas.join(", ")}.`
       : "Focus areas span profiles, key people, asset allocation, and delivery controls.",
-    impact: "This affects export completeness, Datafeeds/API reliability, and operator confidence across the lane.",
+    impact: "This affects export completeness, Datafeeds/API reliability, and delivery confidence across the lane.",
   };
 }
 
@@ -680,9 +680,9 @@ function renderHeroStats() {
   if (aumSource) aumSource.textContent = view.source || "";
   if (heroSourceCount) {
     const publishableUpdates = liveTerminal.summary?.publishable_updates || 0;
-    heroSourceCount.textContent = sourceCount
-      ? `${sourceCount} sources linked · ${publishableUpdates} updates ready`
-      : "Sources loaded";
+    heroSourceCount.textContent = publishableUpdates
+      ? `${publishableUpdates} source-backed updates ready`
+      : (sourceCount ? "Source-backed coverage" : "Coverage loading");
   }
 
   if (statCountries) statCountries.textContent = first.value;
@@ -729,20 +729,20 @@ function renderStatusStrip() {
   const items = state.dashboard?.statuses || [];
   const liveTerminal = state.dashboard?.live_terminal || {};
   const spotlight = liveTerminal.spotlight || {};
-  const recentAction = (liveTerminal.recent_actions || [])[0] || {};
+  const topSignal = (state.dashboard?.profile_signals?.items || [])[0] || {};
   const liveItems = [];
   if (spotlight.name) {
     liveItems.push({
-      source: "Profile focus",
+      source: "Coverage focus",
       note: `${spotlight.name} · ${spotlight.key_people || 0} Key People · ${spotlight.with_email || 0} with email`,
       status: String(spotlight.trust_status || "watch").toLowerCase(),
     });
   }
-  if (recentAction.title) {
+  if (topSignal.title) {
     liveItems.push({
-      source: "Recent review",
-      note: `${displayReviewAction(recentAction.action)} · ${recentAction.title} · ${relDate(recentAction.timestamp)}`,
-      status: String(recentAction.status || recentAction.action || "watch").toLowerCase(),
+      source: "Latest update",
+      note: `${topSignal.title} · ${topSignal.confidence || "Source-backed"} · ${relDate(topSignal.generated_at)}`,
+      status: String(topSignal.status || "watch").toLowerCase(),
     });
   }
   statusStrip.innerHTML = liveItems
@@ -796,6 +796,7 @@ function renderLaneSelectors() {
 }
 
 function renderProposalBrief() {
+  if (!proposalBrief) return;
   proposalBrief.innerHTML = `
     <div class="brief-grid">
       ${OFFERING_CARDS.map(
@@ -812,6 +813,7 @@ function renderProposalBrief() {
 }
 
 function renderReferenceGrid() {
+  if (!referenceGrid) return;
   const reference = state.dashboard?.platform_reference;
   if (!reference) {
     referenceGrid.innerHTML = "";
@@ -847,6 +849,7 @@ function renderReferenceGrid() {
 }
 
 function renderCollections() {
+  if (!collectionList) return;
   const docs = state.dashboard?.aum_docs;
   if (!docs?.collections) {
     collectionList.innerHTML = "";
@@ -873,9 +876,9 @@ function renderLaneList() {
           </div>
           <p>${esc(lane.focus)}</p>
           <div class="lane-metrics">
-            <span><strong>${lane.issue_count ?? 0}</strong><em>Priorities</em></span>
-            <span><strong>${lane.manual_count ?? 0}</strong><em>Automation</em></span>
-            <span><strong>${lane.field_gap_count ?? 0}</strong><em>Data gaps</em></span>
+            <span><strong>${lane.issue_count ?? 0}</strong><em>Coverage items</em></span>
+            <span><strong>${lane.manual_count ?? 0}</strong><em>Manual steps</em></span>
+            <span><strong>${lane.field_gap_count ?? 0}</strong><em>Field gaps</em></span>
           </div>
           <div class="lane-footer"><span>${esc(lane.deliverable)}</span></div>
         </button>
@@ -902,12 +905,11 @@ function renderActionList() {
         <article class="action-card tone-${tone(item.status)}">
           <div class="action-head">
             <strong>${esc(displayTitle(item.title))}</strong>
-            <span>${esc(displayPriority(item.priority))}</span>
+            <span>${esc(displayStatus(item.status))}</span>
           </div>
           <p>${esc(item.impact)}</p>
           <div class="action-meta">
             <span>${esc(item.lane)}</span>
-            <span>${esc(displayStatus(item.status))}</span>
           </div>
         </article>
       `,
@@ -955,11 +957,10 @@ function renderConcernList() {
             </div>
             <div class="tag-column">
               <span class="status-chip tone-${tone(row.state)}">${esc(displayStatus(row.state))}</span>
-              <span class="priority-chip">${esc(displayPriority(row.priority))}</span>
             </div>
           </div>
           <div class="concern-block"><span>Needed for</span><p>${esc(narrative.summary)}</p></div>
-          <div class="concern-block"><span>Current state</span><p>${esc(narrative.build)}</p></div>
+          <div class="concern-block"><span>Available now</span><p>${esc(narrative.build)}</p></div>
           <div class="concern-block"><span>Why it matters</span><p>${esc(narrative.impact)}</p></div>
           <div class="tag-row">${tags.map((tag) => `<span class="data-pill">${esc(tag)}</span>`).join("")}</div>
         </article>
@@ -985,7 +986,7 @@ function renderApiSurface() {
     { label: "Query params", value: String(params.length), note: "Time, value, entity_id, sort" },
     { label: "Response fields", value: String(fields.length), note: "Assets, investments, allocations" },
     { label: "Collections", value: String(collections.length), note: "Public collection object types" },
-    { label: "Delivery modes", value: "API+CSV+UI", note: "Machine + operator workflows" },
+    { label: "Delivery modes", value: "API+CSV+UI", note: "Interface and export workflows" },
   ];
   apiTitle.textContent = docs.title || "AUM collection";
   apiPath.textContent = docs.path || "";
@@ -1047,6 +1048,7 @@ function renderReadiness() {
 }
 
 function renderBenchmarkPanel() {
+  if (!benchmarkList || !apiStackList) return;
   const benchmarks = state.dashboard?.benchmark_matrix || state.dashboard?.competitor_benchmark || [];
   benchmarkList.innerHTML = benchmarks
     .map((benchmark) => {
@@ -1151,6 +1153,7 @@ function renderTelemetryChart() {
 }
 
 function renderCoveragePanel() {
+  if (!coverageSummaryGrid || !coverageList || !sourceFamilyList) return;
   const coverage = state.dashboard?.data_coverage || [];
   const families = state.dashboard?.source_taxonomy || [];
   const confidence = state.dashboard?.confidence_summary || {};
@@ -1162,7 +1165,7 @@ function renderCoveragePanel() {
     { label: "Source families", value: String(families.length), note: "Transactions, People, Entities, Enhancers" },
     { label: "Public APIs now", value: String((publicGroup?.items || []).length), note: "Current public rails ready for wiring" },
     { label: "Sandbox collections", value: String(sandbox.summary?.accessible_collections || 0), note: "Authenticated collections reachable now" },
-    { label: "Private gaps", value: String(confidence.private_sources || 0), note: "Authenticated sources still required" },
+    { label: "Controlled sources", value: String(confidence.private_sources || 0), note: "Authenticated sources available behind sign-in" },
   ];
   coverageSummaryGrid.innerHTML = cards
     .map(
@@ -1244,6 +1247,7 @@ function renderSandboxMap() {
 }
 
 function renderMaturityPanel() {
+  if (!maturityGroupList) return;
   const groups = state.dashboard?.connector_maturity || [];
   maturityGroupList.innerHTML = groups
     .map(
@@ -1277,7 +1281,6 @@ function renderSignalPanel() {
   const items = signalStream.items || [];
   const summary = signalStream.summary || {};
   const spotlight = liveTerminal.spotlight || {};
-  const recentActions = liveTerminal.recent_actions || [];
   const signalCards = [];
 
   if (spotlight.name) {
@@ -1293,7 +1296,6 @@ function renderSignalPanel() {
           <span>${esc(`${spotlight.with_email || 0} with email`)}</span>
           <span>${esc(`${spotlight.with_phone || 0} with phone`)}</span>
         </div>
-        ${(spotlight.reasons || []).length ? `<div class="tag-row">${spotlight.reasons.map((reason) => `<span class="data-pill">${esc(reason)}</span>`).join("")}</div>` : ""}
         <div class="detail-line">
           ${spotlight.profile_url ? `<a class="nav-link" href="${esc(spotlight.profile_url)}">Open profile</a>` : ""}
           ${spotlight.api_url ? `<a class="nav-link" href="${esc(spotlight.api_url)}">API</a>` : ""}
@@ -1302,7 +1304,7 @@ function renderSignalPanel() {
     `);
   }
 
-  signalSummaryNote.textContent = `${summary.publishable || 0} ready now · ${summary.review_required || 0} in review`;
+  signalSummaryNote.textContent = `${items.length} source-backed update${items.length === 1 ? "" : "s"}`;
   signalCards.push(
     ...items
     .map(
@@ -1315,7 +1317,6 @@ function renderSignalPanel() {
           <p>${esc(item.why_it_matters || item.summary || "")}</p>
           <div class="detail-line">
             <span>${esc(item.confidence || "")}</span>
-            <span>${esc(item.priority || "")}</span>
             <span>${esc(relDate(item.generated_at))}</span>
           </div>
           ${
@@ -1333,29 +1334,6 @@ function renderSignalPanel() {
       `,
     ),
   );
-
-  if (recentActions.length) {
-    signalCards.push(`
-      <article class="stack-card tone-${tone(String(recentActions[0].status || recentActions[0].action || "").toLowerCase())}">
-        <div class="readiness-head">
-          <strong>Recent review activity</strong>
-          <span class="panel-note">${esc(relDate(recentActions[0].timestamp))}</span>
-        </div>
-        <div class="mini-list">
-          ${recentActions
-            .map(
-              (item) => `
-                <article class="mini-item">
-                  <span class="list-mark">▸</span>
-                  <p><strong>${esc(displayReviewAction(item.action))}</strong> · ${esc(item.title)}</p>
-                </article>
-              `,
-            )
-            .join("")}
-        </div>
-      </article>
-    `);
-  }
 
   signalList.innerHTML = signalCards.join("");
 }
@@ -1410,16 +1388,17 @@ function renderBriefingPanel() {
 }
 
 function renderCanonicalPanel() {
+  if (!confidenceSummaryGrid || !schemaList || !sourceTrailList) return;
   const canonical = state.dashboard?.canonical_schema || {};
   const models = canonical.models || [];
   const provenance = canonical.provenance_contract || {};
   const confidence = state.dashboard?.confidence_summary || {};
   const sources = state.dashboard?.sources || [];
   const cards = [
-    { label: "High confidence", value: String(confidence.high || 0), note: "Public APIs, local packets, and vetted docs" },
-    { label: "Medium confidence", value: String(confidence.medium || 0), note: "Useful inputs that still need review" },
-    { label: "Blocked sources", value: String(confidence.blocked_sources || 0), note: "Fallback or private-source dependencies" },
-    { label: "Canonical models", value: String(models.length), note: "Institution through research item" },
+    { label: "High confidence", value: String(confidence.high || 0), note: "Public APIs, authenticated sources, and vetted documents" },
+    { label: "Medium confidence", value: String(confidence.medium || 0), note: "Useful inputs with narrower support" },
+    { label: "Restricted sources", value: String(confidence.blocked_sources || 0), note: "Fallback or private-source dependencies" },
+    { label: "Record types", value: String(models.length), note: "Institution through research item" },
   ];
   confidenceSummaryGrid.innerHTML = cards
     .map(
@@ -1436,13 +1415,13 @@ function renderCanonicalPanel() {
   const provenanceCard = `
     <article class="stack-card">
       <div class="readiness-head">
-        <strong>Provenance envelope</strong>
+        <strong>Field provenance</strong>
         <span class="panel-note">${(provenance.required_fields || []).length} required fields</span>
       </div>
       <div class="tag-row">${(provenance.required_fields || []).map((field) => `<span class="data-pill">${esc(field.replaceAll("_", " "))}</span>`).join("")}</div>
       <div class="detail-line">
         <span>${esc(provenance.example?.source_system || "")}</span>
-        <span>${esc(provenance.example?.extraction_method || "")}</span>
+        <span>${esc(String(provenance.example?.extraction_method || "").replaceAll("_", " "))}</span>
         <span>${esc(provenance.example?.confidence || "")}</span>
       </div>
     </article>
@@ -1477,14 +1456,14 @@ function renderCanonicalPanel() {
           <p>${esc(source.note || source.source_system || "")}</p>
           <div class="detail-line">
             <span>${esc(String(source.classification || "").replaceAll("_", " "))}</span>
-            <span>${esc(source.extraction_method || "")}</span>
+            <span>${esc(String(source.extraction_method || "").replaceAll("_", " "))}</span>
             <span>${esc(source.confidence || "")}</span>
           </div>
           ${
             source.evidence_url
               ? `<a class="source-link" href="${esc(source.evidence_url)}" target="_blank" rel="noreferrer">Evidence</a>`
               : source.document_pointer
-                ? `<div class="detail-line"><span>${esc(source.document_pointer)}</span></div>`
+                ? `<div class="detail-line"><span>Document reference available</span></div>`
                 : ""
           }
         </article>
@@ -1494,6 +1473,7 @@ function renderCanonicalPanel() {
 }
 
 function renderLaunchPanel() {
+  if (!launchChecklistList || !gapList || !securityControlsList || !riskRegisterList || !emailStreamList) return;
   const checklist = state.dashboard?.production_launch_checklist || [];
   const gaps = state.dashboard?.gaps || [];
   const securityControls = state.dashboard?.security_controls || [];
@@ -1607,7 +1587,7 @@ function seedChat() {
   if (chatLog.childElementCount) return;
   appendChat(
     "assistant",
-    "Ask about Profiles, Transactions, RFPs, Key People, Asset Allocation, or Datafeeds. Answers stay tied to the current packet and linked evidence.",
+    "Ask about Profiles, Transactions, RFPs, Key People, Asset Allocation, or Datafeeds. Answers stay tied to current SWFI sources and linked evidence.",
     [],
     "Source-backed",
   );
@@ -1617,7 +1597,7 @@ async function runCopilot(query) {
   const trimmed = (query || "").trim();
   if (!trimmed) return;
   appendChat("user", trimmed);
-  appendChat("assistant", "Checking the current packet and linked evidence...", [], "Sourcing");
+  appendChat("assistant", "Checking SWFI sources and linked evidence...", [], "Sourcing");
   try {
     const response = await fetch(`/api/research/v1?q=${encodeURIComponent(trimmed)}`);
     if (response.status === 401) {
@@ -1639,7 +1619,7 @@ async function runCopilot(query) {
   } catch (error) {
     const placeholder = chatLog.lastElementChild;
     if (placeholder?.classList.contains("assistant")) placeholder.remove();
-    appendChat("assistant", error.message || "Research lookup failed. The dashboard packet is still loaded.", [], "Fallback");
+    appendChat("assistant", error.message || "Research lookup failed. Core SWFI sources are still loaded.", [], "Fallback");
     console.error(error);
   }
 }
@@ -1740,7 +1720,7 @@ loadDashboard().catch((error) => {
   statusStrip.innerHTML = `
     <article class="status-pill tone-blocked">
       <strong>Dashboard</strong>
-      <span>Failed to load the SWFI packet</span>
+      <span>Failed to load SWFI data</span>
     </article>
   `;
 });
