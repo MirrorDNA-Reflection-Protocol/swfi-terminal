@@ -106,6 +106,9 @@ ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PROFILES_SCHEMA_VERSION = "swfi.profiles.v1"
 RESEARCH_WORKSPACE_SCHEMA_VERSION = "swfi.research_workspace.v1"
 CAPITAL_INTENT_SCHEMA_VERSION = "swfi.capital_intent.v1"
+MANDATE_FIT_SCHEMA_VERSION = "swfi.mandate_fit.v1"
+RELATIONSHIP_PATHS_SCHEMA_VERSION = "swfi.relationship_paths.v1"
+COVERAGE_BOARD_SCHEMA_VERSION = "swfi.coverage_board.v1"
 PREVIEW_ROUTE = "/preview"
 AI_POLICY_VERSION = "swfi.policy.ai_governance.v0_1"
 PROMPT_REGISTRY_VERSION = "swfi.prompt_registry.v1"
@@ -3615,6 +3618,9 @@ def build_dashboard_payload() -> dict[str, object]:
     sandbox_bundle = get_sandbox_api_map()
     profiles_payload = get_profiles_payload()
     capital_intent_graph = build_capital_intent_graph(profiles_payload)
+    mandate_fit_matrix = build_mandate_fit_matrix(profiles_payload)
+    coverage_board = build_coverage_board(profiles_payload)
+    relationship_paths = build_relationship_paths_graph(profiles_payload)
     people_summary = get_msci_people_summary(target_bundle)
 
     concerns = concern_bundle["rows"]
@@ -3657,6 +3663,9 @@ def build_dashboard_payload() -> dict[str, object]:
         },
         "category_blueprint": CATEGORY_BLUEPRINT,
         "capital_intent_graph": capital_intent_graph,
+        "mandate_fit_matrix": mandate_fit_matrix,
+        "coverage_board": coverage_board,
+        "relationship_paths": relationship_paths,
         "benchmark_matrix": BENCHMARK_MATRIX,
         "required_api_stack": REQUIRED_API_STACK,
         "external_api_matrix": EXTERNAL_API_MATRIX,
@@ -4423,6 +4432,18 @@ def build_capital_intent_json() -> str:
     return json.dumps(get_capital_intent_payload(), indent=2) + "\n"
 
 
+def build_mandate_fit_json() -> str:
+    return json.dumps(build_mandate_fit_matrix(get_profiles_payload()), indent=2) + "\n"
+
+
+def build_relationship_paths_json() -> str:
+    return json.dumps(build_relationship_paths_graph(get_profiles_payload()), indent=2) + "\n"
+
+
+def build_coverage_board_json() -> str:
+    return json.dumps(build_coverage_board(get_profiles_payload()), indent=2) + "\n"
+
+
 def build_client_brief_md() -> str:
     payload = get_dashboard_payload()
     profile_signals = payload.get("profile_signals", {})
@@ -4504,6 +4525,15 @@ def build_profile_brief_md(slug: str) -> str:
     if mandate_fit:
         lines.append(f"- Mandate fit: {', '.join(str(item) for item in mandate_fit[:4])}")
 
+    mandate_profile = profile.get("mandate_fit") or {}
+    lines.extend(["", "## Mandate fit"])
+    lines.append(f"- Status: {mandate_profile.get('status') or 'research_required'}")
+    lines.append(f"- Fit score: {mandate_profile.get('fit_score') or 0}")
+    lines.append(f"- Next window: {mandate_profile.get('next_window') or 'Monitor'}")
+    top_strategies = mandate_profile.get("top_strategies") or []
+    if top_strategies:
+        lines.append(f"- Top strategies: {', '.join(str(item) for item in top_strategies[:4])}")
+
     barriers = profile.get("access_barriers") or []
     lines.extend(["", "## Access barriers"])
     if not barriers:
@@ -4515,6 +4545,26 @@ def build_profile_brief_md(slug: str) -> str:
             )
             if item.get("note"):
                 lines.append(f"  - {item.get('note')}")
+
+    relationship_paths = profile.get("relationship_paths") or []
+    lines.extend(["", "## Relationship paths"])
+    if not relationship_paths:
+        lines.append("- No relationship paths are currently attached.")
+    else:
+        for item in relationship_paths[:5]:
+            lines.append(
+                f"- **{item.get('name') or 'Unknown'}** · {item.get('title') or 'Role not specified'} · {item.get('quality') or 'indirect'}"
+            )
+
+    coverage_playbook = profile.get("coverage_playbook") or {}
+    lines.extend(["", "## Coverage playbook"])
+    lines.append(f"- Status: {coverage_playbook.get('status') or 'watch'}")
+    lines.append(f"- Priority: {coverage_playbook.get('priority') or 'Low'}")
+    lines.append(f"- Why now: {coverage_playbook.get('why_now') or 'No current coverage note.'}")
+    lines.append(f"- Next move: {coverage_playbook.get('next_move') or 'No next move is attached.'}")
+    questions = coverage_playbook.get("briefing_questions") or []
+    if questions:
+        lines.append(f"- Briefing questions: {' | '.join(str(item) for item in questions[:3])}")
 
     lines.extend(["", "## Sources"])
     for source in (profile.get("source_refs") or [])[:6]:
@@ -4799,6 +4849,154 @@ def build_profile_capital_intent(
     }
 
 
+def relationship_path_quality(contact: dict[str, object]) -> str:
+    if contact.get("email") and contact.get("phone"):
+        return "direct"
+    if contact.get("email"):
+        return "email_only"
+    if contact.get("phone"):
+        return "phone_only"
+    if contact.get("linkedin"):
+        return "linkedin_only"
+    return "indirect"
+
+
+def relationship_path_weight(title: str) -> int:
+    lowered = str(title or "").lower()
+    if any(token in lowered for token in ("chief", "cio", "ceo", "president", "managing director", "director general", "governor")):
+        return 5
+    if any(token in lowered for token in ("head", "director", "partner", "portfolio manager", "investment committee")):
+        return 4
+    if any(token in lowered for token in ("manager", "advisor", "special advisor", "communications")):
+        return 3
+    return 2
+
+
+def build_profile_relationship_paths(current_contacts: list[dict[str, object]]) -> list[dict[str, object]]:
+    paths: list[dict[str, object]] = []
+    for person in current_contacts[:8]:
+        title = str(person.get("title") or "Role not specified")
+        quality = relationship_path_quality(person)
+        paths.append(
+            {
+                "name": str(person.get("name") or "Unknown"),
+                "title": title,
+                "quality": quality,
+                "weight": relationship_path_weight(title),
+                "email": str(person.get("email") or ""),
+                "phone": str(person.get("phone") or ""),
+                "linkedin": str(person.get("linkedin") or ""),
+                "country": str(person.get("country") or ""),
+            }
+        )
+    paths.sort(key=lambda item: (-int(item.get("weight") or 0), 0 if item.get("quality") == "direct" else 1, str(item.get("name") or "")))
+    return paths
+
+
+def build_profile_mandate_fit(
+    profile_type: str,
+    trust_status: str,
+    aum_value: float,
+    current_contacts: list[dict[str, object]],
+    relationship_paths: list[dict[str, object]],
+    access_barriers: list[dict[str, str]],
+) -> dict[str, object]:
+    playbook = profile_playbook(profile_type)
+    strategies = list(playbook.get("mandate_fit") or [])
+    direct_paths = sum(1 for item in relationship_paths if item.get("quality") == "direct")
+    barrier_penalty = 10 * sum(1 for item in access_barriers if item.get("status") in {"blocked", "watch"})
+    score = 0
+    score += 36 if trust_status == "Verified" else 22 if trust_status == "Derived" else 8
+    score += min(20, len(current_contacts) * 2)
+    score += min(18, direct_paths * 6)
+    score += 12 if aum_value > 0 else 0
+    score -= min(20, barrier_penalty)
+    score = max(0, min(100, score))
+
+    if score >= 70:
+        status = "aligned"
+        next_window = "Current"
+    elif score >= 45:
+        status = "developing"
+        next_window = "Near-term"
+    else:
+        status = "research_required"
+        next_window = "Monitor"
+
+    blockers = [str(item.get("title") or "") for item in access_barriers if item.get("status") in {"blocked", "watch"}][:3]
+    rationale = [
+        f"{len(current_contacts)} Key People currently attached.",
+        f"{direct_paths} direct relationship paths are available.",
+        f"Timing bias: {playbook.get('timing_bias') or 'Institutional cycle'}.",
+    ]
+    return {
+        "status": status,
+        "fit_score": score,
+        "top_strategies": strategies[:4],
+        "next_window": next_window,
+        "timing_bias": str(playbook.get("timing_bias") or ""),
+        "rationale": rationale,
+        "blockers": blockers,
+    }
+
+
+def build_profile_coverage_playbook(
+    name: str,
+    profile_type: str,
+    capital_intent: dict[str, object],
+    mandate_fit: dict[str, object],
+    relationship_map: dict[str, object],
+    relationship_paths: list[dict[str, object]],
+    access_barriers: list[dict[str, str]],
+) -> dict[str, object]:
+    playbook = profile_playbook(profile_type)
+    direct_paths = sum(1 for item in relationship_paths if item.get("quality") == "direct")
+    blocked_barriers = [item for item in access_barriers if item.get("status") == "blocked"]
+    watch_barriers = [item for item in access_barriers if item.get("status") == "watch"]
+    capital_status = str(capital_intent.get("status") or "review")
+    mandate_status = str(mandate_fit.get("status") or "research_required")
+    fit_score = int(mandate_fit.get("fit_score") or 0)
+    actionability_score = int(capital_intent.get("actionability_score") or 0)
+
+    if capital_status == "actionable" and mandate_status == "aligned" and direct_paths > 0 and not blocked_barriers:
+        status = "ready_now"
+        priority = "High"
+        why_now = f"{name} is actionable now, with aligned mandate fit and at least one direct Key People path."
+        next_move = "Prepare a subscriber briefing, confirm the direct path, and move into outreach or datafeed delivery."
+    elif capital_status in {"actionable", "developing"} and mandate_status in {"aligned", "developing"}:
+        status = "build_now"
+        priority = "Medium"
+        why_now = f"{name} has live coverage momentum, but the relationship or verification path still needs tightening."
+        next_move = "Deepen Key People coverage, verify the contact path, and connect the profile to the most relevant mandate theme."
+    else:
+        status = "watch"
+        priority = "Medium" if fit_score >= 45 or actionability_score >= 45 else "Low"
+        why_now = f"{name} remains in active institutional coverage, but the current packet does not support immediate action."
+        next_move = "Keep the profile in monitored coverage and resolve the top blocker before escalating."
+
+    primary_strategy = str(((mandate_fit.get("top_strategies") or [])[:1] or ["institutional coverage"])[0])
+    briefing_questions = [
+        f"Which {primary_strategy.lower()} theme matters most for {name} right now?",
+        f"How does the current {str(playbook.get('timing_bias') or 'institutional')} cycle affect timing for {name}?",
+        "Which current Key People path should be treated as the primary subscriber route?",
+    ]
+    watch_items = [str(item.get("title") or "") for item in blocked_barriers[:2] + watch_barriers[:2]]
+    if not watch_items:
+        watch_items = ["No current blocker is preventing subscriber use."]
+
+    return {
+        "status": status,
+        "priority": priority,
+        "why_now": why_now,
+        "next_move": next_move,
+        "coverage_model": str(playbook.get("deployment_model") or ""),
+        "briefing_questions": briefing_questions,
+        "watch_items": watch_items,
+        "path_status": str(relationship_map.get("path_status") or "no_current_path"),
+        "direct_paths": direct_paths,
+    }
+
+
 def build_capital_intent_graph(profiles_payload: dict[str, object]) -> dict[str, object]:
     profiles = [item for item in (profiles_payload.get("profiles") or []) if isinstance(item, dict)]
     ranked = sorted(
@@ -4851,6 +5049,128 @@ def build_capital_intent_graph(profiles_payload: dict[str, object]) -> dict[str,
         },
         "top_profiles": top_profiles[:8],
         "access_barriers": constrained[:8],
+    }
+
+
+def build_mandate_fit_matrix(profiles_payload: dict[str, object]) -> dict[str, object]:
+    profiles = [item for item in (profiles_payload.get("profiles") or []) if isinstance(item, dict)]
+    ranked = sorted(
+        profiles,
+        key=lambda item: (
+            -int(((item.get("mandate_fit") or {}).get("fit_score")) or 0),
+            -float(item.get("assets") or 0.0),
+            str(item.get("name") or ""),
+        ),
+    )
+    rows = []
+    for item in ranked[:12]:
+        fit = item.get("mandate_fit") or {}
+        rows.append(
+            {
+                "slug": str(item.get("slug") or ""),
+                "name": str(item.get("name") or ""),
+                "type": str(item.get("type") or ""),
+                "country": str(item.get("country") or ""),
+                "status": str(fit.get("status") or "research_required"),
+                "fit_score": int(fit.get("fit_score") or 0),
+                "next_window": str(fit.get("next_window") or "Monitor"),
+                "top_strategy": str(((fit.get("top_strategies") or [])[:1] or [""])[0]),
+                "profile_url": f"/profiles/{item.get('slug')}",
+            }
+        )
+    return {
+        "schema_version": MANDATE_FIT_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary": {
+            "profiles": len(profiles),
+            "aligned": sum(1 for item in profiles if ((item.get("mandate_fit") or {}).get("status")) == "aligned"),
+            "developing": sum(1 for item in profiles if ((item.get("mandate_fit") or {}).get("status")) == "developing"),
+            "research_required": sum(1 for item in profiles if ((item.get("mandate_fit") or {}).get("status")) == "research_required"),
+        },
+        "rows": rows[:8],
+    }
+
+
+def build_coverage_board(profiles_payload: dict[str, object]) -> dict[str, object]:
+    profiles = [item for item in (profiles_payload.get("profiles") or []) if isinstance(item, dict)]
+    ranked = sorted(
+        profiles,
+        key=lambda item: (
+            0
+            if ((item.get("coverage_playbook") or {}).get("priority")) == "High"
+            else 1
+            if ((item.get("coverage_playbook") or {}).get("priority")) == "Medium"
+            else 2,
+            0
+            if ((item.get("coverage_playbook") or {}).get("status")) == "ready_now"
+            else 1
+            if ((item.get("coverage_playbook") or {}).get("status")) == "build_now"
+            else 2,
+            -int(((item.get("capital_intent") or {}).get("actionability_score")) or 0),
+            -int(((item.get("mandate_fit") or {}).get("fit_score")) or 0),
+            str(item.get("name") or ""),
+        ),
+    )
+    rows = []
+    for item in ranked[:12]:
+        playbook = item.get("coverage_playbook") or {}
+        rows.append(
+            {
+                "slug": str(item.get("slug") or ""),
+                "name": str(item.get("name") or ""),
+                "type": str(item.get("type") or ""),
+                "country": str(item.get("country") or ""),
+                "status": str(playbook.get("status") or "watch"),
+                "priority": str(playbook.get("priority") or "Low"),
+                "why_now": str(playbook.get("why_now") or ""),
+                "next_move": str(playbook.get("next_move") or ""),
+                "profile_url": f"/profiles/{item.get('slug')}",
+            }
+        )
+
+    return {
+        "schema_version": COVERAGE_BOARD_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary": {
+            "profiles": len(profiles),
+            "ready_now": sum(1 for item in profiles if ((item.get("coverage_playbook") or {}).get("status")) == "ready_now"),
+            "build_now": sum(1 for item in profiles if ((item.get("coverage_playbook") or {}).get("status")) == "build_now"),
+            "watch": sum(1 for item in profiles if ((item.get("coverage_playbook") or {}).get("status")) == "watch"),
+            "high_priority": sum(1 for item in profiles if ((item.get("coverage_playbook") or {}).get("priority")) == "High"),
+        },
+        "rows": rows[:8],
+    }
+
+
+def build_relationship_paths_graph(profiles_payload: dict[str, object]) -> dict[str, object]:
+    profiles = [item for item in (profiles_payload.get("profiles") or []) if isinstance(item, dict)]
+    rows = []
+    for item in profiles:
+        paths = item.get("relationship_paths") or []
+        rows.append(
+            {
+                "slug": str(item.get("slug") or ""),
+                "name": str(item.get("name") or ""),
+                "type": str(item.get("type") or ""),
+                "country": str(item.get("country") or ""),
+                "path_status": str(((item.get("relationship_map") or {}).get("path_status")) or "no_current_path"),
+                "direct_paths": sum(1 for path in paths if path.get("quality") == "direct"),
+                "decision_paths": len(paths),
+                "top_path": paths[0] if paths else {},
+                "profile_url": f"/profiles/{item.get('slug')}",
+            }
+        )
+    ranked = sorted(rows, key=lambda item: (-int(item.get("direct_paths") or 0), -int(item.get("decision_paths") or 0), str(item.get("name") or "")))
+    return {
+        "schema_version": RELATIONSHIP_PATHS_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary": {
+            "profiles": len(profiles),
+            "profiles_with_direct_paths": sum(1 for item in rows if int(item.get("direct_paths") or 0) > 0),
+            "profiles_with_any_paths": sum(1 for item in rows if int(item.get("decision_paths") or 0) > 0),
+            "profiles_without_paths": sum(1 for item in rows if int(item.get("decision_paths") or 0) == 0),
+        },
+        "rows": ranked[:8],
     }
 
 
@@ -5045,6 +5365,7 @@ def build_profiles_payload() -> dict[str, object]:
             phone_count,
             str(entity.get("website") or ""),
         )
+        relationship_paths = build_profile_relationship_paths(current_contacts)
         relationship_map = build_relationship_map(current_contacts, source_refs)
         capital_intent = build_profile_capital_intent(
             str(entity.get("name") or "Unnamed profile"),
@@ -5057,10 +5378,27 @@ def build_profiles_payload() -> dict[str, object]:
             phone_count,
             signals,
         )
+        mandate_fit = build_profile_mandate_fit(
+            entity_type,
+            trust_status,
+            aum_value,
+            current_contacts,
+            relationship_paths,
+            access_barriers,
+        )
         narrative_drift = build_narrative_drift(
             clean_profile_copy(entity.get("summary") or entity.get("background") or "", limit=900),
             trust_status,
             source_refs,
+        )
+        coverage_playbook = build_profile_coverage_playbook(
+            str(entity.get("name") or "Unnamed profile"),
+            entity_type,
+            capital_intent,
+            mandate_fit,
+            relationship_map,
+            relationship_paths,
+            access_barriers,
         )
 
         record = {
@@ -5109,7 +5447,10 @@ def build_profiles_payload() -> dict[str, object]:
             "key_people": current_contacts[:12],
             "signals": signals,
             "capital_intent": capital_intent,
+            "mandate_fit": mandate_fit,
+            "coverage_playbook": coverage_playbook,
             "relationship_map": relationship_map,
+            "relationship_paths": relationship_paths,
             "access_barriers": access_barriers,
             "narrative_drift": narrative_drift,
             "source_refs": source_refs,
@@ -5117,6 +5458,10 @@ def build_profiles_payload() -> dict[str, object]:
             "download_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/v1",
             "brief_url": f"/api/reports/profile-brief.md?slug={parse.quote(profile_slug(str(entity.get('name') or 'profile')))}",
             "briefings_url": f"/research?q={parse.quote(str(entity.get('name') or ''), safe='')}",
+            "mandate_fit_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/mandate-fit/v1",
+            "coverage_playbook_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/coverage-playbook/v1",
+            "relationship_paths_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/relationship-paths/v1",
+            "capital_intent_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/capital-intent/v1",
         }
         records.append(record)
 
@@ -5543,6 +5888,7 @@ def build_research_workspace_payload() -> dict[str, object]:
             {"label": "Briefings JSON", "url": "/api/research-workspace/v1"},
             {"label": "Client brief", "url": "/api/reports/client-brief.md"},
             {"label": "Profile signals JSON", "url": "/api/reports/profile-signals.json"},
+            {"label": "Coverage board JSON", "url": "/api/reports/coverage-board.json"},
             {"label": "Official source watchlist", "url": "/api/reports/source-watchlist.csv"},
         ],
         "current_reads": current_reads,
@@ -6512,6 +6858,7 @@ def build_admin_payload() -> dict[str, object]:
         "reports": [
             {"label": "MSCI analytics CSV", "url": "/api/reports/msci-analytics.csv"},
             {"label": "External API matrix CSV", "url": "/api/reports/external-api-matrix.csv"},
+            {"label": "Coverage board JSON", "url": "/api/reports/coverage-board.json"},
             {"label": "Source watchlist CSV", "url": "/api/reports/source-watchlist.csv"},
             {"label": "Source watchlist JSON", "url": "/api/source-watchlist/v1"},
             {"label": "Connector status JSON", "url": "/api/connectors/v1"},
@@ -7958,6 +8305,27 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_json(get_capital_intent_payload(), head_only=head_only)
             return True
 
+        if parsed.path in ("/api/mandate-fit", "/api/mandate-fit/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_mandate_fit_matrix(get_profiles_payload()), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/coverage-board", "/api/coverage-board/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_coverage_board(get_profiles_payload()), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/relationship-paths", "/api/relationship-paths/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_relationship_paths_graph(get_profiles_payload()), head_only=head_only)
+            return True
+
         profile_match = re.fullmatch(r"/api/profiles/([^/]+)/v1", parsed.path)
         if profile_match:
             if not request_is_authenticated(self):
@@ -8000,6 +8368,85 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                         "relationship_map": profile.get("relationship_map") or {},
                         "access_barriers": profile.get("access_barriers") or [],
                         "narrative_drift": profile.get("narrative_drift") or {},
+                    },
+                },
+                head_only=head_only,
+            )
+            return True
+
+        profile_mandate_fit_match = re.fullmatch(r"/api/profiles/([^/]+)/mandate-fit/v1", parsed.path)
+        if profile_mandate_fit_match:
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            profile = get_profile_detail(profile_mandate_fit_match.group(1))
+            if not profile:
+                self._write_json({"error": "profile not found"}, status=404, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": MANDATE_FIT_SCHEMA_VERSION,
+                    "generated_at": iso_now(),
+                    "profile": {
+                        "slug": str(profile.get("slug") or ""),
+                        "name": str(profile.get("name") or ""),
+                        "type": str(profile.get("type") or ""),
+                        "country": str(profile.get("country") or ""),
+                        "mandate_fit": profile.get("mandate_fit") or {},
+                    },
+                },
+                head_only=head_only,
+            )
+            return True
+
+        profile_coverage_playbook_match = re.fullmatch(r"/api/profiles/([^/]+)/coverage-playbook/v1", parsed.path)
+        if profile_coverage_playbook_match:
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            profile = get_profile_detail(profile_coverage_playbook_match.group(1))
+            if not profile:
+                self._write_json({"error": "profile not found"}, status=404, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": COVERAGE_BOARD_SCHEMA_VERSION,
+                    "generated_at": iso_now(),
+                    "profile": {
+                        "slug": str(profile.get("slug") or ""),
+                        "name": str(profile.get("name") or ""),
+                        "type": str(profile.get("type") or ""),
+                        "country": str(profile.get("country") or ""),
+                        "coverage_playbook": profile.get("coverage_playbook") or {},
+                        "capital_intent": profile.get("capital_intent") or {},
+                        "mandate_fit": profile.get("mandate_fit") or {},
+                        "relationship_map": profile.get("relationship_map") or {},
+                    },
+                },
+                head_only=head_only,
+            )
+            return True
+
+        profile_relationships_match = re.fullmatch(r"/api/profiles/([^/]+)/relationship-paths/v1", parsed.path)
+        if profile_relationships_match:
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            profile = get_profile_detail(profile_relationships_match.group(1))
+            if not profile:
+                self._write_json({"error": "profile not found"}, status=404, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": RELATIONSHIP_PATHS_SCHEMA_VERSION,
+                    "generated_at": iso_now(),
+                    "profile": {
+                        "slug": str(profile.get("slug") or ""),
+                        "name": str(profile.get("name") or ""),
+                        "type": str(profile.get("type") or ""),
+                        "country": str(profile.get("country") or ""),
+                        "relationship_map": profile.get("relationship_map") or {},
+                        "relationship_paths": profile.get("relationship_paths") or [],
                     },
                 },
                 head_only=head_only,
@@ -8477,6 +8924,84 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-capital-intent.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/mandate-fit.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_mandate_fit_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-mandate-fit.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/coverage-board.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_coverage_board_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-coverage-board.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/relationship-paths.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_relationship_paths_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-relationship-paths.json"'},
             )
             return True
 
