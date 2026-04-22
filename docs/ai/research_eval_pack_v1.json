@@ -16,22 +16,22 @@
     {
       "id": "msci-export-readiness",
       "query": "MSCI people export readiness",
-      "note": "Core wedge query should return a governed source-backed answer.",
+      "note": "Core subscriber query should return a source-backed answer.",
       "expectations": {
         "status": "Derived",
         "guardrail": "source_grounded",
-        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "prompt_version": "swfi.prompt.answer.sovereign_expert_v2",
         "min_sources": 1
       }
     },
     {
       "id": "schema-surface",
       "query": "What is the canonical schema",
-      "note": "Schema query should stay in packet scope and cite current packet evidence.",
+      "note": "Schema query should stay in current source scope and cite current evidence.",
       "expectations": {
         "status": "Derived",
         "guardrail": "source_grounded",
-        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "prompt_version": "swfi.prompt.answer.sovereign_expert_v2",
         "min_sources": 1
       }
     },
@@ -42,7 +42,7 @@
       "expectations": {
         "status": "Derived",
         "guardrail": "source_grounded",
-        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "prompt_version": "swfi.prompt.answer.sovereign_expert_v2",
         "min_sources": 1
       }
     },
@@ -53,7 +53,7 @@
       "expectations": {
         "status": "Derived",
         "guardrail": "source_grounded",
-        "prompt_version": "swfi.prompt.answer.grounded_v1",
+        "prompt_version": "swfi.prompt.answer.sovereign_expert_v2",
         "min_sources": 1
       }
     }

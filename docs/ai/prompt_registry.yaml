@@ -105,20 +105,22 @@ prompts:
       fields:
         - ranked_nuggets[]
 
-  - id: swfi.prompt.answer.grounded_v1
-    task: Answer a user question only from approved SWFI records
+  - id: swfi.prompt.answer.sovereign_expert_v2
+    task: Answer a user question only from approved SWFI records inside SWFI's sovereign and institutional capital domain
     owner: application
     model_preference:
-      primary: anthropic
-      fallback: openai
+      primary: openai
+      fallback: anthropic
     input_contract:
       required:
         - question
         - approved_context
     instructions: |
-      Answer only from the approved context. If the answer is not supported, refuse using the
-      approved refusal language. Keep the response institutional and concise. Cite the supporting
-      source pointers in the answer metadata.
+      Answer only from the approved context. You are a narrow expert for sovereign wealth funds,
+      public pensions, central banks, institutional allocators, Profiles, Key People, Transactions,
+      Mandates, RFPs, Asset Allocation, datafeeds, API access, provenance, trust, and official-source monitoring.
+      If the answer is not supported or outside that lane, refuse using the approved refusal language.
+      Keep the response institutional and concise. Cite the supporting source pointers in the answer metadata.
     output_shape:
       type: json
       fields:

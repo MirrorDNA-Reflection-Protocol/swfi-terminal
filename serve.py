@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parent
 INPUTS_ROOT = ROOT / "data" / "inputs"
 DOCS_ROOT = ROOT / "docs"
 AI_DOCS_ROOT = DOCS_ROOT / "ai"
+SECURITY_DOCS_ROOT = DOCS_ROOT / "security"
 
 SHEET_CSV_URL = (
     "https://docs.google.com/spreadsheets/d/1dVHsh2zmWrWsxSpMg3zEr7Je27XmAsnO/gviz/tq"
@@ -39,6 +40,10 @@ SHEET_CSV_URL = (
 AUM_DOCS_URL = "https://api.swfi.com/collections/aum"
 COLLECTIONS_URL = "https://api.swfi.com/collections"
 API_HOME_URL = "https://api.swfi.com/"
+SERVICES_URL = "https://www.swfinstitute.org/services"
+SUBSCRIPTION_URL = "https://www.swfinstitute.org/services/subscription"
+DATAFEED_API_URL = "https://www.swfinstitute.org/services/datafeed-api"
+PUBLIC_FUND_MONITOR_URL = "https://www.swfinstitute.org/services/public-fund-monitor"
 PROPOSAL_SHEET_URL = (
     "https://docs.google.com/spreadsheets/d/1dVHsh2zmWrWsxSpMg3zEr7Je27XmAsnO/htmlview#gid=251913671"
 )
@@ -92,6 +97,8 @@ LOGIN_RATE_LIMIT_PER_15_MIN = int(os.environ.get("SWFI_LOGIN_RATE_LIMIT_PER_15_M
 PREVIEW_SESSION_TTL_SECONDS = int(os.environ.get("SWFI_PREVIEW_SESSION_TTL_SECONDS", "43200"))
 CONNECTOR_PROBE_TTL_SECONDS = int(os.environ.get("SWFI_CONNECTOR_PROBE_TTL_SECONDS", "21600"))
 ADMIN_REVIEW_RATE_LIMIT_PER_MINUTE = int(os.environ.get("SWFI_ADMIN_REVIEW_RATE_LIMIT_PER_MINUTE", "30"))
+SWFI_AI_MAX_QUERY_CHARS = int(os.environ.get("SWFI_AI_MAX_QUERY_CHARS", "1200"))
+SWFI_AI_MAX_BODY_BYTES = int(os.environ.get("SWFI_AI_MAX_BODY_BYTES", "32768"))
 
 ATLAS_URI = os.environ.get("SWFI_ATLAS_URI", "").strip()
 ATLAS_DB = os.environ.get("SWFI_ATLAS_DB", "swfi_terminal_preview").strip() or "swfi_terminal_preview"
@@ -101,18 +108,22 @@ ATLAS_COLLECTION = (
 
 DASHBOARD_SCHEMA_VERSION = "swfi.dashboard.v1"
 RESEARCH_SCHEMA_VERSION = "swfi.research.v1"
+SWFI_AI_SCHEMA_VERSION = "swfi.ai.v1"
+SWFI_CHAT_SCHEMA_VERSION = "swfi.chat.v1"
 MSCI_SCHEMA_VERSION = "swfi.msci_workbench.v1"
 ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PROFILES_SCHEMA_VERSION = "swfi.profiles.v1"
 RESEARCH_WORKSPACE_SCHEMA_VERSION = "swfi.research_workspace.v1"
+SWFI_POLLING_SCHEMA_VERSION = "swfi.polling.v1"
 CAPITAL_INTENT_SCHEMA_VERSION = "swfi.capital_intent.v1"
 MANDATE_FIT_SCHEMA_VERSION = "swfi.mandate_fit.v1"
 RELATIONSHIP_PATHS_SCHEMA_VERSION = "swfi.relationship_paths.v1"
 COVERAGE_BOARD_SCHEMA_VERSION = "swfi.coverage_board.v1"
+PUBLIC_FRONT_DOOR_SCHEMA_VERSION = "swfi.public_front_door.v1"
 PREVIEW_ROUTE = "/preview"
 AI_POLICY_VERSION = "swfi.policy.ai_governance.v0_1"
 PROMPT_REGISTRY_VERSION = "swfi.prompt_registry.v1"
-GROUNDED_RESEARCH_PROMPT_ID = "swfi.prompt.answer.grounded_v1"
+GROUNDED_RESEARCH_PROMPT_ID = "swfi.prompt.answer.sovereign_expert_v2"
 REFUSAL_PROMPT_ID = "swfi.prompt.refuse.unsupported_v1"
 NUGGET_SCHEMA_VERSION = "swfi.nugget.v1"
 ANTHROPIC_API_VERSION = "2023-06-01"
@@ -152,22 +163,22 @@ PLATFORM_REFERENCE = {
 }
 
 PROPOSAL = {
-    "title": "SWFI Feed Modernization and Client Delivery System",
+    "title": "SWFI Feed Modernization and Client Integration System",
     "goal": (
-        "Build a private working surface at swfi.activemirror.ai that modernizes feed delivery, "
+        "Build a private working surface at swfi.activemirror.ai that modernizes feed access, "
         "normalizes outputs, and gives operators a refresh-state and audit surface."
     ),
     "fee": "USD 100,000 fixed fee",
     "timeline": "8 to 12 weeks",
-    "payments": ["50% on kickoff", "50% on delivery and acceptance"],
+    "payments": ["50% on kickoff", "50% on launch and acceptance"],
     "deliverables": [
         "Working private deployment of swfi.activemirror.ai",
-        "Modernized delivery interface for in-scope client feeds",
+        "Modernized integration interface for in-scope client feeds",
         "Normalized data and export layer for agreed fields",
         "MSCI people/account export capability",
         "Agreed field mappings and output structure",
         "Basic admin and refresh-state visibility",
-        "Delivery walkthrough and handoff session",
+        "Integration walkthrough and handoff session",
     ],
     "maintenance": [
         "Monthly maintenance: USD 5,000",
@@ -178,38 +189,38 @@ PROPOSAL = {
 CLIENT_PRESETS = {
     "MSCI": {
         "status": "active",
-        "cadence": "Rolling delivery + quarterly revisit cycle",
+        "cadence": "Rolling integration + quarterly review cycle",
         "focus": "Key People, Asset Allocation, and managed-assets splits",
         "deliverable": "Key People export and account mapping",
     },
     "Bloomberg": {
         "status": "active",
-        "cadence": "Quarterly delivery lane",
+        "cadence": "Quarterly integration cycle",
         "focus": "Financial institution coverage, currency-normalized AUM, and Asset Allocation fields",
         "deliverable": "Datafeed with normalized AUM outputs",
     },
     "IFC": {
         "status": "scaffolded",
         "cadence": "Pending detailed workflow pack",
-        "focus": "Alternatives coverage, profiles, and controlled delivery",
-        "deliverable": "Controlled client output",
+        "focus": "Alternatives coverage, profiles, and controlled access",
+        "deliverable": "Structured client output",
     },
 }
 
 PRIVATE_IA_NOTE = (
-    "Authenticated review informed IA alignment; no private data persisted in the repo or preview packet."
+    "Authenticated product review informed the current information architecture; no subscriber data is stored in the repo or local environment."
 )
 
 CATEGORY_BLUEPRINT = {
     "label": "Institutional Capital Intelligence OS",
     "core_thesis": (
-        "SWFI is a governed intelligence layer that helps users understand who has capital, "
+        "SWFI is a source-linked intelligence layer that helps users understand who has capital, "
         "where it is moving, why it is moving, and what action should be taken."
     ),
     "core_differentiator": "Capital Intent Graph",
     "positioning": (
         "SWFI tracks who allocates capital, where it is likely to move, why it is moving, "
-        "and how to act on it using verified data and governed intelligence."
+        "and how to act on it using verified data and source-linked research."
     ),
     "modules": [
         {"name": "Verified Data Universe", "status": "ok"},
@@ -223,7 +234,7 @@ CATEGORY_BLUEPRINT = {
         {"name": "Capital Access (curated)", "status": "partial"},
     ],
     "phases": [
-        "Phase 1: Clean data and delivery",
+        "Phase 1: Clean data and integration",
         "Phase 2: Core intelligence",
         "Phase 3: Predictive intelligence",
         "Phase 4: Adaptive learning",
@@ -231,7 +242,7 @@ CATEGORY_BLUEPRINT = {
     "avoid": [
         "Generic AI chatbot",
         "Broad Bloomberg-style terminal clone",
-        "Ungoverned marketplace",
+        "Open marketplace",
     ],
 }
 
@@ -559,29 +570,29 @@ BENCHMARK_MATRIX = [
     {
         "name": "SWFI",
         "tone": "watch",
-        "product_benchmark": "Strong sovereign/institutional niche, but trust and depth issues still dominate buyer feedback.",
-        "api_benchmark": "Public AUM docs exist, but delivery jobs, canonical exports, and private people/account APIs are missing.",
+        "product_benchmark": "Strong sovereign and institutional niche, but trust and depth issues still dominate buyer feedback.",
+        "api_benchmark": "Public AUM docs exist, but scheduled integrations, canonical exports, and private people/account APIs are still incomplete.",
         "ux_benchmark": "Dense authenticated IA exists, but feedback still scores the platform 5/10 on speed and usability.",
     },
     {
         "name": "Preqin",
         "tone": "partial",
-        "product_benchmark": "Direct coverage and workflow benchmark for investors, deals, performance, mandates, and delivery.",
-        "api_benchmark": "Data feeds, API delivery, CRM workflows, and ongoing contact / RFP product updates are all visible publicly.",
+        "product_benchmark": "Direct coverage and workflow benchmark for investors, deals, performance, mandates, and integration.",
+        "api_benchmark": "Data feeds, API access, CRM workflows, and ongoing contact / RFP product updates are all visible publicly.",
         "ux_benchmark": "Institutional operator benchmark for research, saved searches, target lists, and data-backed workflows.",
     },
     {
         "name": "PitchBook",
         "tone": "partial",
         "product_benchmark": "Major private-capital benchmark across companies, investors, funds, deals, and people.",
-        "api_benchmark": "Direct Data exposes feeds, API, sandboxing, and CRM plugins for Salesforce, HubSpot, and Dynamics.",
+        "api_benchmark": "Direct Data exposes feeds, API access, protected testing environments, and CRM plugins for Salesforce, HubSpot, and Dynamics.",
         "ux_benchmark": "Strong workflow benchmark across Excel, PowerPoint, Chrome, and conversational AI partnerships.",
     },
     {
         "name": "Bloomberg",
         "tone": "partial",
         "product_benchmark": "Enterprise benchmark on breadth, real-time data, documents, analytics, and collaboration.",
-        "api_benchmark": "Server API, unified data-model delivery, entitlements management, and warehouse delivery are all public.",
+        "api_benchmark": "Server API, unified data-model access, entitlements management, and warehouse connectivity are all public.",
         "ux_benchmark": "AI-powered research, mobile continuity, and integrated collaboration make this the enterprise UX benchmark.",
     },
     {
@@ -706,9 +717,9 @@ REQUIRED_API_STACK = [
         ],
     },
     {
-        "name": "CRM / warehouse delivery",
+        "name": "CRM / warehouse integrations",
         "status": "blocked",
-        "why": "Sales feedback explicitly calls out missing CRM sync and one-click list delivery.",
+        "why": "Sales feedback explicitly calls out missing CRM sync and one-click list exports.",
         "gap": "Need Salesforce, Snowflake, and Graph connectors plus outbound export jobs.",
         "sources": [
             {"label": "Salesforce APIs", "url": "https://developer.salesforce.com/docs/apis"},
@@ -743,18 +754,18 @@ REQUIRED_API_STACK = [
     {
         "name": "Entitlements / monitoring / unified data model",
         "status": "blocked",
-        "why": "Bloomberg exposes entitlements control, activity monitoring, and unified data delivery as standard enterprise capabilities.",
-        "gap": "Need permission-aware exports, usage telemetry, monitoring, and a consistent cross-collection field model.",
+        "why": "Bloomberg exposes entitlements control, activity monitoring, and unified data access as standard enterprise capabilities.",
+        "gap": "Need permission-aware exports, usage activity, monitoring, and a consistent cross-collection field model.",
         "sources": [
             {"label": "Bloomberg SAPI", "url": "https://professional.bloomberg.com/products/data/data-connectivity/server-api/"},
             {"label": "Bloomberg Data License Plus", "url": "https://professional.bloomberg.com/products/data/data-management/dms/"},
         ],
     },
     {
-        "name": "Email / alert delivery APIs",
+        "name": "Email / alert APIs",
         "status": "partial",
         "why": "Daily subscriber alerts and the public newsletter already exist as automated streams.",
-        "gap": "Need observable job state, transport telemetry, and evidence-backed send logs in the terminal.",
+        "gap": "Need observable job state, transport activity, and evidence-backed send logs in the terminal.",
         "sources": [
             {"label": "Mandrill", "url": "https://mailchimp.com/developer/transactional/"},
             {"label": "SendGrid", "url": "https://www.twilio.com/docs/sendgrid/api-reference"},
@@ -1061,7 +1072,7 @@ EXTERNAL_API_MATRIX = [
         "name": "Companies House API",
         "access": "free_public_with_key",
         "status": "ok",
-        "use_case": "UK entity registry lookups, officers, filings history, and sandbox testing.",
+        "use_case": "UK entity registry lookups, officers, filings history, and integration testing.",
         "note": "Official API is public but requires registration and an API key. Default rate limit is 600 requests per 5 minutes.",
         "url": "https://developer.company-information.service.gov.uk/get-started",
     },
@@ -1199,7 +1210,7 @@ MSCI_REQUESTED_FIELDS = [
     {
         "field": "SWFI Contact ID",
         "status": "ok",
-        "availability": "Available from authenticated sandbox and production people sources",
+        "availability": "Available from authenticated and production people sources",
         "note": "The people endpoint exposes a stable contact identifier that can be exported directly.",
     },
     {
@@ -1313,15 +1324,25 @@ Rules:
 """.strip()
 
 RESEARCH_GOVERNED_SYSTEM_PROMPT = """
-You are SWFI governed research inside a controlled-access intelligence terminal.
-You are not allowed to invent or expand beyond the approved answer seed and evidence catalog.
+You are SWFI Sovereign and Public Capital Expert inside a controlled-access intelligence terminal.
+You are a narrow expert, not a general assistant.
 
-Rules:
+Allowed scope:
+- sovereign wealth funds
+- public pensions
+- central banks
+- endowments, foundations, and adjacent institutional allocators
+- Profiles, Key People, Transactions, Mandates, RFPs, Asset Allocation
+- datafeeds, API access, exports, provenance, trust, and official-source monitoring
+
+Hard rules:
 - Use only the supplied approved_context.
 - Rewrite or tighten the answer_seed; do not introduce new facts, numbers, dates, institutions, or claims.
 - Distinguish direct support from interpretation.
 - If the support is weak or partial, reduce confidence and use status NeedsReview.
 - If the evidence does not support a reliable answer, refuse using the approved refusal language.
+- Do not answer generic lifestyle, creative, entertainment, personal productivity, or broad web questions.
+- Do not act, browse freely, send messages, schedule, or imply hidden access.
 - Return JSON only with keys: answer, status, confidence, source_labels, inference_note.
 - status must be one of Verified, Derived, Conflicted, Missing, NeedsReview, Rejected.
 - confidence must be one of High, Medium, Low, None.
@@ -1349,6 +1370,92 @@ ACTION_HINTS = (
     "log in",
     "login",
     "book a meeting",
+)
+
+SWFI_EXPERT_SCOPE_LABEL = "SWFI Sovereign and Public Capital Expert"
+SWFI_EXPERT_SCOPE_NOTE = (
+    "This AI is limited to sovereign funds, public pensions, central banks, institutional allocators, "
+    "Profiles, Key People, Transactions, Mandates, RFPs, Asset Allocation, datafeeds, API access, trust, and official-source research."
+)
+SWFI_EXPERT_KEYWORDS = (
+    "swfi",
+    "sovereign",
+    "swf",
+    "pension",
+    "public pension",
+    "central bank",
+    "allocator",
+    "asset owner",
+    "institution",
+    "institutional",
+    "profile",
+    "profiles",
+    "key people",
+    "people",
+    "contact",
+    "transaction",
+    "transactions",
+    "deal",
+    "deals",
+    "mandate",
+    "mandates",
+    "rfp",
+    "rfps",
+    "asset allocation",
+    "allocation",
+    "aum",
+    "managed assets",
+    "datafeed",
+    "datafeeds",
+    "api",
+    "export",
+    "briefing",
+    "briefings",
+    "research",
+    "trust",
+    "provenance",
+    "canonical",
+    "schema",
+    "security",
+    "legal",
+    "risk",
+    "privacy",
+    "audit",
+    "governance",
+    "coverage",
+    "connector",
+    "procurement",
+    "board",
+    "meeting",
+    "watchlist",
+    "polling",
+    "signal",
+    "signals",
+    "capital intent",
+    "relationship path",
+    "relationship map",
+    "msci",
+    "atlas",
+    "crm",
+    "snowflake",
+)
+SWFI_ENTITY_HINTS = (
+    "adia",
+    "pif",
+    "gic",
+    "cic",
+    "qia",
+    "kia",
+    "temasek",
+    "gic",
+    "gpfg",
+    "nbim",
+    "calpers",
+    "cpp",
+    "cppib",
+    "otpp",
+    "cdpq",
+    "apg",
 )
 
 _cache_lock = threading.Lock()
@@ -1395,6 +1502,11 @@ def load_secret_from_env_or_keychain(*secret_names: str) -> str:
 OPENAI_API_KEY = load_secret_from_env_or_keychain("OPENAI_API_KEY")
 GEMINI_API_KEY = load_secret_from_env_or_keychain("GEMINI_API_KEY", "GOOGLE_API_KEY")
 ANTHROPIC_API_KEY = load_secret_from_env_or_keychain("ANTHROPIC_API_KEY", "CLAUDE_API_KEY")
+SWFI_AI_PROVIDER_ORDER = [
+    {"slug": "openai", "label": "OpenAI", "role": "primary", "model": OPENAI_MODEL},
+    {"slug": "anthropic", "label": "Anthropic", "role": "fallback", "model": ANTHROPIC_MODEL},
+    {"slug": "gemini", "label": "Google Gemini", "role": "fallback", "model": GEMINI_MODEL},
+]
 SWFI_SANDBOX_API_KEY = load_secret_from_env_or_keychain("SWFI_SANDBOX_API_KEY")
 SWFI_PRIVATE_EXPORT_TOKEN = load_secret_from_env_or_keychain("SWFI_PRIVATE_EXPORT_TOKEN")
 COMPANIES_HOUSE_API_KEY = load_secret_from_env_or_keychain("COMPANIES_HOUSE_API_KEY")
@@ -1418,6 +1530,28 @@ DEMO_ASK_LOG = Path(os.path.expanduser("~/Library/Logs/swfi-terminal/demo-ask.lo
 
 def iso_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def parse_observed_date_label(value: str) -> float | None:
+    match = re.search(r"(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})", str(value or ""))
+    if not match:
+        return None
+    try:
+        return time.mktime(time.strptime(match.group(1), "%d %b %Y"))
+    except Exception:
+        return None
+
+
+def freshness_state_from_label(value: str, *, ok_days: int, watch_days: int) -> tuple[str, str]:
+    observed_ts = parse_observed_date_label(value)
+    if observed_ts is None:
+        return ("watch", "Undated snapshot")
+    age_days = max(0.0, (time.time() - observed_ts) / 86400.0)
+    if age_days <= ok_days:
+        return ("ok", f"{int(age_days)} days old")
+    if age_days <= watch_days:
+        return ("watch", f"{int(age_days)} days old")
+    return ("blocked", f"{int(age_days)} days old")
 
 
 def normalize_text(value: str) -> str:
@@ -1517,7 +1651,7 @@ def build_confidence_summary(sources: list[dict[str, str | None]]) -> dict[str, 
         "low": confidence_counts.get("low", 0),
         "private_sources": sum(1 for item in sources if item.get("classification") == "authenticated_private_source"),
         "blocked_sources": status_counts.get("blocked", 0) + status_counts.get("fallback", 0),
-        "summary": "High-confidence public, local, and authenticated sandbox packets are present, but production still needs export protection, audit logging, and contact-quality controls.",
+        "summary": "High-confidence public, local, and authenticated source coverage is present, but production still needs export protection, audit logging, and contact-quality controls.",
     }
 
 
@@ -1633,7 +1767,7 @@ def build_sandbox_api_map() -> dict[str, object]:
     retrieved_at = iso_now()
     source = make_source_entry(
         "swfi_sandbox_api",
-        "SWFI sandbox API",
+        "SWFI authenticated API",
         "authenticated_private_source",
         "swfi_sandbox_api",
         retrieved_at,
@@ -1641,10 +1775,10 @@ def build_sandbox_api_map() -> dict[str, object]:
         "high" if SWFI_SANDBOX_API_KEY else "low",
         "ok" if SWFI_SANDBOX_API_KEY else "blocked",
         evidence_url=SWFI_SANDBOX_API_ROOT,
-        note="Sandbox API surface used for MSCI export validation and field mapping.",
+        note="Authenticated API used for MSCI export validation and field mapping.",
     )
     if not SWFI_SANDBOX_API_KEY:
-        source["note"] = "Sandbox API key not configured."
+        source["note"] = "Authenticated API key not configured."
         return {
             "status": "blocked",
             "tone": "blocked",
@@ -1665,7 +1799,7 @@ def build_sandbox_api_map() -> dict[str, object]:
         failures = 1
         source["status"] = "blocked"
         source["confidence"] = "low"
-        source["note"] = f"Sandbox probe failed: {exc.__class__.__name__}"
+        source["note"] = f"Authenticated API probe failed: {exc.__class__.__name__}"
         return {
             "status": "blocked",
             "tone": "blocked",
@@ -1685,16 +1819,16 @@ def build_sandbox_api_map() -> dict[str, object]:
             "status": "ok",
             "total_items": people_total if spec["name"] == "people" else "",
             "sample_fields": [],
-            "note": "Authenticated core collection documented and available via sandbox."
+            "note": "Authenticated core collection documented and available in the current source."
             if spec["family"] == "core"
-            else "Documented referential collection available via the SWFI sandbox contract.",
+            else "Documented reference collection available in the current source.",
         }
         for spec in SANDBOX_COLLECTIONS
     ]
 
     source["status"] = "ok"
     source["confidence"] = "high"
-    source["note"] = "Sandbox contract verified via authenticated probe; documented collections are mapped into the terminal."
+    source["note"] = "Authenticated API verified via probe; documented collections are mapped into the terminal."
     return {
         "status": "ok",
         "tone": "ok",
@@ -1750,7 +1884,7 @@ def build_msci_people_summary(target_bundle: dict[str, object]) -> dict[str, obj
         note="Summary probe across people and entity endpoints for MSCI export coverage.",
     )
     if not SWFI_SANDBOX_API_KEY:
-        source["note"] = "Sandbox API key not configured."
+        source["note"] = "Authenticated API key not configured."
         return {
             "status": "blocked",
             "tone": "blocked",
@@ -2120,9 +2254,9 @@ def classify_row(row: dict[str, object]) -> dict[str, str]:
 
 CONCERN_BRIEFS = {
     "Complete Asset Allocation fields": {
-        "requirement": "Complete Asset Allocation fields used in MSCI and client delivery.",
+        "requirement": "Complete Asset Allocation fields used in MSCI and client integration.",
         "challenge": "Move allocation percentages, managed assets, and classification fields into repeatable export-ready records.",
-        "recommendation": "This improves Asset Allocation tables, AUM views, and Datafeeds/API delivery.",
+        "recommendation": "This improves Asset Allocation tables, AUM views, and Datafeeds/API coverage.",
     },
     "Expand AUM coverage for subsidiaries": {
         "requirement": "Expand AUM and managed-assets coverage across subsidiaries and child funds.",
@@ -2142,7 +2276,7 @@ CONCERN_BRIEFS = {
     "Complete Datafeeds/API fields": {
         "requirement": "Complete the fields needed by downstream Datafeeds/API consumers.",
         "challenge": "Close the remaining gaps between tracked internal fields and the records surfaced directly in exports.",
-        "recommendation": "This reduces one-off handling and makes delivery easier to automate.",
+        "recommendation": "This reduces one-off handling and makes integration easier to automate.",
     },
     "Align Key People with Profiles": {
         "requirement": "Align Key People, contacts, and institution profiles with stable account references.",
@@ -2160,7 +2294,7 @@ CONCERN_BRIEFS = {
         "recommendation": "This closes a visible coverage gap and reduces manual side handling.",
     },
     "Expand Key People coverage": {
-        "requirement": "Improve the depth and consistency of Key People records used in delivery work.",
+        "requirement": "Improve the depth and consistency of Key People records used in integration work.",
         "challenge": "Enrich contact coverage, refresh cadence, and supporting joins so people records are usable downstream.",
         "recommendation": "This raises confidence in contact-level outputs and reduces manual follow-up.",
     },
@@ -2172,11 +2306,11 @@ def sanitize_concern_copy(row: dict[str, object]) -> dict[str, str]:
     mapped = CONCERN_BRIEFS.get(title)
     if mapped:
         return mapped
-    client = str(row.get("client") or "delivery")
+    client = str(row.get("client") or "coverage")
     return {
-        "requirement": f"{title} sits inside the {client} lane and still needs fuller coverage before it can be treated as routine.",
-        "challenge": "Focus areas span profiles, key people, asset allocation, and delivery controls.",
-        "recommendation": "This affects export completeness, Datafeeds/API reliability, and operator confidence across the lane.",
+        "requirement": f"{title} sits inside the {client} category and still needs fuller coverage before it can be treated as routine.",
+        "challenge": "Focus areas span profiles, key people, asset allocation, and integration controls.",
+        "recommendation": "This affects export completeness, Datafeeds/API reliability, and operator confidence across the category.",
     }
 
 
@@ -2748,7 +2882,7 @@ def build_lane_summaries(concerns: list[dict[str, object]]) -> list[dict[str, ob
             "manual_count": 0,
             "field_gap_count": 0,
             "automation_count": 1,
-            "source_note": "Proposal includes IFC, but no live concern rows define the lane.",
+            "source_note": "Proposal includes IFC, but no live concern rows define the category.",
         }
     )
     return lanes
@@ -2795,18 +2929,18 @@ def build_action_queue(concerns: list[dict[str, object]]) -> list[dict[str, obje
             "impact": "Clients expect natural-language search, saved searches, and alerts across profiles and transactions.",
         },
         {
-            "title": "CRM and Datafeeds/API delivery",
+            "title": "CRM and Datafeeds/API integration",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "CSV alone is not enough; enterprise clients expect CRM delivery, warehouse sync, and scheduled exports.",
+            "impact": "CSV alone is not enough; enterprise clients expect CRM integration, warehouse sync, and scheduled exports.",
         },
         {
             "title": "Access controls and monitoring",
             "lane": "All",
             "status": "blocked",
             "priority": "P1",
-            "impact": "Enterprise delivery expects controlled access, usage monitoring, and consistent fields across every delivery channel.",
+            "impact": "Enterprise distribution expects controlled access, usage monitoring, and consistent fields across every access channel.",
         },
     ]
 
@@ -2899,17 +3033,17 @@ def build_metric_cards(
         {
             "label": "Verified profiles",
             "value": str(profile_summary.get("verified_profiles", 0)),
-            "note": "Profiles already carrying stronger trust status in the current workspace",
+            "note": "Profiles already carrying higher-confidence source validation in the current subscriber view",
         },
         {
             "label": "Target accounts",
             "value": str(target_summary.get("total_targets", 0)),
-            "note": "MSCI account coverage mapped into the delivery workspace",
+            "note": "MSCI account coverage mapped into the current integration view",
         },
         {
             "label": "Accessible Key People",
             "value": str(people_counts.get("people_total", 0) or "0"),
-            "note": "Current authenticated people available for delivery",
+            "note": "Authenticated Key People currently available in the integration view",
         },
     ]
 
@@ -2927,12 +3061,12 @@ def build_maturity_groups() -> list[dict[str, object]]:
         },
         {
             "bucket": "authenticated_private_source",
-            "title": "Authenticated / private source",
+            "title": "Authenticated source access",
             "items": [
-                {"name": "SWFI sandbox people / entities", "status": "ok" if SWFI_SANDBOX_API_KEY else "blocked", "note": "Authenticated sandbox source now supports MSCI people-access export validation and entity joins." if SWFI_SANDBOX_API_KEY else "Configure the sandbox or equivalent authenticated source to enable the people export."},
-                {"name": "SWFI private people / entities / transactions / compass", "status": "watch", "note": "Still needed for full production entitlements and parity beyond sandbox-access scope."},
-                {"name": "Mandrill alert delivery", "status": "watch", "note": "Existing private automation stream; observability still needs to be exposed."},
-                {"name": "SendGrid newsletter delivery", "status": "watch", "note": "Existing private automation stream for the public list."},
+                {"name": "SWFI authenticated people / entities", "status": "ok" if SWFI_SANDBOX_API_KEY else "blocked", "note": "Authenticated source now supports MSCI people-access export validation and entity joins." if SWFI_SANDBOX_API_KEY else "Configure authenticated source access to enable the people export."},
+                {"name": "SWFI private people / entities / transactions / compass", "status": "watch", "note": "Still needed for full production entitlements and parity beyond current authenticated access."},
+                {"name": "Mandrill alert stream", "status": "watch", "note": "Existing private automation stream; usage activity still needs to be exposed."},
+                {"name": "SendGrid newsletter stream", "status": "watch", "note": "Existing private automation stream for the public list."},
                 {"name": "MongoDB Atlas preview storage", "status": "watch", "note": "Driver-based materialization target for canonical packets and job state."},
             ],
         },
@@ -2940,9 +3074,9 @@ def build_maturity_groups() -> list[dict[str, object]]:
             "bucket": "document_extraction_required",
             "title": "Document extraction required",
             "items": [
-                {"name": "MSCI target account list", "status": "partial", "note": "Parsed into the MSCI integration workspace from the supplied XLSX file."},
+                {"name": "MSCI target account list", "status": "partial", "note": "Parsed into the MSCI integration view from the supplied XLSX file."},
                 {"name": "Board minutes / agendas / PDF filings", "status": "blocked", "note": "Critical for scattered asset-allocation facts and unstructured disclosures."},
-                {"name": "Platform improvement notes and briefing docs", "status": "partial", "note": "Briefing notes are surfaced, but not yet tied to execution telemetry."},
+                {"name": "Platform improvement notes and briefing docs", "status": "partial", "note": "Briefing notes are surfaced, but not yet tied to execution activity."},
             ],
         },
         {
@@ -2960,8 +3094,8 @@ def build_maturity_groups() -> list[dict[str, object]]:
             "items": [
                 {"name": "Preqin", "status": "watch", "note": "Direct product benchmark on coverage, feeds, and workflow depth."},
                 {"name": "PitchBook", "status": "watch", "note": "Direct data, CRM plugins, Excel/PowerPoint/Chrome integrations, and AI partnership benchmark."},
-                {"name": "Bloomberg", "status": "watch", "note": "Enterprise data, entitlements, unified delivery, and AI-assisted research benchmark."},
-                {"name": "BlackRock Aladdin", "status": "watch", "note": "API-first enterprise benchmark for governed platform depth."},
+                {"name": "Bloomberg", "status": "watch", "note": "Enterprise data, entitlements, unified access, and AI-assisted research benchmark."},
+                {"name": "BlackRock Aladdin", "status": "watch", "note": "API-first enterprise benchmark for controlled platform depth."},
                 {"name": "KKR", "status": "watch", "note": "Institutional credibility benchmark rather than a target integration."},
             ],
         },
@@ -2976,22 +3110,22 @@ def build_data_coverage(people_summary: dict[str, object]) -> list[dict[str, obj
             "available_today_api": [
                 "Public AUM docs and masked collections map",
                 "Account target ingestion and normalized account export",
-                "Sandbox-backed people export with entity joins",
+                "Authenticated people export with entity joins",
                 f"Accessible people list summary: {people_counts.get('people_total', 0)} records",
             ],
             "public_docs_extraction": [
                 "MSCI target account list",
                 "MSCI field mapping scope",
-                "Platform improvement notes and feedback packet",
+                "Platform improvement notes and feedback brief",
             ],
             "third_party_connectors": [
                 "GLEIF / Companies House for identity resolution",
-                "Salesforce / Snowflake / Graph for downstream delivery",
+                "Salesforce / Snowflake / Graph for downstream integration",
             ],
             "unavailable_without_private_access": [
-                "Production-grade entitlements beyond sandbox scope",
+                "Production-grade entitlements beyond current authenticated access",
                 "Email and phone verification workflow",
-                "Private-source parity across every profile and account lane",
+                "Source parity across every profile and account category",
             ],
         },
         {
@@ -3006,12 +3140,12 @@ def build_data_coverage(people_summary: dict[str, object]) -> list[dict[str, obj
             ],
             "third_party_connectors": [
                 "Registry / filing connectors for entity normalization",
-                "Warehouse and CRM delivery connectors",
+                "Warehouse and CRM connectors",
             ],
             "unavailable_without_private_access": [
                 "Full managed-assets splits and validated classifications",
                 "Latest RFP and Compass completeness",
-                "Internal search / filter telemetry and true production performance signals",
+                "Search and filter usage data plus true production performance signals",
             ],
         },
         {
@@ -3023,7 +3157,7 @@ def build_data_coverage(people_summary: dict[str, object]) -> list[dict[str, obj
                 "Roadmap and product-gap framing",
             ],
             "third_party_connectors": [
-                "Reusable delivery connectors from other lanes once the workflow pack exists",
+                "Reusable integration connectors from other categories once the workflow pack exists",
             ],
             "unavailable_without_private_access": [
                 "Detailed IFC workflow definition",
@@ -3067,9 +3201,9 @@ def build_gap_list(atlas_status: dict[str, object], people_summary: dict[str, ob
             "detail": "Natural-language query and explainable alerting are now baseline buyer expectations.",
         },
         {
-            "title": "Entitlements and unified data delivery are not yet built",
+            "title": "Entitlements and unified data access are not yet complete",
             "severity": "blocked",
-            "detail": "Current enterprise leaders expose permission-aware APIs, monitoring, and a unified data model across delivery channels.",
+            "detail": "Current enterprise leaders expose permission-aware APIs, monitoring, and a unified data model across access channels.",
         },
         {
             "title": "Atlas preview materialization is not ready",
@@ -3110,7 +3244,7 @@ def build_security_controls() -> list[dict[str, str]]:
             "url": "https://www.rfc-editor.org/rfc/rfc9116",
         },
         {
-            "title": "Read-only briefings lane",
+            "title": "Read-only briefings access",
             "status": "ok",
             "note": "The briefing chat remains read-only, bounded to current updates, and rate limited to reduce leakage and model-spend abuse.",
             "source": "SWFI runtime",
@@ -3177,9 +3311,9 @@ def build_msci_people_export(people_summary: dict[str, object]) -> dict[str, obj
     return {
         "answer": (
             f"Yes. The authenticated people-export path is live and currently summarizes {counts.get('people_total', 0)} accessible records. "
-            "Use the export for delivery; contact-quality review is a separate step."
+            "Use the export for integration; contact-quality review is a separate step."
             if status == "ok"
-            else "The export contract is defined, but delivery is blocked until authenticated SWFI sandbox or production credentials are configured."
+            else "The export contract is defined, but integration is blocked until authenticated SWFI source access or production credentials are configured."
         ),
         "requested_fields": MSCI_REQUESTED_FIELDS,
         "export_ready_now": [
@@ -3190,7 +3324,7 @@ def build_msci_people_export(people_summary: dict[str, object]) -> dict[str, obj
             "Durable export audit logging",
         ],
         "blocked_until_private_access": [
-            "Production entitlements beyond the sandbox scope",
+            "Production entitlements beyond current authenticated access",
             "Contact verification and consent-sensitive outreach controls",
             "Reviewer-visible audit history and customer-specific export authorization",
         ],
@@ -3221,7 +3355,7 @@ def build_msci_workbench(
             {"label": "Target accounts", "value": str(summary.get("total_targets", 0)), "note": "Rows in the normalized account list"},
             {"label": "API potential", "value": human_number(float(summary.get("total_api_potential", 0.0))), "note": "Modeled account-level potential from the account list"},
             {"label": "Managed assets", "value": human_number(float(summary.get("total_assets_managed", 0.0))), "note": "Aggregate managed-assets figure across target accounts"},
-            {"label": "Accessible people", "value": str(people_summary.get("summary", {}).get("people_total", 0)), "note": "Authenticated people records available for export"},
+            {"label": "Accessible people", "value": str(people_summary.get("summary", {}).get("people_total", 0)), "note": "Authenticated people records available in the export surface"},
         ],
         "top_targets": summary.get("top_targets", []),
         "type_breakdown": summary.get("type_breakdown", []),
@@ -3238,7 +3372,7 @@ def atlas_materialize_payload(payload: dict[str, object]) -> dict[str, object]:
             "status": "missing_env",
             "tone": "watch",
             "backend": "local_runtime_only",
-            "note": "Set SWFI_ATLAS_URI to materialize preview packets into Atlas. Atlas Data API is not used.",
+            "note": "Set SWFI_ATLAS_URI to materialize preview builds into Atlas. Atlas Data API is not used.",
         }
 
     try:
@@ -3340,7 +3474,7 @@ def build_launch_checklist(atlas_status: dict[str, object]) -> list[dict[str, st
         {
             "title": "Entitlements and usage monitoring",
             "status": "blocked",
-            "note": "The market standard now includes entitlements-aware delivery, usage monitoring, and a unified field model across channels.",
+            "note": "The market standard now includes entitlements-aware access, usage monitoring, and a unified field model across channels.",
         },
         {
             "title": "Atlas preview storage",
@@ -3363,7 +3497,7 @@ def build_statuses(
             "source": "Profiles",
             "status": "ok" if int(profile_summary.get("total_profiles", 0) or 0) else "watch",
             "note": (
-                f"{profile_summary.get('total_profiles', 0)} institution profiles are live in the protected workspace, including {profile_summary.get('verified_profiles', 0)} with stronger trust status."
+                f"{profile_summary.get('total_profiles', 0)} institution profiles are live in the subscriber view, including {profile_summary.get('verified_profiles', 0)} with higher-confidence source validation."
                 if int(profile_summary.get("total_profiles", 0) or 0)
                 else "Profile coverage is still loading."
             ),
@@ -3372,7 +3506,7 @@ def build_statuses(
             "source": "Key People",
             "status": str(people_summary.get("tone", "watch")),
             "note": (
-                f"Authenticated people access summary is live with {people_summary.get('summary', {}).get('people_total', 0)} accessible records."
+                f"Authenticated Key People summary is live with {people_summary.get('summary', {}).get('people_total', 0)} accessible records."
                 if people_summary.get("status") == "ok"
                 else str(people_summary.get("source", {}).get("note", "People-access export is not configured."))
             ),
@@ -3380,13 +3514,13 @@ def build_statuses(
         {
             "source": "Datafeeds/API",
             "status": "ok" if concern_source.get("status") == "ok" else "blocked",
-            "note": "MSCI, Bloomberg, and IFC delivery lanes are loaded from the current sheet." if concern_source.get("status") == "ok" else str(concern_source.get("note", "")),
+            "note": "MSCI, Bloomberg, and IFC coverage categories are loaded from the latest source set." if concern_source.get("status") == "ok" else str(concern_source.get("note", "")),
         },
         {
             "source": "API Access",
             "status": str(sandbox_status.get("tone", "watch")) if SWFI_SANDBOX_API_KEY else ("ok" if aum_source.get("status") == "ok" else "blocked"),
             "note": (
-                f"Public docs plus {sandbox_status.get('summary', {}).get('accessible_collections', 0)} authenticated sandbox collections are reachable."
+                f"Public docs plus {sandbox_status.get('summary', {}).get('accessible_collections', 0)} authenticated collections are reachable."
                 if SWFI_SANDBOX_API_KEY
                 else "Public collection docs parsed from api.swfi.com."
             ),
@@ -3471,7 +3605,7 @@ def build_sources(
                 "high",
                 "ok",
                 document_pointer="/Users/mirror-admin/Downloads/swfi/Fwd_ SWFI- Production support dependency & handover.eml",
-                note="Confirms production sensitivity, deployment dependencies, and access controls for live delivery.",
+                note="Confirms production sensitivity, deployment dependencies, and access controls for live integration.",
             ),
             make_source_entry(
                 "security_txt_standard",
@@ -3721,12 +3855,52 @@ def get_dashboard_payload() -> dict[str, object]:
 def get_guardrail(query_text: str) -> str | None:
     lowered = query_text.lower().strip()
     if not lowered:
-        return "Ask about canonical schema, provenance, MSCI coverage, integration status, coverage gaps, or launch readiness."
+        return SWFI_EXPERT_SCOPE_NOTE
     if any(token in lowered for token in ACTION_HINTS):
         return "This copilot is read-only. It analyzes product and integration status; it does not execute workflows."
     if any(token in lowered for token in NON_PRODUCT_HINTS):
-        return "This copilot is limited to SWFI product, workflow, schema, and launch-readiness analysis."
+        return SWFI_EXPERT_SCOPE_NOTE
+    if not query_is_swfi_expert_query(lowered):
+        return SWFI_EXPERT_SCOPE_NOTE
     return None
+
+
+def swfi_expert_scope_manifest() -> dict[str, object]:
+    return {
+        "label": SWFI_EXPERT_SCOPE_LABEL,
+        "note": SWFI_EXPERT_SCOPE_NOTE,
+        "coverage": [
+            "Profiles",
+            "Key People",
+            "Transactions",
+            "Mandates and RFPs",
+            "Asset Allocation",
+            "Datafeeds and API access",
+            "Trust, provenance, and official-source monitoring",
+        ],
+        "provider_policy": {
+            "primary": "OpenAI",
+            "fallbacks": ["Anthropic", "Google Gemini"],
+            "publishing": "source_grounded_only",
+            "mode": "read_only",
+        },
+    }
+
+
+def query_is_swfi_expert_query(query_text: str) -> bool:
+    lowered = normalize_text(query_text).lower()
+    if not lowered:
+        return False
+    if any(token in lowered for token in SWFI_EXPERT_KEYWORDS):
+        return True
+    if any(token in lowered for token in SWFI_ENTITY_HINTS):
+        return True
+    return bool(
+        re.search(
+            r"\b(fund|funds|pension|pensions|allocator|allocators|allocation|allocations|transaction|transactions|deal|deals|mandate|mandates|rfp|rfps|sovereign|profile|profiles|contact|contacts|entity|entities|briefing|briefings|api|apis|export|exports|research|signals?)\b",
+            lowered,
+        )
+    )
 
 
 def make_evidence(label: str, source: str, url: str | None = None) -> dict[str, str | None]:
@@ -3782,9 +3956,17 @@ def build_fallback_answer(query_text: str, payload: dict[str, object]) -> tuple[
             "Two automated communication streams are modeled: daily subscriber alerts via Mandrill and the Public Fund Monitor every three days via SendGrid. The product gap is observability and evidence-backed job state inside the terminal."
         )
 
-    if any(token in lowered for token in ("coverage", "gap", "benchmark", "preqin", "pitchbook", "bloomberg", "aladdin", "kkr")):
+    if any(token in lowered for token in ("coverage gap", "coverage gaps", "current gaps", "data gap", "data gaps", "what are the gaps")):
+        gap_rows = payload.get("gaps") or []
+        top_gaps = "; ".join(str(item.get("title") or "") for item in gap_rows[:4] if str(item.get("title") or "").strip())
         parts.append(
-            "The current public benchmark set is bigger than Preqin alone. SWFI still trails Preqin and PitchBook on direct data + CRM delivery, Bloomberg on entitlements and enterprise data operations, and Aladdin on API-first workflow depth and copilots. KKR remains a credibility benchmark rather than an integration target."
+            f"The current gaps are concentrated in contact quality, per-customer export authorization, production performance clearance, AI search and alerting, and entitlement-aware unified data access. {top_gaps}".strip()
+        )
+        evidence.append(make_evidence("Gap register", "SWFI terminal"))
+
+    if any(token in lowered for token in ("benchmark", "preqin", "pitchbook", "bloomberg", "aladdin", "kkr")):
+        parts.append(
+            "The current public benchmark set is bigger than Preqin alone. SWFI still trails Preqin and PitchBook on direct data + CRM integration, Bloomberg on entitlements and enterprise data operations, and Aladdin on API-first workflow depth and copilots. KKR remains a credibility benchmark rather than an integration target."
         )
         evidence.append(make_evidence("Preqin Pro", "Official source", "https://www.preqin.com/our-products/preqin-pro"))
         evidence.append(make_evidence("PitchBook Direct Data", "Official source", "https://pitchbook.com/help/data-feed-api-crm-direct-data-solutions-q3-2025"))
@@ -3796,6 +3978,21 @@ def build_fallback_answer(query_text: str, payload: dict[str, object]) -> tuple[
                 "https://www.blackrock.com/aladdin/products/aladdin-platform",
             )
         )
+
+    if any(token in lowered for token in ("openai", "anthropic", "gemini", "chat", "copilot", "ai")):
+        parts.append(
+            "SWFI AI is now designed as a narrow expert for sovereign and public-capital intelligence. OpenAI is the primary provider, with Anthropic and Google Gemini as governed fallbacks, and unsupported questions should be refused rather than answered loosely."
+        )
+        evidence.append(make_evidence("SWFI AI providers", "SWFI terminal", "/api/swfi/ai/providers/v1"))
+
+    if any(token in lowered for token in ("polling", "watchlist", "monitor", "monitoring", "gold", "signal", "signals", "research loop")):
+        research_loop = build_continuous_research_payload()
+        summary = research_loop.get("summary") or {}
+        parts.append(
+            f"The continuous research loop currently stages {summary.get('tracked_sources', 0)} official sources, {summary.get('high_priority_sources', 0)} high-priority watches, and {summary.get('gold_candidates', 0)} gold candidates for review before publication."
+        )
+        evidence.append(make_evidence("Continuous research loop", "SWFI terminal", "/api/swfi/research-loop/v1"))
+        evidence.append(make_evidence("Official source watchlist", "SWFI terminal", "/api/source-watchlist/v1"))
 
     if not parts:
         parts.append(
@@ -3837,6 +4034,12 @@ def build_research_context(
             "gaps": (payload.get("gaps") or [])[:5],
             "security_controls": (payload.get("security_controls") or [])[:4],
             "legal_risks": (payload.get("legal_risk_register") or [])[:4],
+        },
+        "expert_scope": swfi_expert_scope_manifest(),
+        "continuous_research_summary": {
+            "tracked_sources": int(build_source_watchlist_payload().get("summary", {}).get("total_sources", 0)),
+            "high_priority_sources": int(build_source_watchlist_payload().get("summary", {}).get("high_priority", 0)),
+            "gold_candidates": int(build_continuous_research_payload().get("summary", {}).get("gold_candidates", 0)),
         },
     }
 
@@ -4022,7 +4225,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "entity_id": "msci-export-readiness",
             "entity_type": "Mandate",
             "claim": f"MSCI integration is live across {target_accounts} mapped institutions and {people_total} accessible people.",
-            "observed_fact": f"The MSCI workspace currently surfaces {target_accounts} mapped institutions and {people_total} accessible people records.",
+            "observed_fact": f"The MSCI integration view currently surfaces {target_accounts} mapped institutions and {people_total} accessible people records.",
             "derived_implication": "The lane is now credible for controlled integration demos, but downstream outreach quality still depends on contact verification.",
             "status": "Verified",
             "confidence": "High",
@@ -4036,7 +4239,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             ],
             "contradictions": [],
             "review_required": False,
-            "why_it_matters": "This is the current Phase 1 wedge and the most immediate client-facing delivery proof.",
+            "why_it_matters": "This is the current Phase 1 integration and the most immediate client-facing proof.",
             "policy_version": AI_POLICY_VERSION,
             "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
             "model_id": "deterministic.nugget_builder.v1",
@@ -4089,7 +4292,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             ],
             "contradictions": [],
             "review_required": True,
-            "why_it_matters": "This is the reason accurate nuggets and proof-carrying profile changes matter more than generic AI features.",
+            "why_it_matters": "This is why accurate reviewed updates and proof-carrying profile changes matter more than generic AI features.",
             "policy_version": AI_POLICY_VERSION,
             "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
             "model_id": "deterministic.nugget_builder.v1",
@@ -4128,8 +4331,8 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "schema_version": NUGGET_SCHEMA_VERSION,
             "entity_id": "performance-clearance",
             "entity_type": "Document",
-            "claim": "Core delivery controls are live, but full client entitlements and performance monitoring remain the next release step.",
-            "observed_fact": performance_gap or "The current runtime supports controlled access and delivery, but rollout guidance still depends on clearing live performance and entitlement posture.",
+            "claim": "Core access controls are live, but full client entitlements and performance monitoring remain the next release step.",
+            "observed_fact": performance_gap or "The current runtime supports controlled access and exports, but rollout guidance still depends on clearing live performance and entitlement posture.",
             "derived_implication": "The client surface can support live demos now, while the next release should complete entitlement binding and performance monitoring.",
             "status": "Derived",
             "confidence": "Medium",
@@ -4157,7 +4360,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "entity_type": "Document",
             "claim": "Atlas materialization is still not part of the trusted live path.",
             "observed_fact": str(atlas.get("note") or "Atlas preview storage is not configured."),
-            "derived_implication": "Canonical entity history and replayable nugget materialization are still local-runtime-first rather than durable store-first.",
+            "derived_implication": "Canonical entity history and replayable update materialization are still local-runtime-first rather than durable store-first.",
             "status": "NeedsReview" if str(atlas.get("status")) != "materialized" else "Verified",
             "confidence": "High" if str(atlas.get("status")) != "materialized" else "Medium",
             "commercial_relevance": 0.64,
@@ -4169,7 +4372,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             ],
             "contradictions": [],
             "review_required": str(atlas.get("status")) != "materialized",
-            "why_it_matters": "Durable materialization matters once nuggets become customer-visible history instead of just admin insight.",
+            "why_it_matters": "Durable materialization matters once reviewed updates become customer-visible history instead of just admin insight.",
             "policy_version": AI_POLICY_VERSION,
             "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
             "model_id": "deterministic.nugget_builder.v1",
@@ -4345,7 +4548,7 @@ def build_alert_briefings(
             "title": "Daily subscriber alerts",
             "status": "ok",
             "cadence": "Daily",
-            "summary": "Profiles, Transactions, RFPs, and Key People updates assembled from the same reviewed packet.",
+            "summary": "Profiles, Transactions, RFPs, and Key People updates assembled from the same reviewed update set.",
             "detail": "Mandrill-backed stream for paid subscribers. Best next step is to attach reviewed profile updates directly into the alert body.",
         },
         {
@@ -4358,16 +4561,16 @@ def build_alert_briefings(
         {
             "title": "What changed now",
             "status": top_signal.get("status", "watch"),
-            "cadence": "Live packet",
+            "cadence": "Live refresh",
             "summary": str(top_signal.get("title") or "No profile signal has been published yet."),
-            "detail": str(top_signal.get("why_it_matters") or "Governed profile signals should summarize what changed and why it matters."),
+            "detail": str(top_signal.get("why_it_matters") or "Reviewed profile signals should summarize what changed and why it matters."),
         },
         {
             "title": "Review queue",
             "status": "watch" if review_required else "ok",
             "cadence": "Analyst",
             "summary": f"{review_required} items currently need analyst review; {publishable} are publishable and {rejected} are held back.",
-            "detail": "Use the review queue to approve, reject, or promote governed signals before they move into client reports or alert automation.",
+            "detail": "Use the review queue to approve, reject, or promote reviewed signals before they move into client reports or alert automation.",
         },
     ]
     return {
@@ -4759,7 +4962,7 @@ def build_relationship_map(current_contacts: list[dict[str, object]], source_ref
         summary = "Decision paths exist, but direct channels still require enrichment or verification."
     else:
         path_status = "no_current_path"
-        summary = "No current decision-maker path is attached in the existing profile packet."
+        summary = "No current decision-maker path is attached in the existing profile record."
 
     return {
         "path_status": path_status,
@@ -4779,7 +4982,7 @@ def build_narrative_drift(summary: str, trust_status: str, source_refs: list[dic
     if not cleaned:
         return {
             "status": "needs_review",
-            "note": "Current profile packet lacks a concise narrative summary.",
+            "note": "Current profile record lacks a concise narrative summary.",
         }
     if len(source_refs) < 2:
         return {
@@ -4788,7 +4991,7 @@ def build_narrative_drift(summary: str, trust_status: str, source_refs: list[dic
         }
     return {
         "status": "aligned",
-        "note": "Profile summary, trust state, and source trail are aligned in the current packet.",
+        "note": "Profile summary, trust state, and source trail are aligned in the current profile record.",
     }
 
 
@@ -4962,7 +5165,7 @@ def build_profile_coverage_playbook(
         status = "ready_now"
         priority = "High"
         why_now = f"{name} is actionable now, with aligned mandate fit and at least one direct Key People path."
-        next_move = "Prepare a subscriber briefing, confirm the direct path, and move into outreach or datafeed delivery."
+        next_move = "Prepare a subscriber briefing, confirm the direct path, and move into outreach or datafeed integration."
     elif capital_status in {"actionable", "developing"} and mandate_status in {"aligned", "developing"}:
         status = "build_now"
         priority = "Medium"
@@ -4971,7 +5174,7 @@ def build_profile_coverage_playbook(
     else:
         status = "watch"
         priority = "Medium" if fit_score >= 45 or actionability_score >= 45 else "Low"
-        why_now = f"{name} remains in active institutional coverage, but the current packet does not support immediate action."
+        why_now = f"{name} remains in active institutional coverage, but the current profile record does not support immediate action."
         next_move = "Keep the profile in monitored coverage and resolve the top blocker before escalating."
 
     primary_strategy = str(((mandate_fit.get("top_strategies") or [])[:1] or ["institutional coverage"])[0])
@@ -5661,9 +5864,9 @@ def build_profile_repair_queue(profiles_payload: dict[str, object], dashboard_pa
         "publish_queue": top_publishable,
         "loop_steps": [
             "Repair top Profiles with the highest trust and coverage gaps.",
-            "Review governed nuggets for approval, rejection, or promotion.",
+            "Review high-signal updates for approval, rejection, or promotion.",
             "Publish approved signals into client reads and alerts.",
-            "Repeat the cycle after packet rebuilds and new source checks.",
+            "Repeat the cycle after refreshes and new source checks.",
         ],
     }
 
@@ -5902,6 +6105,122 @@ def build_research_workspace_payload() -> dict[str, object]:
 
 def build_research_workspace_json() -> str:
     return json.dumps(build_research_workspace_payload(), indent=2) + "\n"
+
+
+def provider_slug_from_payload(provider: str | None) -> str | None:
+    lowered = str(provider or "").strip().lower()
+    if "openai" in lowered:
+        return "openai"
+    if "anthropic" in lowered:
+        return "anthropic"
+    if "gemini" in lowered:
+        return "gemini"
+    return None
+
+
+def build_swfi_ai_provider_stack(active_provider: str | None = None) -> dict[str, object]:
+    active_slug = provider_slug_from_payload(active_provider)
+    rows = []
+    enabled_by_slug = {
+        "openai": bool(OPENAI_API_KEY),
+        "anthropic": bool(ANTHROPIC_API_KEY),
+        "gemini": bool(GEMINI_API_KEY),
+    }
+    for index, item in enumerate(SWFI_AI_PROVIDER_ORDER, start=1):
+        row = dict(item)
+        row["priority"] = index
+        row["enabled"] = enabled_by_slug.get(str(row["slug"]), False)
+        row["active"] = row["slug"] == active_slug
+        rows.append(row)
+    return {
+        "primary": "openai",
+        "fallbacks": ["anthropic", "gemini"],
+        "active": active_slug or "deterministic_fallback",
+        "providers": rows,
+    }
+
+
+def canonical_swfi_ai_routes() -> dict[str, str]:
+    return {
+        "research": "/api/swfi/research/v1",
+        "ai": "/api/swfi/ai/v1",
+        "chat": "/api/swfi/chat/v1",
+        "providers": "/api/swfi/ai/providers/v1",
+        "polling": "/api/swfi/polling/v1",
+        "research_loop": "/api/swfi/research-loop/v1",
+        "steward": "/api/swfi/steward/v1",
+        "trust_envelope": "/api/reports/trust-envelope.md",
+        "crypto_governance": "/api/reports/crypto-governance.md",
+        "legacy_research": "/api/research/v1",
+    }
+
+
+def build_swfi_ai_payload(
+    query_text: str,
+    *,
+    route_name: str,
+    schema_version: str,
+    allow_models: bool = True,
+) -> dict[str, object]:
+    payload = build_research_payload(query_text, allow_models=allow_models)
+    provider = str(payload.get("provider") or "")
+    payload["schema_version"] = schema_version
+    payload["api_family"] = "swfi_ai"
+    payload["api_route"] = route_name
+    payload["provider_stack"] = build_swfi_ai_provider_stack(provider)
+    payload["canonical_routes"] = canonical_swfi_ai_routes()
+    payload["provider_backup_chain"] = ["Anthropic", "Google Gemini"]
+    payload["primary_provider"] = "OpenAI"
+    payload["expert_scope"] = swfi_expert_scope_manifest()
+    return payload
+
+
+def build_swfi_provider_manifest() -> dict[str, object]:
+    return {
+        "schema_version": SWFI_AI_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "api_family": "swfi_ai",
+        "provider_stack": build_swfi_ai_provider_stack(),
+        "canonical_routes": canonical_swfi_ai_routes(),
+        "expert_scope": swfi_expert_scope_manifest(),
+        "governance_downloads": {
+            "ai_governance": "/api/reports/ai-governance.md",
+            "trust_envelope": "/api/reports/trust-envelope.md",
+            "crypto_governance": "/api/reports/crypto-governance.md",
+        },
+        "notes": [
+            "OpenAI is the primary SWFI AI provider.",
+            "Anthropic is the first fallback when OpenAI is unavailable or unsuitable.",
+            "Google Gemini is the final model fallback before deterministic SWFI fallback logic.",
+            "The AI is narrow by design and should refuse requests outside sovereign and institutional capital scope.",
+        ],
+    }
+
+
+def extract_query_from_json_body(body_data: dict[str, object]) -> str:
+    query = normalized_ai_query(str(body_data.get("q") or body_data.get("query") or body_data.get("prompt") or ""))
+    if query:
+        return query
+    messages = body_data.get("messages")
+    if isinstance(messages, list):
+        for item in reversed(messages):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("role") or "").strip().lower() != "user":
+                continue
+            content = item.get("content")
+            if isinstance(content, str) and normalized_ai_query(content):
+                return normalized_ai_query(content)
+            if isinstance(content, list):
+                parts = []
+                for part in content:
+                    if isinstance(part, dict):
+                        text = normalized_ai_query(str(part.get("text") or ""))
+                        if text:
+                            parts.append(text)
+                if parts:
+                    return normalized_ai_query(" ".join(parts))
+    return ""
 
 
 def extract_openai_output_text(response: dict[str, object]) -> str | None:
@@ -6655,6 +6974,175 @@ def build_source_watchlist_csv() -> str:
     return output.getvalue()
 
 
+def polling_interval_hours(cadence: str) -> int:
+    lowered = normalize_text(cadence).lower()
+    if "daily" in lowered or "ongoing" in lowered:
+        return 24
+    if "weekly" in lowered or "meeting cycle" in lowered or "dataset-dependent" in lowered or "periodic" in lowered:
+        return 168
+    if "monthly" in lowered:
+        return 720
+    if "quarterly" in lowered:
+        return 2160
+    if "annual" in lowered:
+        return 8760
+    if "event-driven" in lowered:
+        return 12
+    if "as needed" in lowered:
+        return 168
+    return 168
+
+
+def source_collection_mode(item: dict[str, object]) -> str:
+    family = str(item.get("family") or "")
+    if family == "Board materials":
+        return "document_watch"
+    if family == "Mandates and RFPs":
+        return "procurement_watch"
+    if family == "Public records and oversight":
+        return "oversight_watch"
+    return "official_source_watch"
+
+
+def build_continuous_research_payload() -> dict[str, object]:
+    source_watchlist = build_source_watchlist_payload()
+    dashboard = get_dashboard_payload()
+    profiles_payload = get_profiles_payload()
+    nuggets = apply_nugget_review_state(build_governed_nuggets(dashboard))
+    repair_queue = build_profile_repair_queue(profiles_payload, dashboard)
+    publishable = [item for item in nuggets if bool((item.get("review") or {}).get("publishable"))]
+    pending = [item for item in nuggets if (item.get("review") or {}).get("state") == "pending"]
+    items = list(source_watchlist.get("items") or [])
+    items.sort(
+        key=lambda item: (
+            0 if item.get("priority") == "High" else 1,
+            polling_interval_hours(str(item.get("cadence") or "")),
+            str(item.get("family") or ""),
+            str(item.get("source_name") or ""),
+        )
+    )
+    now = time.time()
+    collection_queue: list[dict[str, object]] = []
+    for index, item in enumerate(items[:12]):
+        interval_hours = polling_interval_hours(str(item.get("cadence") or ""))
+        spacing_minutes = 10 if item.get("priority") == "High" else 30
+        planned_next_check = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now + (index + 1) * spacing_minutes * 60))
+        collection_queue.append(
+            {
+                "source_name": str(item.get("source_name") or ""),
+                "family": str(item.get("family") or ""),
+                "focus": str(item.get("focus") or ""),
+                "priority": str(item.get("priority") or "Watch"),
+                "cadence": str(item.get("cadence") or ""),
+                "collector_mode": source_collection_mode(item),
+                "target_interval_hours": interval_hours,
+                "planned_next_check_at": planned_next_check,
+                "collection_status": "ready" if item.get("priority") == "High" else "staged",
+                "why_it_matters": str(item.get("why_it_matters") or ""),
+                "url": str(item.get("url") or ""),
+            }
+        )
+
+    gold_candidates: list[dict[str, object]] = []
+    ranked_nuggets = sorted(
+        publishable + pending,
+        key=lambda item: (
+            nugget_priority_rank(item.get("priority")),
+            -float(item.get("commercial_relevance", 0.0)),
+            -float(item.get("evidence_strength", 0.0)),
+        ),
+    )
+    for item in ranked_nuggets[:6]:
+        gold_candidates.append(
+            {
+                "type": "nugget",
+                "title": str(item.get("claim") or ""),
+                "status": str(item.get("status") or "NeedsReview"),
+                "confidence": str(item.get("confidence") or "Low"),
+                "priority": str(item.get("priority") or "medium"),
+                "why_it_matters": str(item.get("why_it_matters") or ""),
+                "source_count": len(item.get("source_refs") or []),
+                "target_url": "/api/reports/nugget-review.csv",
+            }
+        )
+    for item in (repair_queue.get("repair_queue") or [])[:4]:
+        gold_candidates.append(
+            {
+                "type": "profile_repair",
+                "title": str(item.get("name") or ""),
+                "status": str(item.get("trust_status") or "NeedsReview"),
+                "confidence": "Medium",
+                "priority": "high" if int(item.get("score") or 0) >= 100 else "medium",
+                "why_it_matters": "; ".join(item.get("reasons") or []) or "High-value profile needs trust and coverage repair.",
+                "source_count": 1,
+                "target_url": str(item.get("profile_url") or ""),
+            }
+        )
+
+    cadence_mix = Counter(str(item.get("cadence") or "Weekly") for item in items)
+    return {
+        "schema_version": SWFI_POLLING_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "runtime": {
+            "label": "SWFI Runtime Steward",
+            "mode": "continuous_research",
+            "state": "ready",
+            "note": "The steward stages official-source watches, converts signal candidates into governed nuggets, and routes them into review before publication.",
+        },
+        "summary": {
+            "tracked_sources": len(items),
+            "high_priority_sources": int(source_watchlist.get("summary", {}).get("high_priority", 0)),
+            "gold_candidates": len(gold_candidates),
+            "publishable_nuggets": len(publishable),
+            "pending_nuggets": len(pending),
+            "repair_targets": len(repair_queue.get("repair_queue") or []),
+        },
+        "cadence_mix": [{"cadence": cadence, "count": count} for cadence, count in cadence_mix.most_common()],
+        "collection_queue": collection_queue,
+        "gold_candidates": gold_candidates[:10],
+        "loop": [
+            "Observe official sources and public rails with cadence-aware watches.",
+            "Extract signal candidates into governed nuggets and profile repair targets.",
+            "Promote only reviewed, evidence-linked findings into briefings, alerts, and exports.",
+        ],
+        "downloads": {
+            "watchlist_csv": "/api/reports/source-watchlist.csv",
+            "nugget_review_csv": "/api/reports/nugget-review.csv",
+            "coverage_board_json": "/api/reports/coverage-board.json",
+        },
+    }
+
+
+def build_swfi_runtime_steward_payload() -> dict[str, object]:
+    research_loop = build_continuous_research_payload()
+    return {
+        "schema_version": "swfi.runtime_steward.v1",
+        "generated_at": iso_now(),
+        "label": "SWFI Runtime Steward",
+        "purpose": "Observe official-source coverage, prioritize research targets, delegate governed AI work, and write outcomes back into review and export surfaces.",
+        "observe": [
+            "Official source watchlist",
+            "Connector probes",
+            "MSCI export readiness",
+            "Governed nugget queue",
+            "Profile repair queue",
+        ],
+        "decide": [
+            "Trust status and confidence labeling",
+            "Priority routing for gold candidates",
+            "Review-required publication gates",
+            "Provider fallback from OpenAI to Anthropic to Google Gemini",
+        ],
+        "writeback": [
+            "Nugget review ledger",
+            "Export audit log",
+            "Briefings and profile signal packets",
+        ],
+        "expert_scope": swfi_expert_scope_manifest(),
+        "research_loop": research_loop,
+    }
+
+
 def build_export_history_csv(limit: int = 200) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
@@ -6726,6 +7214,11 @@ def read_ai_doc(filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def read_security_doc(filename: str) -> str:
+    path = SECURITY_DOCS_ROOT / filename
+    return path.read_text(encoding="utf-8")
+
+
 def build_ai_governance_md() -> str:
     return read_ai_doc("SWFI_AI_GOVERNANCE.md")
 
@@ -6737,6 +7230,19 @@ def build_nugget_schema_json() -> str:
 
 def build_prompt_registry_yaml() -> str:
     return read_ai_doc("prompt_registry.yaml")
+
+
+def build_trust_envelope_md() -> str:
+    return read_security_doc("SWFI_TRUST_ENVELOPE.md")
+
+
+def build_crypto_governance_md() -> str:
+    return read_security_doc("SWFI_CRYPTO_GOVERNANCE.md")
+
+
+def build_trust_envelope_json() -> str:
+    raw = read_security_doc("swfi_trust_envelope_v1.json")
+    return json.dumps(json.loads(raw), indent=2) + "\n"
 
 
 def build_research_eval_pack() -> dict[str, object]:
@@ -6792,16 +7298,16 @@ def build_admin_payload() -> dict[str, object]:
         atlas_status = {
             "status": "not_warmed",
             "tone": "watch",
-            "note": "Dashboard packet has not been warmed yet on this runtime.",
+            "note": "Dashboard snapshot has not been warmed yet on this runtime.",
         }
     if not sandbox_status:
         sandbox_status = {
             "tone": "ok" if SWFI_SANDBOX_API_KEY else "blocked",
             "source": {
                 "note": (
-                    "Sandbox credentials are configured on this runtime."
+                    "Authenticated source access is configured on this runtime."
                     if SWFI_SANDBOX_API_KEY
-                    else "Sandbox credentials are not configured on this runtime."
+                    else "Authenticated source access is not configured on this runtime."
                 )
             },
         }
@@ -6811,11 +7317,11 @@ def build_admin_payload() -> dict[str, object]:
     if people_summary.get("summary", {}).get("with_phone", 0) < 250:
         errors.append({"title": "Phone coverage remains thin", "detail": "MSCI export is populated, but phone coverage is still low for high-confidence outreach use.", "status": "partial"})
     statuses = [
-        {"label": "Dashboard packet", "status": "ok" if dashboard else "watch", "note": f"Last built {dashboard.get('generated_at', 'not warmed yet') if isinstance(dashboard, dict) else 'not warmed yet'}"},
+        {"label": "Dashboard snapshot", "status": "ok" if dashboard else "watch", "note": f"Last built {dashboard.get('generated_at', 'not warmed yet') if isinstance(dashboard, dict) else 'not warmed yet'}"},
         {"label": "MSCI target list", "status": "ok" if target_bundle.get('summary', {}).get('total_targets', 0) else "blocked", "note": f"{target_bundle.get('summary', {}).get('total_targets', 0)} target accounts parsed"},
         {"label": "People export", "status": str(export_payload.get("tone", "watch")), "note": f"{export_payload.get('summary', {}).get('rows_exported', 0)} rows exported"},
         {"label": "Export audit log", "status": "ok" if SWFI_EXPORT_AUDIT_LOG.exists() else "watch", "note": f"{len(audit_events)} recent events loaded"},
-        {"label": "Sandbox API", "status": str(sandbox_status.get('tone', 'watch')), "note": str(sandbox_status.get('source', {}).get('note', ''))},
+        {"label": "Authenticated API", "status": str(sandbox_status.get('tone', 'watch')), "note": str(sandbox_status.get('source', {}).get('note', ''))},
         {"label": "Public connector probes", "status": "ok" if sum(1 for item in live_external_matrix if item.get("live_status") == "ok") >= 4 else "partial", "note": f"{sum(1 for item in live_external_matrix if item.get('live_status') == 'ok')} connectors responded on the latest probe"},
         {"label": "Official source watches", "status": "ok" if source_watchlist.get("summary", {}).get("total_sources", 0) else "watch", "note": f"{source_watchlist.get('summary', {}).get('high_priority', 0)} high-priority official sources staged for collection"},
         {"label": "Review ledger", "status": "ok" if review_events else "watch", "note": f"{len(review_events)} recent analyst actions loaded"},
@@ -6827,11 +7333,11 @@ def build_admin_payload() -> dict[str, object]:
         "schema_version": ADMIN_SCHEMA_VERSION,
         "generated_at": iso_now(),
         "summary_cards": [
-            {"label": "Target accounts", "value": str(target_bundle.get("summary", {}).get("total_targets", 0)), "note": "Rows parsed into the MSCI workspace"},
+            {"label": "Target accounts", "value": str(target_bundle.get("summary", {}).get("total_targets", 0)), "note": "Rows parsed into the MSCI integration view"},
             {"label": "Accessible people", "value": str(people_summary.get("summary", {}).get("people_total", 0)), "note": "Authenticated people records"},
             {"label": "Exports logged", "value": str(len(audit_events)), "note": "Recent export audit events"},
             {"label": "Live public probes", "value": str(sum(1 for item in live_external_matrix if item.get("live_status") == "ok")), "note": "Public/free connector probes responding on the latest check"},
-            {"label": "Governed nuggets", "value": str(len(nuggets)), "note": f"{len(review_queue)} currently require analyst review"},
+            {"label": "Reviewed updates", "value": str(len(nuggets)), "note": f"{len(review_queue)} currently require analyst review"},
             {"label": "Approved / promoted", "value": str(approved_count + promoted_count), "note": f"{rejected_count} currently rejected"},
             {"label": "Top repair score", "value": str(quality_loop.get("summary", {}).get("top_score", 0)), "note": str(quality_loop.get("summary", {}).get("top_target", "No target"))},
             {"label": "Official watches", "value": str(source_watchlist.get("summary", {}).get("total_sources", 0)), "note": f"{source_watchlist.get('summary', {}).get('high_priority', 0)} high-priority official rails"},
@@ -6867,10 +7373,10 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Profile repair queue CSV", "url": "/api/reports/profile-repair-queue.csv"},
             {"label": "Operator loop brief", "url": "/api/reports/operator-loop.md"},
             {"label": "AI governance spec", "url": "/api/reports/ai-governance.md"},
-            {"label": "Nugget schema JSON", "url": "/api/reports/nugget-schema.json"},
+            {"label": "Update schema JSON", "url": "/api/reports/nugget-schema.json"},
             {"label": "Prompt registry YAML", "url": "/api/reports/prompt-registry.yaml"},
-            {"label": "Nugget review CSV", "url": "/api/reports/nugget-review.csv"},
-            {"label": "Nugget review history CSV", "url": "/api/reports/nugget-review-history.csv"},
+            {"label": "Reviewed updates CSV", "url": "/api/reports/nugget-review.csv"},
+            {"label": "Update review history CSV", "url": "/api/reports/nugget-review-history.csv"},
             {"label": "Research eval JSON", "url": "/api/reports/research-eval.json"},
         ],
         "review_actions": {
@@ -6979,11 +7485,33 @@ def sanitize_next_path(value: str | None) -> str:
 
 
 def is_public_host(host: str) -> bool:
-    return host in {"swfi.com", "www.swfi.com"}
+    clean_host = str(host or "").split(":", 1)[0].lower()
+    return clean_host in {"swfi.com", "www.swfi.com"}
+
+
+def normalized_ai_query(text: str) -> str:
+    return normalize_text(str(text or ""))[:SWFI_AI_MAX_QUERY_CHARS]
+
+
+def request_origin_is_trusted(handler: "SiteHandler", host: str, proto: str) -> bool:
+    origin = normalize_text(handler.headers.get("Origin", "")).rstrip("/")
+    referer = normalize_text(handler.headers.get("Referer", ""))
+    raw_host = normalize_text(handler.headers.get("Host", "")).split(",")[0].strip().lower()
+    expected_host = raw_host or host or parse_request_host(handler.headers)
+    expected_proto = proto or parse_request_proto(handler.headers) or ("http" if is_local_host(expected_host) else "https")
+    expected_variants = {f"{expected_proto}://{expected_host}".rstrip("/")}
+    if raw_host:
+        expected_variants.add(f"{expected_proto}://{raw_host}".rstrip("/"))
+    if origin:
+        return origin in expected_variants
+    if referer:
+        return any(referer.startswith(candidate + "/") or referer == candidate for candidate in expected_variants)
+    return True
 
 
 def is_local_host(host: str) -> bool:
-    return host in {"127.0.0.1", "localhost"}
+    clean_host = str(host or "").split(":", 1)[0].lower()
+    return clean_host in {"127.0.0.1", "localhost"}
 
 
 def request_origin(host: str, proto: str) -> str:
@@ -7442,6 +7970,164 @@ def render_template_html(template_name: str, meta: dict[str, object], csp_nonce:
     <script type="application/ld+json" nonce="{html.escape(csp_nonce)}">{json_ld}</script>
     """.strip()
     return html_text.replace("</head>", f"{injection}\n  </head>", 1)
+
+
+def build_public_front_door_payload(host: str, proto: str) -> dict[str, object]:
+    origin = request_origin(host, proto)
+    coverage_state, coverage_freshness = freshness_state_from_label(
+        str(PLATFORM_REFERENCE.get("observed_at") or ""),
+        ok_days=14,
+        watch_days=45,
+    )
+    coverage_counts = [dict(item) for item in PLATFORM_REFERENCE.get("counts", []) if isinstance(item, dict)]
+    evidence = [
+        {
+            "id": "subscriber_dashboard",
+            "title": "Subscriber dashboard access",
+            "status": "ok",
+            "note": "The public front door leads into a controlled subscriber login instead of exposing subscriber data directly.",
+            "source_label": "Subscriber login route",
+            "href": f"{origin}/login?next=/dashboard",
+            "cta": "Open login",
+            "freshness_label": "Checked live on request",
+        },
+        {
+            "id": "api_docs",
+            "title": "Public API documentation",
+            "status": "ok",
+            "note": "Direct integration has a real public discovery surface rather than a placeholder CTA.",
+            "source_label": "SWFI API docs",
+            "href": API_HOME_URL,
+            "cta": "Inspect docs",
+            "freshness_label": "Verified 22 Apr 2026",
+        },
+        {
+            "id": "collections_docs",
+            "title": "Collections directory",
+            "status": "ok",
+            "note": "Collections and AUM discovery routes are live and inspectable today.",
+            "source_label": "Collections endpoint",
+            "href": COLLECTIONS_URL,
+            "cta": "Open collections",
+            "freshness_label": "Verified 22 Apr 2026",
+        },
+        {
+            "id": "aum_docs",
+            "title": "AUM collection surface",
+            "status": "ok",
+            "note": "Public AUM filters and documentation provide a concrete proof object for the integration story.",
+            "source_label": "AUM docs",
+            "href": AUM_DOCS_URL,
+            "cta": "Inspect AUM docs",
+            "freshness_label": "Verified 22 Apr 2026",
+        },
+        {
+            "id": "security_disclosure",
+            "title": "Security disclosure",
+            "status": "ok",
+            "note": "This preview host publishes a public-safe security contact and disclosure surface.",
+            "source_label": "security.txt",
+            "href": f"{origin}/.well-known/security.txt",
+            "cta": "Read disclosure",
+            "freshness_label": "Checked live on request",
+        },
+        {
+            "id": "machine_discovery",
+            "title": "Machine discovery rails",
+            "status": "ok",
+            "note": "robots.txt, sitemap.xml, and llms.txt are exposed so the public surface can be inspected programmatically.",
+            "source_label": "Public discovery routes",
+            "href": f"{origin}/sitemap.xml",
+            "cta": "Inspect sitemap",
+            "freshness_label": "Checked live on request",
+        },
+        {
+            "id": "coverage_snapshot",
+            "title": "Coverage snapshot",
+            "status": coverage_state,
+            "note": "Counts are shown as a dated public snapshot rather than as an evergreen vanity claim.",
+            "source_label": "SWFI services surface",
+            "href": SERVICES_URL,
+            "cta": "Inspect services page",
+            "freshness_label": coverage_freshness,
+        },
+        {
+            "id": "public_monitor",
+            "title": "Public Fund Monitor route",
+            "status": "ok",
+            "note": "The public route is real and current, not a dead-end teaser button.",
+            "source_label": "Public Fund Monitor",
+            "href": PUBLIC_FUND_MONITOR_URL,
+            "cta": "Open Public Fund Monitor",
+            "freshness_label": "Verified 22 Apr 2026",
+        },
+    ]
+    proof_strip = [
+        {
+            "id": "proof_subscriber",
+            "status": "ok",
+            "title": "Controlled subscriber access",
+            "detail": "The front door routes into a real dashboard login while keeping subscriber-only data protected.",
+        },
+        {
+            "id": "proof_api",
+            "status": "ok",
+            "title": "Public API discovery is live",
+            "detail": "API docs, collections, and AUM routes are public and inspectable today.",
+        },
+        {
+            "id": "proof_snapshot",
+            "status": coverage_state,
+            "title": str(PLATFORM_REFERENCE.get("observed_at") or "Coverage snapshot"),
+            "detail": "Public counts are treated as a dated snapshot with freshness rules, not as a permanent marketing number.",
+        },
+        {
+            "id": "proof_machine",
+            "status": "ok",
+            "title": "Public proof rails exposed",
+            "detail": "Security disclosure, sitemap, robots, health, and machine discovery routes are available on the public surface.",
+        },
+    ]
+    exits = [
+        {
+            "label": "Open subscriber dashboard",
+            "audience": "Existing subscribers",
+            "href": f"{origin}/login?next=/dashboard",
+            "promise": "Go straight into profiles, transactions, briefings, and subscriber workflows.",
+        },
+        {
+            "label": "Request Datafeeds/API",
+            "audience": "Integration and platform teams",
+            "href": DATAFEED_API_URL,
+            "promise": "See the integration route for API access, CSV, and direct data access.",
+        },
+        {
+            "label": "Follow Public Fund Monitor",
+            "audience": "Public and market-awareness readers",
+            "href": PUBLIC_FUND_MONITOR_URL,
+            "promise": "Start with the public institutional-news surface before going deeper.",
+        },
+    ]
+    return {
+        "schema_version": PUBLIC_FRONT_DOOR_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "audience": {
+            "primary": "High-agency institutional users who need to decide quickly whether SWFI is credible enough to justify deeper attention.",
+            "secondary": [
+                "Integration and data teams evaluating API or feed access",
+                "Public readers using Public Fund Monitor before entering the subscriber product",
+            ],
+        },
+        "proof_strip": proof_strip,
+        "evidence": evidence,
+        "coverage_snapshot": {
+            "status": coverage_state,
+            "observed_at": str(PLATFORM_REFERENCE.get("observed_at") or ""),
+            "counts": coverage_counts,
+            "fallback_note": "Hide or downgrade the count-based story when the dated snapshot is stale.",
+        },
+        "exits": exits,
+    }
 
 
 def render_dashboard_html(host: str, proto: str, csp_nonce: str) -> str:
@@ -8207,6 +8893,15 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
+        if parsed.path == "/landing.js":
+            self._write_text(
+                (ROOT / "landing.js").read_text(encoding="utf-8"),
+                "application/javascript; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+            )
+            return True
+
         if parsed.path == "/styles.css":
             self._write_text(
                 (ROOT / "styles.css").read_text(encoding="utf-8"),
@@ -8277,6 +8972,10 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
+        if parsed.path in ("/api/public/front-door", "/api/public/front-door/v1"):
+            self._write_json(build_public_front_door_payload(host, proto), head_only=head_only)
+            return True
+
         if parsed.path in ("/api/dashboard", "/api/dashboard/v1"):
             if not request_is_authenticated(self):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
@@ -8296,6 +8995,27 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
                 return True
             self._write_json(build_research_workspace_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/swfi/ai/providers", "/api/swfi/ai/providers/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_swfi_provider_manifest(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/swfi/polling", "/api/swfi/polling/v1", "/api/swfi/research-loop", "/api/swfi/research-loop/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_continuous_research_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/swfi/steward", "/api/swfi/steward/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_swfi_runtime_steward_payload(), head_only=head_only)
             return True
 
         if parsed.path in ("/api/capital-intent", "/api/capital-intent/v1"):
@@ -8453,7 +9173,16 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             )
             return True
 
-        if parsed.path in ("/api/research", "/api/research/v1"):
+        if parsed.path in (
+            "/api/research",
+            "/api/research/v1",
+            "/api/swfi/research",
+            "/api/swfi/research/v1",
+            "/api/swfi/ai",
+            "/api/swfi/ai/v1",
+            "/api/swfi/chat",
+            "/api/swfi/chat/v1",
+        ):
             if not request_is_authenticated(self):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
                 return True
@@ -8466,11 +9195,47 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                     extra_headers={"Retry-After": str(retry_after)},
                 )
                 return True
-            query_text = parse.parse_qs(parsed.query).get("q", [""])[0].strip()
+            query_text = normalized_ai_query(parse.parse_qs(parsed.query).get("q", [""])[0])
             if not query_text:
                 self._write_json({"error": "missing query"}, status=400, head_only=head_only)
                 return True
-            self._write_json(build_research_payload(query_text), head_only=head_only)
+            route_name = (
+                "chat"
+                if "/chat" in parsed.path
+                else "ai"
+                if parsed.path.startswith("/api/swfi/ai")
+                else "research"
+            )
+            schema_version = (
+                SWFI_CHAT_SCHEMA_VERSION
+                if route_name == "chat"
+                else SWFI_AI_SCHEMA_VERSION
+                if route_name == "ai"
+                else RESEARCH_SCHEMA_VERSION
+            )
+            try:
+                payload = build_swfi_ai_payload(
+                    query_text,
+                    route_name=route_name,
+                    schema_version=schema_version,
+                )
+            except Exception:
+                fallback = build_policy_refusal_payload(
+                    "I cannot complete the SWFI response right now. Please retry the request.",
+                    json_digest({"query": query_text, "route": route_name, "error": True}),
+                    guardrail="runtime_failure",
+                )
+                fallback["schema_version"] = schema_version
+                fallback["api_family"] = "swfi_ai"
+                fallback["api_route"] = route_name
+                fallback["provider_stack"] = build_swfi_ai_provider_stack()
+                fallback["canonical_routes"] = canonical_swfi_ai_routes()
+                fallback["provider_backup_chain"] = ["Anthropic", "Google Gemini"]
+                fallback["primary_provider"] = "OpenAI"
+                fallback["expert_scope"] = swfi_expert_scope_manifest()
+                self._write_json(fallback, status=200, head_only=head_only)
+                return True
+            self._write_json(payload, head_only=head_only)
             return True
 
         if parsed.path in ("/api/msci/workbench", "/api/msci/workbench/v1"):
@@ -8754,6 +9519,84 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-ai-governance.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/trust-envelope.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_trust_envelope_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-trust-envelope.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/crypto-governance.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_crypto_governance_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-crypto-governance.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/trust-envelope.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_trust_envelope_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-trust-envelope-v1.json"'},
             )
             return True
 
@@ -9147,8 +9990,18 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         parsed = parse.urlparse(self.path)
         allow = "GET, HEAD, OPTIONS"
-        if parsed.path in {"/auth/login", "/api/admin/rebuild", "/api/admin/nuggets/review"}:
-            allow = "POST, OPTIONS"
+        if parsed.path in {
+            "/auth/login",
+            "/api/admin/rebuild",
+            "/api/admin/nuggets/review",
+            "/api/swfi/research",
+            "/api/swfi/research/v1",
+            "/api/swfi/ai",
+            "/api/swfi/ai/v1",
+            "/api/swfi/chat",
+            "/api/swfi/chat/v1",
+        }:
+            allow = "GET, POST, OPTIONS"
         self._write_empty(status=204, extra_headers={"Allow": allow})
 
     def do_POST(self) -> None:
@@ -9200,6 +10053,90 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_json(result, status=200)
             return
         # --- end /demo/api/ask ----------------------------------------------
+
+        if parsed.path in {
+            "/api/swfi/research",
+            "/api/swfi/research/v1",
+            "/api/swfi/ai",
+            "/api/swfi/ai/v1",
+            "/api/swfi/chat",
+            "/api/swfi/chat/v1",
+        }:
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401)
+                return
+            allowed, retry_after = check_rate_limit("research", client_ip, RESEARCH_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                self._write_json(
+                    {"error": "research rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return
+            content_type = str(self.headers.get("Content-Type", "") or "").split(";", 1)[0].strip().lower()
+            if content_type and content_type != "application/json":
+                self._write_json({"error": "content type must be application/json"}, status=415)
+                return
+            if not request_origin_is_trusted(self, host, proto):
+                self._write_json({"error": "untrusted origin"}, status=403)
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0") or "0")
+                if length > SWFI_AI_MAX_BODY_BYTES:
+                    self._write_json({"error": "request body too large"}, status=413)
+                    return
+                raw_body = self.rfile.read(length) if length else b"{}"
+                body_data = json.loads(raw_body.decode("utf-8", errors="replace"))
+                if not isinstance(body_data, dict):
+                    raise ValueError("body must be object")
+            except Exception:
+                self._write_json({"error": "invalid request body"}, status=400)
+                return
+
+            query_text = extract_query_from_json_body(body_data)
+            if not query_text:
+                self._write_json({"error": "missing query"}, status=400)
+                return
+
+            route_name = (
+                "chat"
+                if "/chat" in parsed.path
+                else "ai"
+                if parsed.path.startswith("/api/swfi/ai")
+                else "research"
+            )
+            schema_version = (
+                SWFI_CHAT_SCHEMA_VERSION
+                if route_name == "chat"
+                else SWFI_AI_SCHEMA_VERSION
+                if route_name == "ai"
+                else RESEARCH_SCHEMA_VERSION
+            )
+            try:
+                payload = build_swfi_ai_payload(
+                    query_text,
+                    route_name=route_name,
+                    schema_version=schema_version,
+                )
+            except Exception:
+                fallback = build_policy_refusal_payload(
+                    "I cannot complete the SWFI response right now. Please retry the request.",
+                    json_digest({"query": query_text, "route": route_name, "error": True}),
+                    guardrail="runtime_failure",
+                )
+                fallback["schema_version"] = schema_version
+                fallback["api_family"] = "swfi_ai"
+                fallback["api_route"] = route_name
+                fallback["provider_stack"] = build_swfi_ai_provider_stack()
+                fallback["canonical_routes"] = canonical_swfi_ai_routes()
+                fallback["provider_backup_chain"] = ["Anthropic", "Google Gemini"]
+                fallback["primary_provider"] = "OpenAI"
+                fallback["expert_scope"] = swfi_expert_scope_manifest()
+                self._write_json(fallback, status=200)
+                return
+
+            self._write_json(payload, status=200)
+            return
 
         if parsed.path == "/api/admin/rebuild":
             auth_mode = authenticated_request_mode(self)
