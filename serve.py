@@ -105,6 +105,7 @@ MSCI_SCHEMA_VERSION = "swfi.msci_workbench.v1"
 ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PROFILES_SCHEMA_VERSION = "swfi.profiles.v1"
 RESEARCH_WORKSPACE_SCHEMA_VERSION = "swfi.research_workspace.v1"
+CAPITAL_INTENT_SCHEMA_VERSION = "swfi.capital_intent.v1"
 PREVIEW_ROUTE = "/preview"
 AI_POLICY_VERSION = "swfi.policy.ai_governance.v0_1"
 PROMPT_REGISTRY_VERSION = "swfi.prompt_registry.v1"
@@ -195,6 +196,41 @@ CLIENT_PRESETS = {
 PRIVATE_IA_NOTE = (
     "Authenticated review informed IA alignment; no private data persisted in the repo or preview packet."
 )
+
+CATEGORY_BLUEPRINT = {
+    "label": "Institutional Capital Intelligence OS",
+    "core_thesis": (
+        "SWFI is a governed intelligence layer that helps users understand who has capital, "
+        "where it is moving, why it is moving, and what action should be taken."
+    ),
+    "core_differentiator": "Capital Intent Graph",
+    "positioning": (
+        "SWFI tracks who allocates capital, where it is likely to move, why it is moving, "
+        "and how to act on it using verified data and governed intelligence."
+    ),
+    "modules": [
+        {"name": "Verified Data Universe", "status": "ok"},
+        {"name": "Capital Intent Graph", "status": "partial"},
+        {"name": "Mandate Fit Engine", "status": "partial"},
+        {"name": "Access Barrier Intelligence", "status": "partial"},
+        {"name": "Relationship Mapping", "status": "partial"},
+        {"name": "Narrative Drift Detection", "status": "partial"},
+        {"name": "Trust-Labeled Research", "status": "ok"},
+        {"name": "Conference Signal Engine", "status": "watch"},
+        {"name": "Capital Access (curated)", "status": "partial"},
+    ],
+    "phases": [
+        "Phase 1: Clean data and delivery",
+        "Phase 2: Core intelligence",
+        "Phase 3: Predictive intelligence",
+        "Phase 4: Adaptive learning",
+    ],
+    "avoid": [
+        "Generic AI chatbot",
+        "Broad Bloomberg-style terminal clone",
+        "Ungoverned marketplace",
+    ],
+}
 
 COLLECTION_MODEL = [
     {
@@ -1321,6 +1357,7 @@ _review_log_lock = threading.Lock()
 _session_lock = threading.Lock()
 _dashboard_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _profiles_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
+_capital_intent_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _sandbox_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _msci_people_summary_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
 _msci_people_export_cache: dict[str, object] = {"timestamp": 0.0, "payload": None}
@@ -3577,6 +3614,7 @@ def build_dashboard_payload() -> dict[str, object]:
     roadmap_bundle = load_platform_improvements()
     sandbox_bundle = get_sandbox_api_map()
     profiles_payload = get_profiles_payload()
+    capital_intent_graph = build_capital_intent_graph(profiles_payload)
     people_summary = get_msci_people_summary(target_bundle)
 
     concerns = concern_bundle["rows"]
@@ -3617,6 +3655,8 @@ def build_dashboard_payload() -> dict[str, object]:
             "models": CANONICAL_SCHEMA,
             "provenance_contract": PROVENANCE_CONTRACT,
         },
+        "category_blueprint": CATEGORY_BLUEPRINT,
+        "capital_intent_graph": capital_intent_graph,
         "benchmark_matrix": BENCHMARK_MATRIX,
         "required_api_stack": REQUIRED_API_STACK,
         "external_api_matrix": EXTERNAL_API_MATRIX,
@@ -4379,6 +4419,10 @@ def build_profile_signals_json() -> str:
     return json.dumps(payload.get("profile_signals", {}), indent=2) + "\n"
 
 
+def build_capital_intent_json() -> str:
+    return json.dumps(get_capital_intent_payload(), indent=2) + "\n"
+
+
 def build_client_brief_md() -> str:
     payload = get_dashboard_payload()
     profile_signals = payload.get("profile_signals", {})
@@ -4450,6 +4494,28 @@ def build_profile_brief_md(slug: str) -> str:
             lines.append(f"- **{person.get('name') or 'Unknown'}** · {person.get('title') or 'Role not specified'}")
             lines.append(f"  - {contact_line}")
 
+    capital_intent = profile.get("capital_intent") or {}
+    lines.extend(["", "## Capital intent"])
+    lines.append(f"- Status: {capital_intent.get('status') or 'review'}")
+    lines.append(f"- Timing: {capital_intent.get('timing') or 'Monitor'}")
+    lines.append(f"- Actionability score: {capital_intent.get('actionability_score') or 0}")
+    lines.append(f"- Next best action: {capital_intent.get('next_best_action') or 'Not set'}")
+    mandate_fit = capital_intent.get("mandate_fit") or []
+    if mandate_fit:
+        lines.append(f"- Mandate fit: {', '.join(str(item) for item in mandate_fit[:4])}")
+
+    barriers = profile.get("access_barriers") or []
+    lines.extend(["", "## Access barriers"])
+    if not barriers:
+        lines.append("- No access barrier intelligence is attached.")
+    else:
+        for item in barriers[:4]:
+            lines.append(
+                f"- **{item.get('title') or 'Barrier'}** ({item.get('status') or 'watch'} / {item.get('priority') or 'medium'})"
+            )
+            if item.get("note"):
+                lines.append(f"  - {item.get('note')}")
+
     lines.extend(["", "## Sources"])
     for source in (profile.get("source_refs") or [])[:6]:
         label = source.get("label") or "Source"
@@ -4513,6 +4579,279 @@ def clean_profile_copy(value: object, *, limit: int = 560) -> str:
 def profile_primary_contact(contact: dict[str, object]) -> str:
     history = pick_person_history_row(contact)
     return normalize_text(str(history.get("title") or contact.get("title") or ""))
+
+
+PROFILE_INTENT_PLAYBOOK = {
+    "Sovereign Wealth Fund": {
+        "deployment_model": "Direct investments, fund commitments, strategic partnerships, and mandate-led allocation shifts.",
+        "mandate_fit": ["Private markets", "Direct deals", "Co-investment", "Strategic partnerships"],
+        "timing_bias": "Long-cycle strategic capital",
+    },
+    "Public Pension": {
+        "deployment_model": "Consultant-influenced manager selection, board-led pacing, and external manager mandates.",
+        "mandate_fit": ["Manager search", "RFPs", "Consultant-led mandates", "Board-approved allocations"],
+        "timing_bias": "Board and procurement cycle",
+    },
+    "Central Bank": {
+        "deployment_model": "Reserve-management mandates, policy-constrained external manager selection, and institutional partnerships.",
+        "mandate_fit": ["Reserve management", "External mandates", "Policy-led allocation", "Custody and risk systems"],
+        "timing_bias": "Policy and reserve cycle",
+    },
+    "Endowment": {
+        "deployment_model": "Specialist manager selection, outsourced CIO relationships, and long-horizon private allocations.",
+        "mandate_fit": ["Specialist managers", "Private funds", "OCIO-led coverage", "Long-horizon allocations"],
+        "timing_bias": "Committee cycle",
+    },
+    "Family Office": {
+        "deployment_model": "Flexible direct deals, co-investments, and relationship-led manager selection.",
+        "mandate_fit": ["Direct opportunities", "Co-investment", "Niche managers", "Relationship-led coverage"],
+        "timing_bias": "Opportunistic cycle",
+    },
+}
+
+
+def profile_playbook(profile_type: str) -> dict[str, object]:
+    return PROFILE_INTENT_PLAYBOOK.get(
+        str(profile_type or ""),
+        {
+            "deployment_model": "Institutional allocation and relationship-led capital deployment.",
+            "mandate_fit": ["Profiles", "Transactions", "Mandates", "Key People"],
+            "timing_bias": "Institutional cycle",
+        },
+    )
+
+
+def build_access_barriers(
+    trust_status: str,
+    current_contacts: list[dict[str, object]],
+    email_count: int,
+    phone_count: int,
+    website: str,
+) -> list[dict[str, str]]:
+    barriers: list[dict[str, str]] = []
+    if trust_status in {"NeedsReview", "Conflicted"}:
+        barriers.append(
+            {
+                "title": "Profile verification",
+                "status": "blocked" if trust_status == "Conflicted" else "watch",
+                "priority": "high",
+                "note": "Trust state still needs analyst confirmation before treating the profile as fully cleared.",
+            }
+        )
+    if not current_contacts:
+        barriers.append(
+            {
+                "title": "Decision-maker coverage",
+                "status": "blocked",
+                "priority": "high",
+                "note": "No current Key People are attached, which limits outreach and relationship planning.",
+            }
+        )
+    elif email_count == 0:
+        barriers.append(
+            {
+                "title": "Direct contact coverage",
+                "status": "watch",
+                "priority": "high",
+                "note": "Key People exist, but no current direct email coverage is attached.",
+            }
+        )
+    elif phone_count == 0:
+        barriers.append(
+            {
+                "title": "Phone verification",
+                "status": "watch",
+                "priority": "medium",
+                "note": "Email coverage exists, but phone coverage is still thin for direct follow-up.",
+            }
+        )
+    if not str(website or "").strip():
+        barriers.append(
+            {
+                "title": "Institution website",
+                "status": "watch",
+                "priority": "medium",
+                "note": "Public website is missing from current coverage, reducing public-source triangulation.",
+            }
+        )
+    if not barriers:
+        barriers.append(
+            {
+                "title": "Access path",
+                "status": "ok",
+                "priority": "medium",
+                "note": "Current trust state, website, and contact coverage support subscriber use.",
+            }
+        )
+    return barriers
+
+
+def build_relationship_map(current_contacts: list[dict[str, object]], source_refs: list[dict[str, object]]) -> dict[str, object]:
+    decision_paths = []
+    for person in current_contacts[:5]:
+        channel_state = "direct" if person.get("email") or person.get("phone") else "indirect"
+        decision_paths.append(
+            {
+                "name": str(person.get("name") or "Unknown"),
+                "title": str(person.get("title") or "Role not specified"),
+                "channel_state": channel_state,
+                "email": str(person.get("email") or ""),
+                "phone": str(person.get("phone") or ""),
+                "linkedin": str(person.get("linkedin") or ""),
+            }
+        )
+
+    if decision_paths and any(item.get("channel_state") == "direct" for item in decision_paths):
+        path_status = "direct_access_available"
+        summary = "At least one current decision path has direct contact coverage."
+    elif decision_paths:
+        path_status = "relationship_development_required"
+        summary = "Decision paths exist, but direct channels still require enrichment or verification."
+    else:
+        path_status = "no_current_path"
+        summary = "No current decision-maker path is attached in the existing profile packet."
+
+    return {
+        "path_status": path_status,
+        "summary": summary,
+        "decision_paths": decision_paths,
+        "source_count": len(source_refs),
+    }
+
+
+def build_narrative_drift(summary: str, trust_status: str, source_refs: list[dict[str, object]]) -> dict[str, str]:
+    cleaned = normalize_text(summary)
+    if trust_status == "Conflicted":
+        return {
+            "status": "conflicted",
+            "note": "Profile trust state is conflicted, so the narrative should not be treated as settled.",
+        }
+    if not cleaned:
+        return {
+            "status": "needs_review",
+            "note": "Current profile packet lacks a concise narrative summary.",
+        }
+    if len(source_refs) < 2:
+        return {
+            "status": "watch",
+            "note": "Narrative exists, but the source trail is still thin.",
+        }
+    return {
+        "status": "aligned",
+        "note": "Profile summary, trust state, and source trail are aligned in the current packet.",
+    }
+
+
+def build_profile_capital_intent(
+    name: str,
+    profile_type: str,
+    trust_status: str,
+    trust_confidence: str,
+    aum_value: float,
+    current_contacts: list[dict[str, object]],
+    email_count: int,
+    phone_count: int,
+    signals: list[dict[str, object]],
+) -> dict[str, object]:
+    playbook = profile_playbook(profile_type)
+    direct_channels = email_count + phone_count
+    if trust_status == "Verified" and direct_channels >= 3 and len(current_contacts) >= 3:
+        status = "actionable"
+        timing = "Current"
+        next_action = "Move from profile review to relationship and mandate preparation."
+    elif trust_status in {"Verified", "Derived"} and current_contacts:
+        status = "developing"
+        timing = "Near-term"
+        next_action = "Deepen Key People coverage and link the profile to active mandates or briefings."
+    elif trust_status == "Conflicted":
+        status = "constrained"
+        timing = "Hold"
+        next_action = "Resolve the trust conflict before using the profile in outbound work."
+    else:
+        status = "review"
+        timing = "Monitor"
+        next_action = "Complete trust and coverage review before treating this profile as actionable."
+
+    score = 0
+    score += 30 if trust_status == "Verified" else 18 if trust_status == "Derived" else 6
+    score += min(25, len(current_contacts) * 4)
+    score += min(20, direct_channels * 3)
+    score += 12 if aum_value > 0 else 0
+    score = max(0, min(100, score))
+    top_signals = [str(item.get("title") or "") for item in signals[:3] if str(item.get("title") or "").strip()]
+
+    return {
+        "status": status,
+        "confidence": trust_confidence,
+        "timing": timing,
+        "actionability_score": score,
+        "deployment_model": str(playbook.get("deployment_model") or ""),
+        "mandate_fit": list(playbook.get("mandate_fit") or []),
+        "timing_bias": str(playbook.get("timing_bias") or ""),
+        "signal_summary": top_signals,
+        "next_best_action": next_action,
+        "thesis": (
+            f"{name} fits the current {profile_type.lower()} playbook with "
+            f"{len(current_contacts)} Key People and {direct_channels} direct channels in coverage."
+            if profile_type
+            else f"{name} has {len(current_contacts)} Key People and {direct_channels} direct channels in coverage."
+        ),
+    }
+
+
+def build_capital_intent_graph(profiles_payload: dict[str, object]) -> dict[str, object]:
+    profiles = [item for item in (profiles_payload.get("profiles") or []) if isinstance(item, dict)]
+    ranked = sorted(
+        profiles,
+        key=lambda item: (
+            -int(((item.get("capital_intent") or {}).get("actionability_score")) or 0),
+            -float(item.get("assets") or 0.0),
+            str(item.get("name") or ""),
+        ),
+    )
+    top_profiles = []
+    constrained = []
+    for item in ranked[:12]:
+        capital_intent = item.get("capital_intent") or {}
+        top_profiles.append(
+            {
+                "slug": str(item.get("slug") or ""),
+                "name": str(item.get("name") or ""),
+                "type": str(item.get("type") or ""),
+                "country": str(item.get("country") or ""),
+                "status": str(capital_intent.get("status") or "review"),
+                "timing": str(capital_intent.get("timing") or "Monitor"),
+                "score": int(capital_intent.get("actionability_score") or 0),
+                "next_best_action": str(capital_intent.get("next_best_action") or ""),
+                "profile_url": f"/profiles/{item.get('slug')}",
+            }
+        )
+        barriers = item.get("access_barriers") or []
+        if barriers:
+            constrained.append(
+                {
+                    "slug": str(item.get("slug") or ""),
+                    "name": str(item.get("name") or ""),
+                    "top_barrier": str((barriers[0] or {}).get("title") or ""),
+                    "status": str((barriers[0] or {}).get("status") or "watch"),
+                    "profile_url": f"/profiles/{item.get('slug')}",
+                }
+            )
+
+    return {
+        "schema_version": CAPITAL_INTENT_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "category": CATEGORY_BLUEPRINT,
+        "summary": {
+            "profiles": len(profiles),
+            "actionable": sum(1 for item in profiles if ((item.get("capital_intent") or {}).get("status")) == "actionable"),
+            "developing": sum(1 for item in profiles if ((item.get("capital_intent") or {}).get("status")) == "developing"),
+            "review": sum(1 for item in profiles if ((item.get("capital_intent") or {}).get("status")) == "review"),
+            "constrained": sum(1 for item in profiles if ((item.get("capital_intent") or {}).get("status")) == "constrained"),
+        },
+        "top_profiles": top_profiles[:8],
+        "access_barriers": constrained[:8],
+    }
 
 
 def build_profiles_payload() -> dict[str, object]:
@@ -4699,6 +5038,31 @@ def build_profiles_payload() -> dict[str, object]:
                 }
             )
 
+        access_barriers = build_access_barriers(
+            trust_status,
+            current_contacts,
+            email_count,
+            phone_count,
+            str(entity.get("website") or ""),
+        )
+        relationship_map = build_relationship_map(current_contacts, source_refs)
+        capital_intent = build_profile_capital_intent(
+            str(entity.get("name") or "Unnamed profile"),
+            entity_type,
+            trust_status,
+            trust_confidence,
+            aum_value,
+            current_contacts,
+            email_count,
+            phone_count,
+            signals,
+        )
+        narrative_drift = build_narrative_drift(
+            clean_profile_copy(entity.get("summary") or entity.get("background") or "", limit=900),
+            trust_status,
+            source_refs,
+        )
+
         record = {
             "id": str(entity.get("_id") or profile_slug(str(entity.get("name") or ""))),
             "slug": profile_slug(str(entity.get("name") or "")),
@@ -4744,6 +5108,10 @@ def build_profiles_payload() -> dict[str, object]:
             },
             "key_people": current_contacts[:12],
             "signals": signals,
+            "capital_intent": capital_intent,
+            "relationship_map": relationship_map,
+            "access_barriers": access_barriers,
+            "narrative_drift": narrative_drift,
             "source_refs": source_refs,
             "provenance": provenance,
             "download_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/v1",
@@ -4762,6 +5130,10 @@ def build_profiles_payload() -> dict[str, object]:
         "regions": [{"name": name, "count": count} for name, count in Counter(item["region"] for item in records if item["region"]).most_common(6)],
         "types": [{"name": name, "count": count} for name, count in Counter(item["type"] for item in records if item["type"]).most_common(8)],
         "generated_from": "Curated sovereign and public profile coverage built from authenticated SWFI entity data and SWFI reference sources.",
+        "capital_intent": {
+            "label": CATEGORY_BLUEPRINT["label"],
+            "core_differentiator": CATEGORY_BLUEPRINT["core_differentiator"],
+        },
     }
     return {
         "schema_version": PROFILES_SCHEMA_VERSION,
@@ -4808,6 +5180,21 @@ def get_profiles_payload() -> dict[str, object]:
     with _cache_lock:
         _profiles_cache["timestamp"] = now
         _profiles_cache["payload"] = payload
+    return payload
+
+
+def get_capital_intent_payload() -> dict[str, object]:
+    now = time.time()
+    with _cache_lock:
+        cached = _capital_intent_cache.get("payload")
+        timestamp = float(_capital_intent_cache.get("timestamp", 0.0))
+        if cached and now - timestamp < CACHE_TTL_SECONDS:
+            return cached
+
+    payload = build_capital_intent_graph(get_profiles_payload())
+    with _cache_lock:
+        _capital_intent_cache["timestamp"] = now
+        _capital_intent_cache["payload"] = payload
     return payload
 
 
@@ -5576,6 +5963,8 @@ def clear_runtime_caches() -> None:
         _dashboard_cache["payload"] = None
         _profiles_cache["timestamp"] = 0.0
         _profiles_cache["payload"] = None
+        _capital_intent_cache["timestamp"] = 0.0
+        _capital_intent_cache["payload"] = None
         _sandbox_cache["timestamp"] = 0.0
         _sandbox_cache["payload"] = None
         _msci_people_summary_cache["timestamp"] = 0.0
@@ -7562,6 +7951,13 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_json(build_research_workspace_payload(), head_only=head_only)
             return True
 
+        if parsed.path in ("/api/capital-intent", "/api/capital-intent/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(get_capital_intent_payload(), head_only=head_only)
+            return True
+
         profile_match = re.fullmatch(r"/api/profiles/([^/]+)/v1", parsed.path)
         if profile_match:
             if not request_is_authenticated(self):
@@ -7576,6 +7972,35 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                     "schema_version": PROFILES_SCHEMA_VERSION,
                     "generated_at": iso_now(),
                     "profile": profile,
+                },
+                head_only=head_only,
+            )
+            return True
+
+        profile_capital_intent_match = re.fullmatch(r"/api/profiles/([^/]+)/capital-intent/v1", parsed.path)
+        if profile_capital_intent_match:
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            profile = get_profile_detail(profile_capital_intent_match.group(1))
+            if not profile:
+                self._write_json({"error": "profile not found"}, status=404, head_only=head_only)
+                return True
+            self._write_json(
+                {
+                    "schema_version": CAPITAL_INTENT_SCHEMA_VERSION,
+                    "generated_at": iso_now(),
+                    "category": CATEGORY_BLUEPRINT,
+                    "profile": {
+                        "slug": str(profile.get("slug") or ""),
+                        "name": str(profile.get("name") or ""),
+                        "type": str(profile.get("type") or ""),
+                        "country": str(profile.get("country") or ""),
+                        "capital_intent": profile.get("capital_intent") or {},
+                        "relationship_map": profile.get("relationship_map") or {},
+                        "access_barriers": profile.get("access_barriers") or [],
+                        "narrative_drift": profile.get("narrative_drift") or {},
+                    },
                 },
                 head_only=head_only,
             )
@@ -8026,6 +8451,32 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-profile-signals.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/capital-intent.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_capital_intent_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-capital-intent.json"'},
             )
             return True
 
