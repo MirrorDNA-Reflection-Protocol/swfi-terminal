@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="ticker-wrap" aria-hidden="true">
@@ -47,7 +47,7 @@
             <p class="sys-label">Downloads</p>
             <div class="download-row" id="profile-downloads"></div>
             <div class="section-block">
-              <p class="sys-label">Profile source status</p>
+              <p class="sys-label">Source status</p>
               <div class="panel-stack" id="profile-source-status"></div>
             </div>
           </div>
@@ -134,10 +134,36 @@
               <div class="msci-table" id="profile-key-people"></div>
             </article>
           </section>
+
+          <aside class="right-rail">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Coverage snapshot</p>
+                  <h3>Trust and freshness</h3>
+                </div>
+              </div>
+              <div class="panel-stack" id="profile-coverage-notes"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="sys-label">Subscriber actions</p>
+                  <h3>Downloads and routes</h3>
+                </div>
+              </div>
+              <div class="download-row" id="profile-action-links"></div>
+              <div class="section-block">
+                <p class="sys-label">Next step</p>
+                <div class="panel-stack" id="profile-next-step"></div>
+              </div>
+            </article>
+          </aside>
         </section>
       </main>
     </div>
 
-    <script src="./profiles.js" type="module"></script>
+    <script src="/profiles.js" type="module"></script>
   </body>
 </html>

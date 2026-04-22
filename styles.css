@@ -1138,7 +1138,7 @@ button { cursor: pointer; }
 /* Profiles */
 .profiles-stack { gap: 16px; margin-top: 16px; }
 .profiles-hero { grid-template-columns: minmax(0, 1fr) 360px; }
-.profiles-grid { grid-template-columns: 360px minmax(0, 1fr); }
+.profiles-grid { grid-template-columns: 360px minmax(0, 1fr) 320px; }
 .profiles-directory-panel { min-height: 760px; }
 .profile-list-item {
   width: 100%;

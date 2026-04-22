@@ -20,6 +20,9 @@ const signalListEl = $("profile-signal-list");
 const sourceListEl = $("profile-source-list");
 const keyPeopleCountEl = $("profile-key-people-count");
 const keyPeopleEl = $("profile-key-people");
+const coverageNotesEl = $("profile-coverage-notes");
+const actionLinksEl = $("profile-action-links");
+const nextStepEl = $("profile-next-step");
 
 const state = {
   payload: null,
@@ -92,6 +95,14 @@ function updateLocation(slug) {
   if (window.location.pathname !== target) {
     window.history.replaceState({}, "", target);
   }
+}
+
+function profileBriefingsUrl(profile) {
+  return profile?.briefings_url || `/research?q=${encodeURIComponent(profile?.name || "")}`;
+}
+
+function profileBriefUrl(profile) {
+  return profile?.brief_url || `/api/reports/profile-brief.md?slug=${encodeURIComponent(profile?.slug || "")}`;
 }
 
 function renderTicker(payload) {
@@ -295,6 +306,9 @@ function renderDetail(profile) {
     sourceListEl.innerHTML = '<article class="empty-state"><p>No source references are available.</p></article>';
     keyPeopleCountEl.textContent = "0 people";
     keyPeopleEl.innerHTML = '<article class="empty-state"><p>No Key People are attached to this profile.</p></article>';
+    coverageNotesEl.innerHTML = '<article class="empty-state"><p>No profile coverage snapshot is available.</p></article>';
+    actionLinksEl.innerHTML = "";
+    nextStepEl.innerHTML = '<article class="empty-state"><p>No subscriber action is available.</p></article>';
     return;
   }
 
@@ -417,9 +431,59 @@ function renderDetail(profile) {
     `;
   }
 
+  coverageNotesEl.innerHTML = `
+    <article class="stack-card tone-${tone(profile.trust?.status)}">
+      <div class="readiness-head">
+        <strong>${esc(statusLabel(profile.trust?.status || "Review"))}</strong>
+        <span class="status-chip tone-${tone(profile.trust?.status)}">${esc(profile.trust?.confidence || "Low")}</span>
+      </div>
+      <p>${esc(profile.trust?.note || "Trust note not available.")}</p>
+    </article>
+    <article class="stack-card tone-${people.length ? "ok" : "watch"}">
+      <div class="readiness-head">
+        <strong>Key People coverage</strong>
+        <span class="status-chip tone-${people.length ? "ok" : "watch"}">${esc(`${people.length} current`)}</span>
+      </div>
+      <p>${esc(`${profile.coverage?.with_email || 0} with email · ${profile.coverage?.with_phone || 0} with phone · ${profile.coverage?.with_linkedin || 0} with LinkedIn`)}</p>
+    </article>
+    <article class="stack-card tone-${(profile.source_refs || []).length ? "ok" : "watch"}">
+      <div class="readiness-head">
+        <strong>Source trail</strong>
+        <span class="status-chip tone-${(profile.source_refs || []).length ? "ok" : "watch"}">${esc(`${(profile.source_refs || []).length} linked`)}</span>
+      </div>
+      <p>${esc(profile.updated_at ? `Current profile date ${profile.updated_at}.` : "No current profile date is attached.")}</p>
+    </article>
+  `;
+
+  actionLinksEl.innerHTML = `
+    <a class="nav-cta mini-cta" href="${esc(profile.download_url || `/api/profiles/${profile.slug}/v1`)}">Profile JSON</a>
+    <a class="nav-cta mini-cta" href="${esc(profileBriefUrl(profile))}">Profile brief</a>
+    <a class="nav-cta mini-cta" href="${esc(profileBriefingsUrl(profile))}">Open briefings</a>
+    ${profile.website ? `<a class="nav-cta mini-cta" href="${esc(profile.website)}" target="_blank" rel="noreferrer">Institution website</a>` : ""}
+  `;
+
+  const nextStep = !people.length
+    ? "Key People coverage is missing. Prioritize people verification before using this profile in outreach."
+    : !(profile.coverage?.with_email)
+      ? "Key People are attached, but direct email coverage is missing. Run contact verification before export use."
+      : profile.trust?.status === "NeedsReview"
+        ? "Profile is usable, but field-level review should be completed before treating it as fully verified."
+        : "Profile is ready for subscriber use. Use the brief export for client prep or internal distribution.";
+  nextStepEl.innerHTML = `
+    <article class="stack-card tone-${tone(profile.trust?.status)}">
+      <div class="readiness-head">
+        <strong>Recommended action</strong>
+        <span class="status-chip tone-${tone(profile.trust?.status)}">${esc(statusLabel(profile.trust?.status || "Review"))}</span>
+      </div>
+      <p>${esc(nextStep)}</p>
+    </article>
+  `;
+
   downloadsEl.innerHTML = `
     <a class="nav-cta mini-cta" href="/api/profiles/v1">Profiles JSON</a>
     <a class="nav-cta mini-cta" href="${esc(profile.download_url || `/api/profiles/${profile.slug}/v1`)}">Current profile JSON</a>
+    <a class="nav-cta mini-cta" href="${esc(profileBriefUrl(profile))}">Profile brief</a>
+    <a class="nav-cta mini-cta" href="${esc(profileBriefingsUrl(profile))}">Open briefings</a>
     ${profile.website ? `<a class="nav-cta mini-cta" href="${esc(profile.website)}" target="_blank" rel="noreferrer">Institution website</a>` : ""}
   `;
 }

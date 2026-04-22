@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SWFI | MSCI Delivery</title>
-    <meta name="description" content="Subscriber access to SWFI MSCI Key People delivery, account mapping, and export files." />
+    <title>SWFI | MSCI Integration</title>
+    <meta name="description" content="Subscriber access to SWFI Key People coverage, account mapping, and integration files." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="ticker-wrap" aria-hidden="true">
@@ -38,9 +38,9 @@
       <main class="main-stack msci-stack">
         <header class="panel msci-hero">
           <div class="msci-hero-copy">
-            <p class="sys-label">MSCI delivery</p>
-            <h1>Key People Export</h1>
-            <p class="msci-copy">Subscriber access to Key People coverage, account mapping, export readiness, and delivery files.</p>
+            <p class="sys-label">MSCI integration</p>
+            <h1>Key People Feed</h1>
+            <p class="msci-copy">Subscriber access to Key People coverage, account mapping, and integration files.</p>
             <div class="status-strip msci-status-strip" id="msci-status-strip"></div>
           </div>
           <div class="msci-download-panel">
@@ -60,8 +60,8 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Export status</p>
-                  <h3>Delivery readiness</h3>
+                  <p class="sys-label">Coverage</p>
+                  <h3>Current integration</h3>
                 </div>
               </div>
               <p class="msci-answer" id="msci-answer"></p>
@@ -74,8 +74,8 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <p class="sys-label">Requested fields</p>
-                  <h3>MSCI contract</h3>
+                  <p class="sys-label">Schema</p>
+                  <h3>MSCI fields</h3>
                 </div>
               </div>
               <div class="msci-field-list" id="msci-requested-fields"></div>
@@ -97,12 +97,12 @@
               <div class="panel-head">
                 <div>
                   <p class="sys-label">Available now</p>
-                  <h3>Delivery files</h3>
+                  <h3>Integration files</h3>
                 </div>
               </div>
               <div class="panel-stack" id="msci-ready-list"></div>
               <div class="section-block">
-                <p class="sys-label">Needs follow-up</p>
+                <p class="sys-label">In review</p>
                 <div class="panel-stack" id="msci-blocked-list"></div>
               </div>
             </article>
@@ -111,7 +111,7 @@
               <div class="panel-head">
                 <div>
                   <p class="sys-label">Account mapping</p>
-                  <h3>Top targets</h3>
+                  <h3>Priority institutions</h3>
                 </div>
               </div>
               <div class="msci-table compact" id="msci-targets"></div>
@@ -131,6 +131,6 @@
       </main>
     </div>
 
-    <script src="./msci.js" type="module"></script>
+    <script src="/msci.js" type="module"></script>
   </body>
 </html>

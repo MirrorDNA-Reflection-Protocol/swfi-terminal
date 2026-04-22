@@ -29,6 +29,11 @@ const state = {
   family: "All",
 };
 
+function currentSearchFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("q") || "";
+}
+
 function esc(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -209,6 +214,11 @@ function renderReadList() {
             <span class="status-chip tone-${tone(item.status)}">${esc(statusLabel(item.status))}</span>
           </div>
           <p>${esc(item.family || "VIP Briefing")} · ${esc(item.entity_type || "Read")}</p>
+          <div class="detail-line">
+            <span>${esc(`${(item.source_refs || []).length} sources`)}</span>
+            <span>${esc(relDate(item.generated_at))}</span>
+            <span>${esc(item.confidence || "Low")}</span>
+          </div>
           <div class="lane-footer">
             <span>${esc(item.why_it_matters || item.summary || "")}</span>
           </div>
@@ -414,7 +424,10 @@ async function loadWorkspace() {
     throw new Error(`research workspace fetch failed: ${response.status}`);
   }
   state.payload = await response.json();
+  state.search = currentSearchFromLocation();
+  if (searchInput) searchInput.value = state.search;
   state.selectedId = state.payload?.current_reads?.[0]?.id || null;
+  ensureSelection();
   renderTicker(state.payload);
   renderSummary(state.payload);
   renderFilters();

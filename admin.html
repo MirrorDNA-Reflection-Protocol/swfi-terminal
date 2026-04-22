@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SWFI | Admin Console</title>
-    <meta name="description" content="Hidden SWFI admin console for feed status, export history, audit logs, and rebuild controls." />
+    <meta name="description" content="SWFI ops console: feed status, integration history, audit logs, rebuild controls." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="ticker-wrap" aria-hidden="true">
@@ -30,7 +30,7 @@
         </div>
         <div class="nav-right">
           <span class="nav-status-dot nav-status-dot--controlled"></span>
-          <span class="nav-status-label">Hidden console</span>
+          <span class="nav-status-label">Admin</span>
           <a href="/auth/logout" class="nav-link">Sign out</a>
         </div>
       </nav>
@@ -38,7 +38,7 @@
       <main class="main-stack msci-stack">
         <header class="panel msci-hero">
           <div class="msci-hero-copy">
-            <p class="sys-label">Delivery operations</p>
+            <p class="sys-label">Operations</p>
             <h1>SWFI Operations</h1>
             <p class="msci-copy">Feed status, export history, audit trail, analytics, and controlled rebuild actions for the live SWFI runtime.</p>
             <div class="status-strip msci-status-strip" id="admin-status-strip"></div>
@@ -73,7 +73,7 @@
               <div class="panel-head">
                 <div>
                   <p class="sys-label">Analytics</p>
-                  <h3>MSCI wedge metrics</h3>
+                  <h3>MSCI integration metrics</h3>
                 </div>
               </div>
               <div class="api-summary-grid" id="admin-analytics-grid"></div>
@@ -97,7 +97,7 @@
               <div class="panel-head">
                 <div>
                   <p class="sys-label">Reviewed updates</p>
-                  <h3>Useful facts from the current packet</h3>
+                  <h3>Current packet highlights</h3>
                 </div>
               </div>
               <div class="panel-stack" id="admin-nugget-list"></div>
@@ -167,6 +167,6 @@
       </main>
     </div>
 
-    <script src="./admin.js" type="module"></script>
+    <script src="/admin.js" type="module"></script>
   </body>
 </html>

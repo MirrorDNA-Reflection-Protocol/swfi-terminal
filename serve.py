@@ -2900,7 +2900,7 @@ def build_maturity_groups() -> list[dict[str, object]]:
             "bucket": "document_extraction_required",
             "title": "Document extraction required",
             "items": [
-                {"name": "MSCI target account list", "status": "partial", "note": "Parsed into the MSCI delivery surface from the supplied XLSX file."},
+                {"name": "MSCI target account list", "status": "partial", "note": "Parsed into the MSCI integration workspace from the supplied XLSX file."},
                 {"name": "Board minutes / agendas / PDF filings", "status": "blocked", "note": "Critical for scattered asset-allocation facts and unstructured disclosures."},
                 {"name": "Platform improvement notes and briefing docs", "status": "partial", "note": "Briefing notes are surfaced, but not yet tied to execution telemetry."},
             ],
@@ -2957,8 +2957,8 @@ def build_data_coverage(people_summary: dict[str, object]) -> list[dict[str, obj
         {
             "lane": "Bloomberg",
             "available_today_api": [
-                "AUM field surface and current blocker sheet",
-                "Transactions / Compass domain framing",
+                "AUM field coverage and current review sheet",
+                "Transactions / Compass coverage",
             ],
             "public_docs_extraction": [
                 "Roadmap items for search, filters, and data coverage",
@@ -3072,7 +3072,7 @@ def build_security_controls() -> list[dict[str, str]]:
         {
             "title": "Read-only briefings lane",
             "status": "ok",
-            "note": "The chat surface remains read-only, bounded to the current packet, and rate limited to reduce leakage and model-spend abuse.",
+            "note": "The briefing chat remains read-only, bounded to current updates, and rate limited to reduce leakage and model-spend abuse.",
             "source": "SWFI runtime",
             "url": None,
         },
@@ -3411,7 +3411,7 @@ def build_sources(
             ),
             make_source_entry(
                 "msci_email_thread",
-                "MSCI delivery requirements",
+                "MSCI integration requirements",
                 "document_extraction_required",
                 "user_supplied_email_thread",
                 retrieved_at,
@@ -3672,9 +3672,9 @@ def get_dashboard_payload() -> dict[str, object]:
 def get_guardrail(query_text: str) -> str | None:
     lowered = query_text.lower().strip()
     if not lowered:
-        return "Ask about canonical schema, provenance, MSCI export readiness, coverage gaps, or launch readiness."
+        return "Ask about canonical schema, provenance, MSCI coverage, integration status, coverage gaps, or launch readiness."
     if any(token in lowered for token in ACTION_HINTS):
-        return "This copilot is read-only. It analyzes product and delivery readiness; it does not execute workflows."
+        return "This copilot is read-only. It analyzes product and integration status; it does not execute workflows."
     if any(token in lowered for token in NON_PRODUCT_HINTS):
         return "This copilot is limited to SWFI product, workflow, schema, and launch-readiness analysis."
     return None
@@ -3972,9 +3972,9 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "schema_version": NUGGET_SCHEMA_VERSION,
             "entity_id": "msci-export-readiness",
             "entity_type": "Mandate",
-            "claim": f"MSCI export readiness is live across {target_accounts} target accounts and {people_total} accessible people.",
-            "observed_fact": f"The MSCI workspace currently surfaces {target_accounts} target accounts and {people_total} accessible people records.",
-            "derived_implication": "The lane is now credible for controlled delivery demos, but downstream outreach quality still depends on contact verification.",
+            "claim": f"MSCI integration is live across {target_accounts} mapped institutions and {people_total} accessible people.",
+            "observed_fact": f"The MSCI workspace currently surfaces {target_accounts} mapped institutions and {people_total} accessible people records.",
+            "derived_implication": "The lane is now credible for controlled integration demos, but downstream outreach quality still depends on contact verification.",
             "status": "Verified",
             "confidence": "High",
             "commercial_relevance": 0.96,
@@ -3992,7 +3992,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "prompt_version": GROUNDED_RESEARCH_PROMPT_ID,
             "model_id": "deterministic.nugget_builder.v1",
             "generated_at": iso_now(),
-            "tags": ["msci", "export", "delivery"],
+            "tags": ["msci", "integration", "coverage"],
             "priority": "high",
         },
         {
@@ -4001,7 +4001,7 @@ def build_governed_nuggets(payload: dict[str, object]) -> list[dict[str, object]
             "entity_type": "KeyPerson",
             "claim": f"Contact quality remains the main trust blocker: only {with_email} people currently have email and {with_phone} have phone in the accessible export surface.",
             "observed_fact": f"The authenticated people surface currently exposes {with_email} email values and {with_phone} phone values across {people_total} accessible people.",
-            "derived_implication": contact_gap or "Even with export readiness, outreach utility is still constrained without verification and enrichment review.",
+            "derived_implication": contact_gap or "Even with current integration coverage, outreach utility is still constrained without verification and enrichment review.",
             "status": "NeedsReview",
             "confidence": "High",
             "commercial_relevance": 0.98,
@@ -4400,6 +4400,68 @@ def build_client_brief_md() -> str:
     return "\n".join(lines) + "\n"
 
 
+def build_profile_brief_md(slug: str) -> str:
+    profile = get_profile_detail(slug)
+    if not profile:
+        return "# SWFI Profile Brief\n\nProfile not found.\n"
+
+    trust = profile.get("trust") or {}
+    coverage = profile.get("coverage") or {}
+    lines = [
+        f"# {profile.get('name') or 'SWFI Profile'}",
+        "",
+        f"Generated: {iso_now()}",
+        "",
+        "## Profile snapshot",
+        f"- Type: {profile.get('type') or 'Not disclosed'}",
+        f"- Country: {profile.get('country') or 'Not disclosed'}",
+        f"- Region: {profile.get('region') or 'Not disclosed'}",
+        f"- Assets: {profile.get('aum_display') or 'Not disclosed'}",
+        f"- Trust: {trust.get('status') or 'NeedsReview'} / {trust.get('confidence') or 'Low'}",
+        f"- Established: {profile.get('established_at') or 'Not disclosed'}",
+        f"- Last updated: {profile.get('updated_at') or 'Not disclosed'}",
+        "",
+        "## Summary",
+        str(profile.get("summary") or profile.get("background") or trust.get("note") or "No summary is available."),
+        "",
+        "## Current coverage",
+        f"- Key People: {int(coverage.get('key_people', 0) or 0)}",
+        f"- With email: {int(coverage.get('with_email', 0) or 0)}",
+        f"- With phone: {int(coverage.get('with_phone', 0) or 0)}",
+        f"- With LinkedIn: {int(coverage.get('with_linkedin', 0) or 0)}",
+        "",
+        "## Recent changes",
+    ]
+    for item in (profile.get("signals") or [])[:5]:
+        lines.append(
+            f"- **{item.get('title') or 'Profile signal'}** ({item.get('status') or 'Review'} / {item.get('confidence') or 'Low'})"
+        )
+        if item.get("summary"):
+            lines.append(f"  - {item.get('summary')}")
+
+    lines.extend(["", "## Key People"])
+    people = profile.get("key_people") or []
+    if not people:
+        lines.append("- No Key People are currently attached.")
+    else:
+        for person in people[:10]:
+            contact_bits = [str(person.get("email") or ""), str(person.get("phone") or "")]
+            contact_line = " · ".join([bit for bit in contact_bits if bit]) or "No direct contact in current coverage."
+            lines.append(f"- **{person.get('name') or 'Unknown'}** · {person.get('title') or 'Role not specified'}")
+            lines.append(f"  - {contact_line}")
+
+    lines.extend(["", "## Sources"])
+    for source in (profile.get("source_refs") or [])[:6]:
+        label = source.get("label") or "Source"
+        source_name = source.get("source") or "SWFI"
+        retrieved = source.get("retrieved_at") or "No retrieval date"
+        lines.append(f"- **{label}** · {source_name} · {retrieved}")
+        if source.get("url"):
+            lines.append(f"  - {source.get('url')}")
+
+    return "\n".join(lines) + "\n"
+
+
 PROFILE_RELEVANT_TYPES = {
     "sovereign wealth fund",
     "public pension",
@@ -4685,6 +4747,8 @@ def build_profiles_payload() -> dict[str, object]:
             "source_refs": source_refs,
             "provenance": provenance,
             "download_url": f"/api/profiles/{profile_slug(str(entity.get('name') or 'profile'))}/v1",
+            "brief_url": f"/api/reports/profile-brief.md?slug={parse.quote(profile_slug(str(entity.get('name') or 'profile')))}",
+            "briefings_url": f"/research?q={parse.quote(str(entity.get('name') or ''), safe='')}",
         }
         records.append(record)
 
@@ -5064,7 +5128,7 @@ def build_research_workspace_payload() -> dict[str, object]:
             {
                 "label": "VIP briefings",
                 "status": "ok" if current_reads else "watch",
-                "note": f"{len(current_reads)} research notes are available now.",
+                "note": f"{len(current_reads)} briefing notes are available now.",
             },
             {
                 "label": "Mandates and RFPs",
@@ -6649,13 +6713,13 @@ def render_dashboard_html(host: str, proto: str, csp_nonce: str) -> str:
         host,
         proto,
         path="/dashboard",
-        title="SWFI | Asset Owner Terminal",
+        title="SWFI | Terminal",
         description=(
-            "SWFI Asset Owner Terminal for Profiles, Transactions, Mandates, RFPs, Key People, "
-            "Asset Allocation, VIP briefings, Datafeeds/API, and MSCI delivery."
+            "SWFI Terminal with Profiles, Transactions, Mandates, RFPs, Key People, "
+            "Asset Allocation, VIP Briefings, and Datafeeds/API."
         ),
         about=[
-            "Asset Owner Terminal",
+            "Terminal",
             "Profiles",
             "Transactions",
             "Mandates",
@@ -6704,8 +6768,8 @@ def render_msci_html(host: str, proto: str, csp_nonce: str) -> str:
         host,
         proto,
         path="/msci",
-        title="SWFI | MSCI Delivery",
-        description="Subscriber access to SWFI MSCI Key People delivery, account mapping, and export files.",
+        title="SWFI | MSCI Integration",
+        description="Subscriber access to SWFI Key People coverage, account mapping, and integration files.",
         about=["MSCI", "Key People", "Profiles", "Datafeeds", "API Access", "Asset Allocation"],
     )
     return render_template_html("msci.html", meta, csp_nonce)
@@ -6772,14 +6836,14 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell auth-shell">
       <div class="auth-panel panel">
         <p class="sys-label">Subscriber access</p>
         <h1>SWFI Dashboard</h1>
-        <p class="auth-copy">Sign in to open Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, API Access, and MSCI delivery.</p>
+        <p class="auth-copy">Sign in to open Profiles, Transactions, Mandates, RFPs, Key People, Asset Allocation, Datafeeds, API Access, and MSCI integration.</p>
         {error_block}
         <form class="auth-form" method="post" action="/auth/login">
           <input type="hidden" name="next" value="{next_value}" />
@@ -6793,7 +6857,7 @@ def render_login_html(host: str, proto: str, csp_nonce: str, *, error: str | Non
           </label>
           <button type="submit" class="nav-cta auth-submit">Sign in</button>
         </form>
-        <p class="auth-note">Subscriber access. Sensitive export files remain separately protected.</p>
+        <p class="auth-note">Subscriber access. Sensitive integration files remain separately protected.</p>
       </div>
     </div>
   </body>
@@ -7988,6 +8052,39 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-client-brief.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/profile-brief.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            slug = parse.parse_qs(parsed.query).get("slug", [""])[0]
+            profile = get_profile_detail(slug)
+            if not profile:
+                append_export_audit_event(self, parsed.path, "not_found", auth_mode)
+                self._write_json({"error": "profile not found"}, status=404, head_only=head_only)
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            filename = f"swfi-{profile_slug(str(profile.get('name') or slug or 'profile'))}-brief.md"
+            self._write_text(
+                build_profile_brief_md(slug),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": f'attachment; filename="{filename}"'},
             )
             return True
 
