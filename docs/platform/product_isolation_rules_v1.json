@@ -1,0 +1,32 @@
+{
+  "schema_version": "active_mirror.product_isolation.v1",
+  "products": [
+    "active_mirror_internal",
+    "swfi"
+  ],
+  "shared_allowed": [
+    "routing engine",
+    "budget policy",
+    "privacy policy",
+    "cache framework",
+    "review framework",
+    "audit framework",
+    "watch scheduling framework"
+  ],
+  "must_be_isolated": [
+    "customer datasets",
+    "authenticated exports",
+    "prompt registries when product-specific",
+    "methodology scoring rules",
+    "entitlements",
+    "session secrets",
+    "audit trails",
+    "customer-facing branding"
+  ],
+  "non_negotiable_rules": [
+    "No product may read another product's private dataset by default.",
+    "No shared cache may expose product-private content across tenants.",
+    "Exports and reports must remain product-scoped and auditable.",
+    "Shared infrastructure is allowed; mixed data planes are not."
+  ]
+}

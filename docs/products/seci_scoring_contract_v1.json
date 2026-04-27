@@ -1,0 +1,64 @@
+{
+  "schema_version": "swfi.seci.v1",
+  "label": "SWFI Sovereign Economic Contribution Index",
+  "score_total": 100,
+  "pillars": [
+    {
+      "name": "Transparency and Disclosure",
+      "weight": 15
+    },
+    {
+      "name": "Domestic Economic Contribution",
+      "weight": 20
+    },
+    {
+      "name": "Employment and Local Capability",
+      "weight": 15
+    },
+    {
+      "name": "Strategic Sector Development",
+      "weight": 15
+    },
+    {
+      "name": "Capital Mobilization and Crowding-In",
+      "weight": 15
+    },
+    {
+      "name": "Long-Term Sustainability and Resilience",
+      "weight": 10
+    },
+    {
+      "name": "Governance and Institutional Quality",
+      "weight": 10
+    }
+  ],
+  "confidence_labels": [
+    "High",
+    "Medium",
+    "Low"
+  ],
+  "mandate_classes": [
+    "Stabilization Fund",
+    "Savings / Future Generations Fund",
+    "Strategic Development Fund",
+    "Hybrid Fund",
+    "Pension-Reserve Fund",
+    "National Champion Builder"
+  ],
+  "source_hierarchy": [
+    "Audited annual reports",
+    "Official SWF reports and government disclosures",
+    "Regulatory filings",
+    "Multilateral sources",
+    "Credible financial media",
+    "Derived estimates"
+  ],
+  "required_output_fields": [
+    "seci_score",
+    "disclosure_confidence",
+    "data_completeness",
+    "source_quality",
+    "last_verified",
+    "primary_sources_used"
+  ]
+}

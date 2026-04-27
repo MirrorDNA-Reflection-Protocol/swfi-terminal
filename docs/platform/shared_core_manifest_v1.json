@@ -1,0 +1,50 @@
+{
+  "schema_version": "active_mirror.shared_core.v1",
+  "label": "Active Mirror Shared Core",
+  "services": [
+    {
+      "id": "runtime_steward",
+      "label": "Runtime Steward",
+      "purpose": "Observe, route, prioritize, and write back governed outcomes."
+    },
+    {
+      "id": "token_shield",
+      "label": "TokenShield",
+      "purpose": "Control routing, spend, caching, and privacy-aware escalation."
+    },
+    {
+      "id": "trust_layer",
+      "label": "Trust Layer",
+      "purpose": "Attach provenance, confidence, evidence, review state, and audit."
+    },
+    {
+      "id": "benchmark_factory",
+      "label": "Benchmark Factory",
+      "purpose": "Generate methodology-driven indexes, scorecards, and confidence-labeled outputs."
+    },
+    {
+      "id": "coverage_os",
+      "label": "Coverage OS",
+      "purpose": "Turn messy source universes into tracked coverage, repair, and enrichment programs."
+    },
+    {
+      "id": "report_engine",
+      "label": "Report Engine",
+      "purpose": "Produce board-ready briefs, exports, APIs, and recurring payloads."
+    },
+    {
+      "id": "operator_console",
+      "label": "Operator Console",
+      "purpose": "Surface queues, approvals, source health, and audit history."
+    }
+  ],
+  "reference_verticals": [
+    "SWFI",
+    "Active Mirror internal operations"
+  ],
+  "control_plane_rules": [
+    "Shared core logic may be reused across products.",
+    "Customer data, prompts, and entitlements stay product-scoped.",
+    "Client-facing apps should not expose internal orchestration language by default."
+  ]
+}

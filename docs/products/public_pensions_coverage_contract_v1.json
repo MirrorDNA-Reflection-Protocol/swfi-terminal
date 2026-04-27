@@ -1,0 +1,35 @@
+{
+  "schema_version": "swfi.public_pensions_coverage.v1",
+  "required_fields": [
+    "rank",
+    "institution_name",
+    "city",
+    "state",
+    "assets",
+    "allocator_role_hint",
+    "person_name",
+    "person_email",
+    "person_title",
+    "updated_in_swfi"
+  ],
+  "derived_fields": [
+    "slug",
+    "assets_display",
+    "coverage_status",
+    "export_readiness",
+    "watch_priority",
+    "next_best_action",
+    "source_refs"
+  ],
+  "readiness_states": [
+    "ready_now",
+    "needs_contacts",
+    "needs_verification",
+    "watch"
+  ],
+  "watch_priorities": [
+    "High",
+    "Medium",
+    "Watch"
+  ]
+}

@@ -32,6 +32,18 @@ INPUTS_ROOT = ROOT / "data" / "inputs"
 DOCS_ROOT = ROOT / "docs"
 AI_DOCS_ROOT = DOCS_ROOT / "ai"
 SECURITY_DOCS_ROOT = DOCS_ROOT / "security"
+OPS_DOCS_ROOT = DOCS_ROOT / "ops"
+PLATFORM_DOCS_ROOT = DOCS_ROOT / "platform"
+PRODUCT_DOCS_ROOT = DOCS_ROOT / "products"
+DOWNLOADS_ROOT = Path.home() / "Downloads"
+
+
+def resolve_latest_download(pattern: str, fallback: Path) -> Path:
+    try:
+        candidates = sorted(DOWNLOADS_ROOT.glob(pattern), key=lambda item: item.stat().st_mtime, reverse=True)
+    except Exception:
+        candidates = []
+    return candidates[0] if candidates else fallback
 
 SHEET_CSV_URL = (
     "https://docs.google.com/spreadsheets/d/1dVHsh2zmWrWsxSpMg3zEr7Je27XmAsnO/gviz/tq"
@@ -64,6 +76,31 @@ PLATFORM_IMPROVEMENTS_CSV = Path(
     os.environ.get(
         "SWFI_PLATFORM_IMPROVEMENTS_CSV",
         str(INPUTS_ROOT / "Platform Improvements - Sheet1.csv"),
+    )
+)
+PUBLIC_PENSIONS_SOURCE_XLSX = Path(
+    os.environ.get(
+        "SWFI_PUBLIC_PENSIONS_XLSX",
+        str(
+            resolve_latest_download(
+                "public_pensions_actually_allocate*.xlsx",
+                DOWNLOADS_ROOT / "public_pensions_actually_allocate(1).xlsx",
+            )
+        ),
+    )
+)
+PUBLIC_PENSIONS_SEED_JSON = ROOT / "data" / "seed" / "public_pensions_actually_allocate.json"
+PUBLIC_PENSIONS_AUDIT_JSON = ROOT / "data" / "seed" / "public_pensions_audit.json"
+PI300_SOURCE_XLSX = Path(
+    os.environ.get(
+        "SWFI_PI300_XLSX",
+        str(resolve_latest_download("PI_300_*.xlsx", DOWNLOADS_ROOT / "PI_300_2017,2024.xlsx")),
+    )
+)
+PI300_SOURCE_PDF = Path(
+    os.environ.get(
+        "SWFI_PI300_PDF",
+        str(resolve_latest_download("PI-300*.pdf", DOWNLOADS_ROOT / "PI-300-2017,2024.pdf")),
     )
 )
 
@@ -115,6 +152,11 @@ ADMIN_SCHEMA_VERSION = "swfi.admin.v1"
 PROFILES_SCHEMA_VERSION = "swfi.profiles.v1"
 RESEARCH_WORKSPACE_SCHEMA_VERSION = "swfi.research_workspace.v1"
 SWFI_POLLING_SCHEMA_VERSION = "swfi.polling.v1"
+SECI_SCHEMA_VERSION = "swfi.seci.v1"
+PUBLIC_PENSIONS_SCHEMA_VERSION = "swfi.public_pensions_coverage.v1"
+PUBLIC_PENSION_WATCH_SCHEMA_VERSION = "swfi.public_pensions_watch.v1"
+PUBLIC_PENSIONS_AUDIT_SCHEMA_VERSION = "swfi.public_pensions_audit.v1"
+ACTIVE_MIRROR_SHARED_CORE_SCHEMA_VERSION = "active_mirror.shared_core.v1"
 CAPITAL_INTENT_SCHEMA_VERSION = "swfi.capital_intent.v1"
 MANDATE_FIT_SCHEMA_VERSION = "swfi.mandate_fit.v1"
 RELATIONSHIP_PATHS_SCHEMA_VERSION = "swfi.relationship_paths.v1"
@@ -1405,6 +1447,15 @@ SWFI_EXPERT_KEYWORDS = (
     "allocation",
     "aum",
     "managed assets",
+    "economic contribution",
+    "seci",
+    "transparency index",
+    "linaburg",
+    "linaburg-maduell",
+    "public pensions",
+    "public pension",
+    "allocate",
+    "allocator readiness",
     "datafeed",
     "datafeeds",
     "api",
@@ -1517,6 +1568,7 @@ _PREVIEW_AUTH_PASSWORD_SECRET = load_secret_from_env_or_keychain("SWFI_PREVIEW_A
 SWFI_PREVIEW_AUTH_USERNAME = _PREVIEW_AUTH_USERNAME_SECRET or "swfi-preview"
 SWFI_PREVIEW_AUTH_PASSWORD = _PREVIEW_AUTH_PASSWORD_SECRET or secrets.token_urlsafe(24)
 SWFI_SESSION_SECRET = load_secret_from_env_or_keychain("SWFI_SESSION_SECRET") or secrets.token_urlsafe(32)
+ATLAS_URI = load_secret_from_env_or_keychain("SWFI_ATLAS_URI", "MONGODB_URI", "ATLAS_URI", "SWFI_MONGODB_URI") or ATLAS_URI
 SESSION_COOKIE_NAME = "swfi_preview_session"
 
 # --- demo surface state -------------------------------------------------------
@@ -1582,6 +1634,41 @@ def to_number(value: object) -> float:
         return float(text)
     except ValueError:
         return 0.0
+
+
+def normalize_name_key(value: object) -> str:
+    text = normalize_text(value).lower()
+    replacements = {
+        "&": " and ",
+        "div.": "division",
+        "div ": "division ",
+        "empl.": "employees",
+        "empl ": "employees ",
+        "invesmtent": "investment",
+    }
+    for source, target in replacements.items():
+        text = text.replace(source, target)
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    stopwords = {
+        "and",
+        "the",
+        "of",
+        "fund",
+        "funds",
+        "pension",
+        "pensions",
+        "retirement",
+        "system",
+        "plan",
+        "trust",
+        "authority",
+        "board",
+        "public",
+        "state",
+        "common",
+    }
+    tokens = [token for token in text.split() if token and token not in stopwords]
+    return " ".join(tokens)
 
 
 def make_provenance(
@@ -3372,7 +3459,7 @@ def atlas_materialize_payload(payload: dict[str, object]) -> dict[str, object]:
             "status": "missing_env",
             "tone": "watch",
             "backend": "local_runtime_only",
-            "note": "Set SWFI_ATLAS_URI to materialize preview builds into Atlas. Atlas Data API is not used.",
+            "note": "Configure SWFI_ATLAS_URI in env or Keychain to materialize preview builds into Atlas. Atlas Data API is not used.",
         }
 
     try:
@@ -3424,7 +3511,7 @@ def build_launch_checklist(atlas_status: dict[str, object]) -> list[dict[str, st
         {
             "title": "Environment variables",
             "status": "partial",
-            "note": "Need explicit env management for GEMINI_API_KEY, SWFI_SANDBOX_API_KEY, SWFI_PRIVATE_EXPORT_TOKEN, SWFI_SECURITY_CONTACT_URI, DASHBOARD_TTL_SECONDS, local file paths, and optional SWFI_ATLAS_* settings.",
+            "note": "Need explicit env and Keychain management for GEMINI_API_KEY, SWFI_SANDBOX_API_KEY, SWFI_PRIVATE_EXPORT_TOKEN, SWFI_SECURITY_CONTACT_URI, DASHBOARD_TTL_SECONDS, local file paths, and optional SWFI_ATLAS_* settings.",
         },
         {
             "title": "Auth / session assumptions",
@@ -3985,6 +4072,21 @@ def build_fallback_answer(query_text: str, payload: dict[str, object]) -> tuple[
         )
         evidence.append(make_evidence("SWFI AI providers", "SWFI terminal", "/api/swfi/ai/providers/v1"))
 
+    if any(token in lowered for token in ("seci", "economic contribution", "contribution index", "national contribution", "linaburg")):
+        seci = build_seci_payload()
+        parts.append(
+            f"{seci['label']} should be positioned as a new SWFI benchmark product separate from the Linaburg-Maduell Transparency Index. It measures national economic contribution across {len(seci.get('pillars') or [])} weighted pillars and every score should be paired with disclosure confidence."
+        )
+        evidence.append(make_evidence("SECI methodology", "SWFI product spec", "/api/seci/v1"))
+
+    if any(token in lowered for token in ("public pensions", "actually allocate", "allocator list", "pensions coverage")):
+        pensions = build_public_pensions_coverage_payload()
+        summary = pensions.get("summary") or {}
+        parts.append(
+            f"The public pensions coverage program currently tracks {summary.get('institutions', 0)} institutions with {summary.get('ready_now', 0)} ready-now records, {summary.get('needs_contacts', 0)} needing contact completion, and {summary.get('needs_verification', 0)} needing SWFI verification."
+        )
+        evidence.append(make_evidence("Public pensions coverage", "SWFI program packet", "/api/public-pensions/coverage/v1"))
+
     if any(token in lowered for token in ("polling", "watchlist", "monitor", "monitoring", "gold", "signal", "signals", "research loop")):
         research_loop = build_continuous_research_payload()
         summary = research_loop.get("summary") or {}
@@ -4041,6 +4143,12 @@ def build_research_context(
             "high_priority_sources": int(build_source_watchlist_payload().get("summary", {}).get("high_priority", 0)),
             "gold_candidates": int(build_continuous_research_payload().get("summary", {}).get("gold_candidates", 0)),
         },
+        "seci_summary": {
+            "pillars": len(build_seci_payload().get("pillars") or []),
+            "mandate_classes": len(build_seci_payload().get("mandate_classes") or []),
+            "confidence_labels": build_seci_payload().get("confidence_labels") or [],
+        },
+        "public_pensions_summary": build_public_pensions_coverage_payload().get("summary") or {},
     }
 
 
@@ -6149,8 +6257,13 @@ def canonical_swfi_ai_routes() -> dict[str, str]:
         "polling": "/api/swfi/polling/v1",
         "research_loop": "/api/swfi/research-loop/v1",
         "steward": "/api/swfi/steward/v1",
+        "seci": "/api/seci/v1",
+        "public_pensions": "/api/public-pensions/coverage/v1",
+        "public_pensions_watch": "/api/public-pensions/watch/v1",
+        "public_pensions_audit": "/api/public-pensions/audit/v1",
         "trust_envelope": "/api/reports/trust-envelope.md",
         "crypto_governance": "/api/reports/crypto-governance.md",
+        "shared_core": "/api/reports/shared-core.md",
         "legacy_research": "/api/research/v1",
     }
 
@@ -6187,6 +6300,12 @@ def build_swfi_provider_manifest() -> dict[str, object]:
             "ai_governance": "/api/reports/ai-governance.md",
             "trust_envelope": "/api/reports/trust-envelope.md",
             "crypto_governance": "/api/reports/crypto-governance.md",
+            "shared_core": "/api/reports/shared-core.md",
+            "product_isolation_rules": "/api/reports/product-isolation-rules.json",
+            "seci_methodology": "/api/reports/seci-methodology.md",
+            "public_pensions_program": "/api/reports/public-pensions-program.md",
+            "public_pensions_watch_model": "/api/reports/public-pensions-watch.md",
+            "public_pensions_audit": "/api/reports/public-pensions-audit.json",
         },
         "notes": [
             "OpenAI is the primary SWFI AI provider.",
@@ -6974,6 +7093,479 @@ def build_source_watchlist_csv() -> str:
     return output.getvalue()
 
 
+PUBLIC_PENSION_OFFICIAL_RAILS = [
+    {
+        "id": "public_plans_data_api",
+        "label": "Public Plans Data API",
+        "url": "https://publicplansdata.org/public-plans-database/api/",
+        "family": "Structured plan data",
+        "cadence": "Weekly freshness check",
+        "latency": "Quarterly / annual source-dependent",
+        "why_it_matters": "Official API with last-update queries, plan-level histories, and filterable pension datasets.",
+        "focus": ["plan basics", "funding", "investment returns", "asset allocation", "fees"],
+    },
+    {
+        "id": "public_plans_data_docs",
+        "label": "Public Plans Data documentation",
+        "url": "https://publicplansdata.org/public-plans-database/documentation/",
+        "family": "Structured plan data",
+        "cadence": "Quarterly",
+        "latency": "Periodic",
+        "why_it_matters": "Documents current dataset coverage across 2001-2024 for over 250 major plans covering most public pension assets.",
+        "focus": ["schema", "coverage", "field definitions"],
+    },
+    {
+        "id": "nasra_public_fund_survey",
+        "label": "NASRA Public Fund Survey",
+        "url": "https://www.nasra.org/publicfundsurvey/",
+        "family": "Benchmark survey",
+        "cadence": "Quarterly site check",
+        "latency": "Annual / survey release",
+        "why_it_matters": "Benchmark context for allocation, spending, and contribution comparisons across public pension systems.",
+        "focus": ["benchmarking", "public pension context"],
+    },
+    {
+        "id": "calpers_board",
+        "label": "CalPERS board meetings",
+        "url": "https://www.calpers.ca.gov/about/board/board-meetings",
+        "family": "Board materials",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Meeting notices, agendas, committee materials, and replays expose allocation and governance changes early.",
+        "focus": ["investment committee", "board notices", "webcasts"],
+    },
+    {
+        "id": "calstrs_board",
+        "label": "CalSTRS board meetings",
+        "url": "https://www.calstrs.com/board-meeting-calendar",
+        "family": "Board materials",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Board and committee calendar, agendas, and meeting materials support ongoing investment and governance monitoring.",
+        "focus": ["investment committee", "board calendar", "meeting materials"],
+    },
+    {
+        "id": "calstrs_key_people",
+        "label": "CalSTRS key personnel",
+        "url": "https://www.calstrs.com/calstrs-key-personnel",
+        "family": "Key people",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Named board and investment-relevant personnel page provides current governance and decision-maker visibility.",
+        "focus": ["board members", "investment decision-makers"],
+    },
+    {
+        "id": "trs_texas_board",
+        "label": "Teacher Retirement System of Texas board materials",
+        "url": "https://www.trs.texas.gov/about/trustees/board-meetings",
+        "family": "Board materials",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Agenda, board books, summaries, minutes, and recordings make TRS Texas a strong always-on watch target.",
+        "focus": ["board books", "agenda", "recordings"],
+    },
+    {
+        "id": "texas_prb",
+        "label": "Texas Pension Review Board meetings",
+        "url": "https://www.prb.texas.gov/board-and-agency-info/board-meetings/",
+        "family": "Oversight",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Board videos, agendas, and packets add an oversight layer across Texas public pension systems.",
+        "focus": ["oversight packets", "board agenda", "board video"],
+    },
+    {
+        "id": "nystrs_board",
+        "label": "NYSTRS board meetings",
+        "url": "https://www.nystrs.org/about-us/retirement-board/board-meetings/",
+        "family": "Board materials",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Quarterly board and committee schedule, minutes, and action summaries provide durable governance signals.",
+        "focus": ["board meetings", "investment committee", "minutes"],
+    },
+    {
+        "id": "maryland_rfps",
+        "label": "Maryland SRPS current RFIs/RFPs",
+        "url": "https://sra.maryland.gov/current-rfisrfps",
+        "family": "Procurement",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Official procurement rail for consultant and investment-related solicitations.",
+        "focus": ["RFP", "consultants", "governance services"],
+    },
+    {
+        "id": "maryland_investment_committee",
+        "label": "Maryland SRPS investment committee",
+        "url": "https://sra.maryland.gov/post/investment-committee",
+        "family": "Board materials",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Committee schedule and related board content surface investment governance changes and timing.",
+        "focus": ["investment committee", "board schedule"],
+    },
+    {
+        "id": "mass_msrb",
+        "label": "Massachusetts State Retirement Board meetings",
+        "url": "https://www.mass.gov/info-details/massachusetts-state-retirement-board-meetings-msrb",
+        "family": "Board materials",
+        "cadence": "Daily",
+        "latency": "Same day",
+        "why_it_matters": "Meeting notices and agenda timing support recurring pension-board monitoring.",
+        "focus": ["board meetings", "agendas", "minutes"],
+    },
+]
+
+
+def load_public_pensions_seed() -> dict[str, object]:
+    if PUBLIC_PENSIONS_SEED_JSON.exists():
+        try:
+            return json.loads(PUBLIC_PENSIONS_SEED_JSON.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    if PUBLIC_PENSIONS_SOURCE_XLSX.exists():
+        try:
+            rows = sheet_rows_from_xlsx(PUBLIC_PENSIONS_SOURCE_XLSX, desired_sheet="Pensions")
+        except Exception:
+            rows = []
+        header_index = 0
+        for index, row in enumerate(rows):
+            lowered = [normalize_text(cell).lower() for cell in row]
+            if len(lowered) >= 10 and lowered[1] == "name":
+                header_index = index
+                break
+        headers = rows[header_index] if rows else []
+        items: list[dict[str, object]] = []
+        for raw in rows[header_index + 1 :]:
+            if not raw or len(raw) < 2 or not raw[1]:
+                continue
+            record = {headers[idx]: raw[idx] if idx < len(raw) else "" for idx in range(len(headers))}
+            institution_name = normalize_text(record.get("name") or "")
+            assets = to_number(record.get("assets"))
+            email = normalize_text(record.get("Email") or "")
+            title = normalize_text(record.get("Title") or "")
+            updated = normalize_text(record.get("Updated in SWFI") or "")
+            if email and title and updated:
+                coverage_status, watch_priority = "ready_now", "High"
+                next_best_action = "Promote this allocator to export-ready pension coverage."
+            elif institution_name and (assets or title or updated):
+                coverage_status, watch_priority = "needs_contacts", "Medium"
+                next_best_action = "Complete CIO or Executive Director coverage before export."
+            else:
+                coverage_status, watch_priority = "needs_verification", "Watch"
+                next_best_action = "Verify the institution in SWFI and attach CIO or Executive Director coverage."
+            items.append(
+                {
+                    "rank": int(to_number(record.get("#"))),
+                    "institution_name": institution_name,
+                    "slug": profile_slug(institution_name),
+                    "city": normalize_text(record.get("city") or ""),
+                    "state": normalize_text(record.get("state") or ""),
+                    "assets": assets,
+                    "assets_display": human_number(assets) if assets else "Not disclosed",
+                    "allocator_role_hint": normalize_text(record.get("CEO or CIO or Admnistrator") or ""),
+                    "person_name": normalize_text(record.get("Name") or ""),
+                    "person_email": email,
+                    "person_title": title,
+                    "updated_in_swfi": updated,
+                    "coverage_status": coverage_status,
+                    "export_readiness": "ready" if coverage_status == "ready_now" else "review",
+                    "watch_priority": watch_priority,
+                    "next_best_action": next_best_action,
+                    "source_refs": [
+                        {
+                            "label": "Public pensions allocation workbook",
+                            "document_pointer": local_pointer(PUBLIC_PENSIONS_SOURCE_XLSX),
+                        }
+                    ],
+                }
+            )
+        return {
+            "schema_version": PUBLIC_PENSIONS_SCHEMA_VERSION,
+            "source_file": local_pointer(PUBLIC_PENSIONS_SOURCE_XLSX),
+            "count": len(items),
+            "items": items,
+        }
+    return {
+        "schema_version": PUBLIC_PENSIONS_SCHEMA_VERSION,
+        "source_file": "",
+        "count": 0,
+        "items": [],
+    }
+
+
+def load_public_pensions_audit() -> dict[str, object]:
+    if PUBLIC_PENSIONS_AUDIT_JSON.exists():
+        try:
+            return json.loads(PUBLIC_PENSIONS_AUDIT_JSON.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    coverage = build_public_pensions_coverage_payload()
+    summary = coverage.get("summary") or {}
+    items = [dict(item) for item in (coverage.get("items") or []) if isinstance(item, dict)]
+    items.sort(key=lambda item: (-float(item.get("assets") or 0.0), str(item.get("institution_name") or "")))
+    return {
+        "schema_version": PUBLIC_PENSIONS_AUDIT_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "source_files": {
+            "pensions_workbook": local_pointer(PUBLIC_PENSIONS_SOURCE_XLSX),
+            "pi300_pdf": local_pointer(PI300_SOURCE_PDF) if PI300_SOURCE_PDF.exists() else "",
+            "pi300_workbook": local_pointer(PI300_SOURCE_XLSX) if PI300_SOURCE_XLSX.exists() else "",
+            "seed_json": local_pointer(PUBLIC_PENSIONS_SEED_JSON) if PUBLIC_PENSIONS_SEED_JSON.exists() else "",
+        },
+        "summary": {
+            "institutions": int(summary.get("institutions", 0)),
+            "ready_now": int(summary.get("ready_now", 0)),
+            "needs_contacts": int(summary.get("needs_contacts", 0)),
+            "needs_verification": int(summary.get("needs_verification", 0)),
+            "pi300_us_overlap": 0,
+            "pi300_top_100_overlap": 0,
+            "pi300_top_50_overlap": 0,
+            "critical_contact_gaps": int(summary.get("needs_contacts", 0)) + int(summary.get("needs_verification", 0)),
+            "benchmark_assets": 0,
+            "benchmark_assets_display": "Not disclosed",
+            "top_states": summary.get("top_states") or [],
+        },
+        "position": {
+            "label": "Public pensions benchmark audit",
+            "note": "Fallback audit packet built from the public pensions queue when no prebuilt benchmark audit JSON is available.",
+        },
+        "benchmark": {
+            "label": "Thinking Ahead Institute / P&I 300",
+            "year": 2024,
+            "market_scope": "U.S. institutions only for direct overlap in this audit",
+            "rows_parsed": 0,
+        },
+        "benchmark_matches": [],
+        "critical_contact_gaps": items[:50],
+        "highest_asset_unmatched": items[:40],
+    }
+
+
+def build_public_pensions_coverage_payload() -> dict[str, object]:
+    seed = load_public_pensions_seed()
+    items = [dict(item) for item in (seed.get("items") or []) if isinstance(item, dict)]
+    items.sort(
+        key=lambda item: (
+            0 if item.get("coverage_status") == "ready_now" else 1 if item.get("coverage_status") == "needs_contacts" else 2,
+            -(float(item.get("assets") or 0.0)),
+            str(item.get("institution_name") or ""),
+        )
+    )
+    total_assets = sum(float(item.get("assets") or 0.0) for item in items)
+    state_counts = Counter(str(item.get("state") or "") for item in items if str(item.get("state") or "").strip())
+    source = make_source_entry(
+        "public_pensions_allocate_program",
+        "Public pensions allocation coverage program",
+        "document_extraction_required",
+        "seed_json_from_xlsx",
+        iso_now(),
+        "xlsx_seed_projection",
+        "high" if items else "low",
+        "ok" if items else "fallback",
+        document_pointer=seed.get("source_file") or local_pointer(PUBLIC_PENSIONS_SEED_JSON),
+        note="Coverage queue built from the public pensions workbook and normalized into a SWFI-ready program packet.",
+    )
+    return {
+        "schema_version": PUBLIC_PENSIONS_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "summary": {
+            "institutions": len(items),
+            "ready_now": sum(1 for item in items if item.get("coverage_status") == "ready_now"),
+            "needs_contacts": sum(1 for item in items if item.get("coverage_status") == "needs_contacts"),
+            "needs_verification": sum(1 for item in items if item.get("coverage_status") == "needs_verification"),
+            "total_assets": total_assets,
+            "total_assets_display": human_number(total_assets) if total_assets else "Not disclosed",
+            "top_states": [{"state": state, "count": count} for state, count in state_counts.most_common(8)],
+        },
+        "program": {
+            "label": "Public Pensions That Actually Allocate",
+            "purpose": "Turn allocator lists into a governed SWFI coverage, enrichment, and export-readiness program.",
+            "uses": [
+                "coverage repair",
+                "allocator target list building",
+                "mandate and RFP watchlists",
+                "contact enrichment queue",
+            ],
+        },
+        "queue_summary": {
+            "label": "Coverage and enrichment queue",
+            "ready_now": sum(1 for item in items if item.get("coverage_status") == "ready_now"),
+            "build_now": sum(1 for item in items if item.get("coverage_status") == "needs_contacts"),
+            "watch": sum(1 for item in items if item.get("coverage_status") == "needs_verification"),
+        },
+        "items": items[:150],
+        "source_refs": [source],
+        "downloads": {
+            "json": "/api/public-pensions/coverage/v1",
+            "report": "/api/reports/public-pensions-coverage.json",
+            "watch": "/api/public-pensions/watch/v1",
+            "audit": "/api/public-pensions/audit/v1",
+        },
+    }
+
+
+def build_public_pensions_coverage_json() -> str:
+    return json.dumps(build_public_pensions_coverage_payload(), indent=2) + "\n"
+
+
+def public_pension_watch_targets(item: dict[str, object]) -> list[str]:
+    name = normalize_text(item.get("institution_name") or "").lower()
+    targets = ["public_plans_data_api"]
+    if "california public employees retirement system" in name:
+        targets.extend(["calpers_board"])
+    if "california state teachers retirement system" in name:
+        targets.extend(["calstrs_board", "calstrs_key_people"])
+    if "teacher retirement system of texas" in name:
+        targets.extend(["trs_texas_board", "texas_prb"])
+    if "new york state teachers retirement system" in name:
+        targets.extend(["nystrs_board"])
+    if "maryland state retirement" in name:
+        targets.extend(["maryland_rfps", "maryland_investment_committee"])
+    return list(dict.fromkeys(targets))
+
+
+def build_public_pension_watch_payload() -> dict[str, object]:
+    coverage = build_public_pensions_coverage_payload()
+    items = [dict(item) for item in (coverage.get("items") or []) if isinstance(item, dict)]
+    rail_by_id = {str(item["id"]): item for item in PUBLIC_PENSION_OFFICIAL_RAILS}
+    featured = []
+    for item in items[:25]:
+        watch_ids = public_pension_watch_targets(item)
+        watch_sources = [rail_by_id[source_id] for source_id in watch_ids if source_id in rail_by_id]
+        featured.append(
+            {
+                "institution_name": str(item.get("institution_name") or ""),
+                "slug": str(item.get("slug") or ""),
+                "state": str(item.get("state") or ""),
+                "assets_display": str(item.get("assets_display") or ""),
+                "coverage_status": str(item.get("coverage_status") or ""),
+                "watch_priority": str(item.get("watch_priority") or ""),
+                "watch_targets": [
+                    {
+                        "label": source["label"],
+                        "family": source["family"],
+                        "cadence": source["cadence"],
+                        "latency": source["latency"],
+                        "url": source["url"],
+                    }
+                    for source in watch_sources
+                ],
+                "next_best_action": str(item.get("next_best_action") or ""),
+            }
+        )
+    return {
+        "schema_version": PUBLIC_PENSION_WATCH_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "position": "Always-on pension watch layer for the public pensions coverage program.",
+        "promise": {
+            "label": "Always-on pension coverage",
+            "note": "Event rails can be monitored same day. Financial and actuarial facts refresh on the cadence of the underlying official source.",
+        },
+        "summary": {
+            "institutions_tracked": int(coverage.get("summary", {}).get("institutions", 0)),
+            "featured_watch_targets": len(featured),
+            "official_rails": len(PUBLIC_PENSION_OFFICIAL_RAILS),
+            "build_now": int(coverage.get("queue_summary", {}).get("build_now", 0)),
+            "watch": int(coverage.get("queue_summary", {}).get("watch", 0)),
+        },
+        "latency_model": [
+            {
+                "lane": "Board agendas, packets, meeting notices, and videos",
+                "target_latency": "Same day",
+                "cadence": "Daily",
+            },
+            {
+                "lane": "RFP, consultant, and procurement postings",
+                "target_latency": "Same day",
+                "cadence": "Daily",
+            },
+            {
+                "lane": "Leadership pages and official personnel notices",
+                "target_latency": "Within one day",
+                "cadence": "Daily",
+            },
+            {
+                "lane": "Annual reports, actuarial valuations, and public-plan datasets",
+                "target_latency": "Cadence-aware",
+                "cadence": "Weekly freshness checks against periodic source releases",
+            },
+        ],
+        "official_rails": [
+            {
+                "id": item["id"],
+                "label": item["label"],
+                "family": item["family"],
+                "cadence": item["cadence"],
+                "latency": item["latency"],
+                "why_it_matters": item["why_it_matters"],
+                "focus": item["focus"],
+                "url": item["url"],
+            }
+            for item in PUBLIC_PENSION_OFFICIAL_RAILS
+        ],
+        "featured_targets": featured,
+        "downloads": {
+            "json": "/api/public-pensions/watch/v1",
+            "report": "/api/reports/public-pensions-watch.json",
+            "model": "/api/reports/public-pensions-watch.md",
+        },
+    }
+
+
+def build_public_pension_watch_json() -> str:
+    return json.dumps(build_public_pension_watch_payload(), indent=2) + "\n"
+
+
+def build_public_pensions_audit_payload() -> dict[str, object]:
+    payload = load_public_pensions_audit()
+    payload.setdefault("schema_version", PUBLIC_PENSIONS_AUDIT_SCHEMA_VERSION)
+    payload.setdefault("generated_at", iso_now())
+    payload["downloads"] = {
+        "json": "/api/public-pensions/audit/v1",
+        "report": "/api/reports/public-pensions-audit.json",
+        "coverage": "/api/public-pensions/coverage/v1",
+        "watch": "/api/public-pensions/watch/v1",
+    }
+    return payload
+
+
+def build_public_pensions_audit_json() -> str:
+    return json.dumps(build_public_pensions_audit_payload(), indent=2) + "\n"
+
+
+def build_seci_payload() -> dict[str, object]:
+    contract = json.loads(read_product_doc("seci_scoring_contract_v1.json"))
+    return {
+        "schema_version": SECI_SCHEMA_VERSION,
+        "generated_at": iso_now(),
+        "label": contract.get("label") or "SWFI Sovereign Economic Contribution Index",
+        "position": "A new SWFI benchmark product focused on national economic contribution, separate from the Linaburg-Maduell Transparency Index.",
+        "core_output_fields": contract.get("required_output_fields") or [],
+        "pillars": contract.get("pillars") or [],
+        "mandate_classes": contract.get("mandate_classes") or [],
+        "confidence_labels": contract.get("confidence_labels") or [],
+        "source_hierarchy": contract.get("source_hierarchy") or [],
+        "delivery_plan": [
+            "Methodology memo",
+            "Pilot peer set",
+            "Sample dashboard",
+            "API surface",
+            "Annual flagship report",
+        ],
+        "safeguards": [
+            "Separate contribution score from disclosure confidence",
+            "Use mandate-adjusted comparisons",
+            "Avoid political or causal overclaiming",
+            "Keep methodology independent of sponsors",
+        ],
+    }
+
+
+def build_seci_json() -> str:
+    return json.dumps(build_seci_payload(), indent=2) + "\n"
+
+
 def polling_interval_hours(cadence: str) -> int:
     lowered = normalize_text(cadence).lower()
     if "daily" in lowered or "ongoing" in lowered:
@@ -7109,6 +7701,8 @@ def build_continuous_research_payload() -> dict[str, object]:
             "watchlist_csv": "/api/reports/source-watchlist.csv",
             "nugget_review_csv": "/api/reports/nugget-review.csv",
             "coverage_board_json": "/api/reports/coverage-board.json",
+            "public_pensions_watch_json": "/api/reports/public-pensions-watch.json",
+            "public_pensions_audit_json": "/api/reports/public-pensions-audit.json",
         },
     }
 
@@ -7137,6 +7731,28 @@ def build_swfi_runtime_steward_payload() -> dict[str, object]:
             "Nugget review ledger",
             "Export audit log",
             "Briefings and profile signal packets",
+        ],
+        "products": [
+            {
+                "id": "seci",
+                "label": "SWFI Sovereign Economic Contribution Index",
+                "route": "/api/seci/v1",
+            },
+            {
+                "id": "public_pensions",
+                "label": "Public Pensions That Actually Allocate",
+                "route": "/api/public-pensions/coverage/v1",
+            },
+            {
+                "id": "public_pensions_watch",
+                "label": "Public Pensions Watch",
+                "route": "/api/public-pensions/watch/v1",
+            },
+            {
+                "id": "public_pensions_audit",
+                "label": "Public Pensions Audit",
+                "route": "/api/public-pensions/audit/v1",
+            },
         ],
         "expert_scope": swfi_expert_scope_manifest(),
         "research_loop": research_loop,
@@ -7219,6 +7835,21 @@ def read_security_doc(filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def read_ops_doc(filename: str) -> str:
+    path = OPS_DOCS_ROOT / filename
+    return path.read_text(encoding="utf-8")
+
+
+def read_platform_doc(filename: str) -> str:
+    path = PLATFORM_DOCS_ROOT / filename
+    return path.read_text(encoding="utf-8")
+
+
+def read_product_doc(filename: str) -> str:
+    path = PRODUCT_DOCS_ROOT / filename
+    return path.read_text(encoding="utf-8")
+
+
 def build_ai_governance_md() -> str:
     return read_ai_doc("SWFI_AI_GOVERNANCE.md")
 
@@ -7243,6 +7874,46 @@ def build_crypto_governance_md() -> str:
 def build_trust_envelope_json() -> str:
     raw = read_security_doc("swfi_trust_envelope_v1.json")
     return json.dumps(json.loads(raw), indent=2) + "\n"
+
+
+def build_runtime_steward_md() -> str:
+    return read_ops_doc("SWFI_RUNTIME_STEWARD.md")
+
+
+def build_shared_core_md() -> str:
+    return read_platform_doc("ACTIVE_MIRROR_SHARED_CORE.md")
+
+
+def build_shared_core_manifest_json() -> str:
+    raw = read_platform_doc("shared_core_manifest_v1.json")
+    return json.dumps(json.loads(raw), indent=2) + "\n"
+
+
+def build_product_isolation_rules_json() -> str:
+    raw = read_platform_doc("product_isolation_rules_v1.json")
+    return json.dumps(json.loads(raw), indent=2) + "\n"
+
+
+def build_seci_methodology_md() -> str:
+    return read_product_doc("SWFI_SECI_PRODUCT_SPEC.md")
+
+
+def build_seci_contract_json() -> str:
+    raw = read_product_doc("seci_scoring_contract_v1.json")
+    return json.dumps(json.loads(raw), indent=2) + "\n"
+
+
+def build_public_pensions_program_md() -> str:
+    return read_product_doc("SWFI_PUBLIC_PENSIONS_PROGRAM.md")
+
+
+def build_public_pensions_contract_json() -> str:
+    raw = read_product_doc("public_pensions_coverage_contract_v1.json")
+    return json.dumps(json.loads(raw), indent=2) + "\n"
+
+
+def build_public_pensions_watch_model_md() -> str:
+    return read_product_doc("SWFI_PUBLIC_PENSIONS_WATCH_MODEL.md")
 
 
 def build_research_eval_pack() -> dict[str, object]:
@@ -7373,6 +8044,17 @@ def build_admin_payload() -> dict[str, object]:
             {"label": "Profile repair queue CSV", "url": "/api/reports/profile-repair-queue.csv"},
             {"label": "Operator loop brief", "url": "/api/reports/operator-loop.md"},
             {"label": "AI governance spec", "url": "/api/reports/ai-governance.md"},
+            {"label": "Shared core brief", "url": "/api/reports/shared-core.md"},
+            {"label": "Shared core manifest JSON", "url": "/api/reports/shared-core-manifest.json"},
+            {"label": "Product isolation rules JSON", "url": "/api/reports/product-isolation-rules.json"},
+            {"label": "SECI methodology", "url": "/api/reports/seci-methodology.md"},
+            {"label": "SECI scoring contract JSON", "url": "/api/reports/seci-contract.json"},
+            {"label": "Public pensions program", "url": "/api/reports/public-pensions-program.md"},
+            {"label": "Public pensions coverage JSON", "url": "/api/reports/public-pensions-coverage.json"},
+            {"label": "Public pensions contract JSON", "url": "/api/reports/public-pensions-contract.json"},
+            {"label": "Public pensions audit JSON", "url": "/api/reports/public-pensions-audit.json"},
+            {"label": "Public pensions watch JSON", "url": "/api/reports/public-pensions-watch.json"},
+            {"label": "Public pensions watch model", "url": "/api/reports/public-pensions-watch.md"},
             {"label": "Update schema JSON", "url": "/api/reports/nugget-schema.json"},
             {"label": "Prompt registry YAML", "url": "/api/reports/prompt-registry.yaml"},
             {"label": "Reviewed updates CSV", "url": "/api/reports/nugget-review.csv"},
@@ -9004,6 +9686,34 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
             self._write_json(build_swfi_provider_manifest(), head_only=head_only)
             return True
 
+        if parsed.path in ("/api/seci", "/api/seci/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_seci_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/public-pensions/coverage", "/api/public-pensions/coverage/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_public_pensions_coverage_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/public-pensions/watch", "/api/public-pensions/watch/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_public_pension_watch_payload(), head_only=head_only)
+            return True
+
+        if parsed.path in ("/api/public-pensions/audit", "/api/public-pensions/audit/v1"):
+            if not request_is_authenticated(self):
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            self._write_json(build_public_pensions_audit_payload(), head_only=head_only)
+            return True
+
         if parsed.path in ("/api/swfi/polling", "/api/swfi/polling/v1", "/api/swfi/research-loop", "/api/swfi/research-loop/v1"):
             if not request_is_authenticated(self):
                 self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
@@ -9519,6 +10229,292 @@ class SiteHandler(http.server.SimpleHTTPRequestHandler):
                 cache_control="no-store",
                 head_only=head_only,
                 extra_headers={"Content-Disposition": 'attachment; filename="swfi-ai-governance.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/shared-core.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_shared_core_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="active-mirror-shared-core.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/shared-core-manifest.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_shared_core_manifest_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="active-mirror-shared-core-v1.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/product-isolation-rules.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_product_isolation_rules_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="active-mirror-product-isolation-v1.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/seci-methodology.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_seci_methodology_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-seci-methodology.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/seci-contract.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_seci_contract_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-seci-contract-v1.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/public-pensions-program.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_public_pensions_program_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-public-pensions-program.md"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/public-pensions-coverage.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_public_pensions_coverage_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-public-pensions-coverage.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/public-pensions-contract.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_public_pensions_contract_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-public-pensions-contract-v1.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/public-pensions-audit.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_public_pensions_audit_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-public-pensions-audit.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/public-pensions-watch.json":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_public_pension_watch_json(),
+                "application/json; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-public-pensions-watch.json"'},
+            )
+            return True
+
+        if parsed.path == "/api/reports/public-pensions-watch.md":
+            auth_mode = authenticated_request_mode(self)
+            if not auth_mode:
+                append_export_audit_event(self, parsed.path, "denied", None)
+                self._write_json({"error": "authentication required"}, status=401, head_only=head_only)
+                return True
+            allowed, retry_after = check_rate_limit("report_export", client_ip, EXPORT_RATE_LIMIT_PER_MINUTE)
+            if not allowed:
+                append_export_audit_event(self, parsed.path, "rate_limited", auth_mode)
+                self._write_json(
+                    {"error": "report export rate limit exceeded", "retry_after": retry_after},
+                    status=429,
+                    head_only=head_only,
+                    extra_headers={"Retry-After": str(retry_after)},
+                )
+                return True
+            append_export_audit_event(self, parsed.path, "ok", auth_mode)
+            self._write_text(
+                build_public_pensions_watch_model_md(),
+                "text/markdown; charset=utf-8",
+                cache_control="no-store",
+                head_only=head_only,
+                extra_headers={"Content-Disposition": 'attachment; filename="swfi-public-pensions-watch.md"'},
             )
             return True
 
